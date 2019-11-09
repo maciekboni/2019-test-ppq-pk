@@ -4,6 +4,9 @@
 *.o
 *.obj
 
+# MFB additions
+.sublime-workspace
+
 # Precompiled Headers
 *.gch
 *.pch
