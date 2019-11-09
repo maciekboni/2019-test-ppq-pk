@@ -10,10 +10,10 @@ LIBS=-lm
 GSLLIBS=-lgsl -lgslcblas 
 
 ode:		
-		$(CC) -O3 -c -o pkdynamics_ppq.o pkdynamics_ppq.cpp $(LIBS) $(GSLLIBS)
+		$(CC) -O3 -c -o pkpd_ppq.o pkpd_ppq.cpp $(LIBS) $(GSLLIBS)
 		$(CC) -O3 -c -o pkpd_dha.o pkpd_dha.cpp $(LIBS) $(GSLLIBS)
 		$(CC) -O3 -c -o main.o main.cpp $(LIBS) $(GSLLIBS)
-		$(CC) $(CFLAGS) -o run_ppq_pk main.o pkpd_dha.o pkdynamics_ppq.o $(LIBS) $(GSLLIBS) 
+		$(CC) $(CFLAGS) -o run_ppq_pk main.o pkpd_dha.o pkpd_ppq.o $(LIBS) $(GSLLIBS) 
 
 
 clean:

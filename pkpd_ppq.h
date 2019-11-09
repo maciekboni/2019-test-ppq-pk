@@ -1,5 +1,5 @@
-#ifndef PKDYNAMICS_PPQ
-#define PKDYNAMICS_PPQ
+#ifndef PKPD_PPQ
+#define PKPD_PPQ
 
 // #include "all_gp_data.h"
 #include <vector>
@@ -16,20 +16,21 @@ using namespace std;
 
 
 // these are the parameters -- the n intercept parameters (for the n slopes for the n patients) are not included in this list
-enum parameter_index_ppq_old { i_k15, i_k62, i_k20, i_k23, i_k32, i_k24, i_k42, i_k56, i_F1_indiv, i_F1_thisdose, num_params }; 
+enum parameter_index_ppq { i_ppq_k15, i_ppq_k62, i_ppq_k20, i_ppq_k23, i_ppq_k32, i_ppq_k24, i_ppq_k42, i_ppq_k56, i_ppq_F1_indiv, i_ppq_F1_thisdose, ppq_num_params }; 
 
-typedef enum parameter_index_ppq_old i_ppq_old;
+// NOTE -- there is no need to declare the typedef below; in practice, you always use integers, and you never cycle through the parameters
+// typedef enum parameter_index_ppq i_ppq;
 
 //extern gsl_rng *G_RNG;	
 
-class pkdynamics_ppq
+class pkpd_ppq
 {   
 public:    
-    explicit pkdynamics_ppq();    // constructor
-    ~pkdynamics_ppq();         	  // destructor
+    explicit pkpd_ppq();    // constructor
+    ~pkpd_ppq();         	  // destructor
 
     size_t dim;		          // the dimensionality of the ODE system; this has to be of type size_t
-                                  // if you want to avoid warnings; it's just a "long unsigned int"
+                              // if you want to avoid warnings; it's just a "long unsigned int"
                                   
     static bool stochastic;       // just set this to false and the class will run a deterministic model with
                                   // all the population means; age and weight dependence will still be in the model
@@ -53,6 +54,7 @@ public:
     void give_patient_new_dose( double fraction_of_dose_take );
     void redraw_params_before_newdose();
     
+    // these are the pharmacodynamic parameters that appear in this hill function
     double pdparam_n;
     double pdparam_EC50;
     double pdparam_Pmax;
@@ -69,9 +71,7 @@ public:
     vector<double> v_concentration_in_blood_hourtimes;
     vector<double> v_parasitedensity_in_blood;
     int num_hours_logged;
-    
-    
-    
+        
     // these are pointers to GSL ODE structures that integrate the ODE system
     gsl_odeiv_step* 	os;
     gsl_odeiv_control* 	oc;
@@ -88,4 +88,4 @@ public:
     
 };
 
-#endif // PKDYNAMICS_PPQ
+#endif // PKPD_PPQ

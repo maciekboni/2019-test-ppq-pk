@@ -1,4 +1,5 @@
 #include "pkdynamics_ppq.h"
+#include "pkpd_ppq.h"
 #include "pkpd_dha.h"
 
 #include <gsl/gsl_rng.h> // random number generators from Gnu Scientific Library
@@ -25,12 +26,12 @@ int main(int argc, char* argv[])
 
 
     
-    auto dyn_ppq = new pkdynamics_ppq();
+    auto dyn_ppq = new pkpd_ppq();
     auto dyn_dha = new pkpd_dha();
-    //pkdynamics_ppq* dyn_ppq = new pkdynamics_ppq();   // the above syntax is the more modern way 
+    //pkpd_ppq* dyn_ppq = new pkpd_ppq();   // the above syntax is the more modern way 
     
     pkpd_dha::stochastic = false;
-    pkdynamics_ppq::stochastic = false;
+    pkpd_ppq::stochastic = false;
     
     dyn_ppq->rng = G_RNG;    
     dyn_ppq->age = 25.0;
@@ -59,14 +60,14 @@ int main(int argc, char* argv[])
     
     
     FILE *fp, *fp2;
-    fp = fopen("out.ppq.allpatients.csv","w");
+    fp = fopen("out.ppq.allpatients.v20191109.csv","w");
     fp2 = fopen("out.dha.allpatients.csv","w");
     fprintf(fp, "PID , HOUR, COMP2CONC , PARASITEDENSITY\n" );
     fprintf(fp2, "PID , HOUR, COMP2CONC , PARASITEDENSITY\n" );
     
     for(int pi=0; pi < 100; pi++)
     {
-        auto dyn = new pkdynamics_ppq();
+        auto dyn = new pkpd_ppq();
         dyn->rng = G_RNG;    
         dyn->age = 25.0;
         dyn->initialize();
