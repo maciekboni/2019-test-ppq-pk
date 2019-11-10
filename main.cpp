@@ -59,12 +59,12 @@ int main(int argc, char* argv[])
     
     
     FILE *fp, *fp2;
-    fp = fopen("out.ppq.allpatients.v20191109.csv","w");
+    fp = fopen("out.ppq.allpatients.v20191110.csv","w");
     fp2 = fopen("out.dha.allpatients.csv","w");
     fprintf(fp, "PID , HOUR, COMP2CONC , PARASITEDENSITY\n" );
     fprintf(fp2, "PID , HOUR, COMP2CONC , PARASITEDENSITY\n" );
     
-    for(int pi=0; pi < 5; pi++)
+    for(int pi=0; pi < 100; pi++)
     {
         auto dyn = new pkpd_ppq();
         dyn->rng = G_RNG;    

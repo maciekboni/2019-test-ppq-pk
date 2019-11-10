@@ -47,7 +47,7 @@ public:
     static int rhs_ode(double t, const double y[], double f[], void *params);
 
     void initialize();
-    void initialize_params_w_population_means();
+    void initialize_params_w_population_means(); // TODO deprecate this member function
     void initialize_params();
 
     void set_parasitaemia( double parasites_per_ul );

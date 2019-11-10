@@ -109,9 +109,17 @@ int pkpd_ppq::rhs_ode(double t, const double y[], double f[], void *pkd_object )
 
 void pkpd_ppq::give_next_dose_to_patient( double fractional_dose_taken )
 {
-    redraw_params_before_newdose(); // these are the dose-specific parameters that you're drawing here
-    y0[0] +=  v_dosing_amounts[num_doses_given] * vprms[i_ppq_F1_thisdose] * fractional_dose_taken;
-    num_doses_given++;
+    if( num_doses_given >= v_dosing_amounts.size() )
+    {
+        return;
+    }
+    else
+    {
+        redraw_params_before_newdose(); // these are the dose-specific parameters that you're drawing here
+        y0[0] +=  v_dosing_amounts[num_doses_given] * vprms[i_ppq_F1_thisdose] * fractional_dose_taken;
+        num_doses_given++;
+    }
+
 }
 
 
@@ -119,7 +127,7 @@ void pkpd_ppq::predict( double t0, double t1 )
 {
     //int i;
     gsl_odeiv_system sys = {pkpd_ppq::rhs_ode, pkpd_ppq::jac, dim, this};   // the fourth argument is a void pointer that you are supossed to use freely; you normally
-                                                                                        // use it to access the paramters
+                                                                            // use it to access the paramters
     double t = t0;    
     double h = 1e-6;
     //int counter=0;
@@ -165,24 +173,20 @@ void pkpd_ppq::predict( double t0, double t1 )
 void pkpd_ppq::initialize( void )
 {
     
-    //WARNING - THE AGE MEMBER VARIABLE MUST BE SET BEFORE YOU CALL THIS FUNCTION
+    //-- WARNING - THE AGE MEMBER VARIABLE MUST BE SET BEFORE YOU CALL THIS FUNCTION
     
-    if( stochastic ) 
-    {
-        initialize_params();
-    }
-    else
-    {
-        initialize_params_w_population_means();
-    }
-    
+    initialize_params();
     generate_recommended_dosing_schedule();
+    
 }
 
 
 
 void pkpd_ppq::initialize_params_w_population_means( void )
 {
+    // NOTE 2019/11/10
+    // NOTE this function is deprecated.  Do not use it anymore.
+    assert(false);
 
     // ### ###  as a safety this should default to one; you multiply the dose amount given (in the dose compartment)
     //          by this factor F1; the dose compartment is compartment 0 here and compartment 1 in the PLoS Med paper
@@ -279,7 +283,12 @@ void pkpd_ppq::initialize_params( void )
     
     // before we take into account the effects of dose, the value of TVF1 is one
     double TVF1 = 1.0;
-    double ETA8_rv = gsl_ran_gaussian( rng, sqrt(0.158) ); // this represents between-patient variability 
+    double ETA8_rv = 0.0;
+    if( pkpd_ppq::stochastic )
+    {
+        ETA8_rv = gsl_ran_gaussian( rng, sqrt(0.158) ); // "_rv" means random variate
+                                                        // this represents between-patient variability 
+    }
     double F1 = TVF1 * exp(ETA8_rv);  
     vprms[i_ppq_F1_indiv] = F1;
     
@@ -288,9 +297,12 @@ void pkpd_ppq::initialize_params( void )
     
     // ### ### KTR is the transition rate among the first three compartments
     double TVMT_pe = 2.11; // this is the point estimate (_pe) for TVMT; there is no need to draw a random variate here
-    double ETA7_rv = gsl_ran_gaussian( rng, sqrt(0.135) );  // _rv means random variate
-                                                            // NOTE - the second argument to this function call needs to 
-                                                            //        be the STANDARD DEVIATION not the variance
+    double ETA7_rv = 0.0;
+    if( pkpd_ppq::stochastic )
+    {
+        ETA7_rv = gsl_ran_gaussian( rng, sqrt(0.135) );  // _rv means random variate
+                                                                // NOTE - the second argument to this function call needs to 
+    }                                                           //        be the STANDARD DEVIATION not the variance
     double MT = TVMT_pe * exp( ETA7_rv );
     
     // NOTE at this point you have an MT value without any effect of dose order (i.e. whether it's dose 1, dose 2, etc.
@@ -300,6 +312,10 @@ void pkpd_ppq::initialize_params( void )
     vprms[i_ppq_k15] = KTR;
     vprms[i_ppq_k56] = KTR;
     vprms[i_ppq_k62] = KTR;
+
+
+
+
 
     
     // ### ### this is the transition rate from the central compt to peripheral compt #1
@@ -312,7 +328,11 @@ void pkpd_ppq::initialize_params( void )
     double Q1 = THETA3_pe * pow( weight/median_weight, ACL ); 
     double V2 = THETA2_pe * pow( weight/median_weight, AV ); 
 
-    double ETA2_rv = gsl_ran_gaussian( rng, sqrt(0.371) );  
+    double ETA2_rv = 0.0;
+    if( pkpd_ppq::stochastic )
+    {
+        ETA2_rv = gsl_ran_gaussian( rng, sqrt(0.371) );  
+    }
     V2 *= exp( ETA2_rv );
 
     // NOTE ETA3 is fixed at zero; so we do not draw
@@ -320,44 +340,66 @@ void pkpd_ppq::initialize_params( void )
     // Q1 *= exp( ETA3 ); // should be zero
     
     vprms[i_ppq_k23] = Q1/V2;
+
+
     
     
     // ### ### this is the transition rate from to peripheral compt #1 back to the central compt 
     //         TVV3 = THETA(4)*(WT/M_WE)**AV;
     //         V3 = TVV3*EXP(ETA(4));
     double THETA4_pe = 4910.0;
-    double ETA4_rv = gsl_ran_gaussian( rng, sqrt(0.0558) ); 
+    double ETA4_rv = 0.0;
+    if( pkpd_ppq::stochastic )
+    {
+        ETA4_rv = gsl_ran_gaussian( rng, sqrt(0.0558) ); 
+    }
     double TVV3 = THETA4_pe * pow( weight/median_weight, AV ); 
     double V3 = TVV3 * exp(ETA4_rv);
     
     vprms[i_ppq_k32] = Q1/V3;
     
     
+    
     // ### ###  this is the transition rate from the central compt to peripheral compt #2
     //          Q2 = TVQ2*EXP(ETA(5));
     //          TVQ2 = THETA(5)*(WT/M_WE)**ACL;
     double THETA5_pe = 105.0;
-    double ETA5_rv = gsl_ran_gaussian( rng, sqrt(0.0541) ); 
+    double ETA5_rv = 0.0;
+    if( pkpd_ppq::stochastic )
+    {
+        ETA5_rv = gsl_ran_gaussian( rng, sqrt(0.0541) ); 
+    }
     double TVQ2 = THETA5_pe * pow( weight/median_weight, ACL ); 
     double Q2 = TVQ2 * exp(ETA5_rv); 
     vprms[i_ppq_k24] = Q2/V2;
+
+    
 
     
     // ### ### this is the transition rate from to peripheral compt #2 back to the central compt 
     //         V4 = TVV4*EXP(ETA(6));
     //         TVV4 = THETA(6)*(WT/M_WE)**AV;
     double THETA6_pe = 30900.0;
-    double ETA6_rv = gsl_ran_gaussian( rng, sqrt(0.114) ); 
+    double ETA6_rv = 0.0;
+    if( pkpd_ppq::stochastic )
+    {
+        ETA6_rv = gsl_ran_gaussian( rng, sqrt(0.114) ); 
+    }
     double TVV4 = THETA6_pe * pow( weight/median_weight, AV ); 
     double V4 = TVV4 * exp(ETA6_rv); 
     vprms[i_ppq_k42] = Q2/V4;
+    
     
     
     // ### ### this is the exit rate from the central compartment (the final exit rate in the model
     //         CL = TVCL*EXP(ETA(1));
     //         TVCL = THETA(1)*MF*(WT/M_WE)**ACL;
     double THETA1_pe = 55.4; 
-    double ETA1_rv = gsl_ran_gaussian( rng, sqrt(0.0752) ); 
+    double ETA1_rv = 0.0;
+    if( pkpd_ppq::stochastic )
+    {
+        ETA1_rv = gsl_ran_gaussian( rng, sqrt(0.0752) ); 
+    }
     double HILL = 5.51;
     double EM50 = 0.575; 
     double MF = pow(age,HILL) / ( pow(age,HILL) + pow(EM50,HILL) );
@@ -381,7 +423,7 @@ void pkpd_ppq::redraw_params_before_newdose()
     if(pkpd_ppq::stochastic)
     {
         IOV_rv = gsl_ran_gaussian( rng, sqrt(0.252) );  
-        //IOV_rv = gsl_ran_gaussian( rng, sqrt(0.000001) );
+        //IOV_rv = gsl_ran_gaussian( rng, sqrt(0.000001) ); // only for testing purposes
     }
     
     // this is the mean relative increase in bioavailability(?) from dose to dose
@@ -406,7 +448,7 @@ void pkpd_ppq::redraw_params_before_newdose()
     if(pkpd_ppq::stochastic)
     {
         IOV2_rv = gsl_ran_gaussian( rng, sqrt(0.195) );
-        //IOV2_rv = gsl_ran_gaussian( rng, sqrt(0.00001) );
+        //IOV2_rv = gsl_ran_gaussian( rng, sqrt(0.00001) ); // only for testing purposes
     
         // MT *= exp( IOV2_rv ); - this is what you want to do, but MT goes into the rate variables below as 1/MT
         // so it's simpler to execute the three lines below
