@@ -30,7 +30,7 @@ int main(int argc, char* argv[])
     //pkpd_ppq* dyn_ppq = new pkpd_ppq();   // the above syntax is the more modern way 
     
     pkpd_dha::stochastic = false;
-    pkpd_ppq::stochastic = false;
+    pkpd_ppq::stochastic = true;
     
     dyn_ppq->rng = G_RNG;    
     dyn_ppq->age = 25.0;
@@ -64,7 +64,7 @@ int main(int argc, char* argv[])
     fprintf(fp, "PID , HOUR, COMP2CONC , PARASITEDENSITY\n" );
     fprintf(fp2, "PID , HOUR, COMP2CONC , PARASITEDENSITY\n" );
     
-    for(int pi=0; pi < 10; pi++)
+    for(int pi=0; pi < 5; pi++)
     {
         auto dyn = new pkpd_ppq();
         dyn->rng = G_RNG;    
@@ -74,12 +74,14 @@ int main(int argc, char* argv[])
         t0=0.0;
         t1=maximum_enforced_stepsize;
         
+
         //BEGIN - INTEGRATION
         while( t0 < 168.0*4.0 )
         {
             if( dyn->we_are_past_a_dosing_time(t0) )
             {
-                dyn->give_next_dose_to_patient(1.0);
+                dyn->give_next_dose_to_patient(1.0);    // 1.0 means the full dose is given
+                                                        // if no dose remains to be given, function does nothing
             }
 
             dyn->predict(t0, t1);

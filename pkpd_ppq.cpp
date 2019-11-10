@@ -381,6 +381,7 @@ void pkpd_ppq::redraw_params_before_newdose()
     if(pkpd_ppq::stochastic)
     {
         IOV_rv = gsl_ran_gaussian( rng, sqrt(0.252) );  
+        //IOV_rv = gsl_ran_gaussian( rng, sqrt(0.000001) );
     }
     
     // this is the mean relative increase in bioavailability(?) from dose to dose
@@ -405,6 +406,7 @@ void pkpd_ppq::redraw_params_before_newdose()
     if(pkpd_ppq::stochastic)
     {
         IOV2_rv = gsl_ran_gaussian( rng, sqrt(0.195) );
+        //IOV2_rv = gsl_ran_gaussian( rng, sqrt(0.00001) );
     
         // MT *= exp( IOV2_rv ); - this is what you want to do, but MT goes into the rate variables below as 1/MT
         // so it's simpler to execute the three lines below
