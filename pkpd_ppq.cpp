@@ -26,8 +26,9 @@ pkpd_ppq::pkpd_ppq(  )
     // BUT we do need to set the initial parasitaemia at time zero to something positive
     // this should be obtained from the person class
     // the last differential equation is for the parasitaemia; it is a per/ul measure
-    y0[dim-1] = 10000.0;
-    
+    // y0[dim-1] = 10000.0;
+    set_parasitaemia( 10000.0 ); // simply a wrapper for the statement above
+
     const gsl_odeiv_step_type* T = gsl_odeiv_step_rkf45;
     os 	= gsl_odeiv_step_alloc(T, dim);
     oc 	= gsl_odeiv_control_y_new (1e-6, 0.0);
@@ -59,6 +60,11 @@ pkpd_ppq::~pkpd_ppq()
     gsl_odeiv_evolve_free(oe);
     gsl_odeiv_control_free(oc);
     gsl_odeiv_step_free(os);
+}
+
+void pkpd_ppq::set_parasitaemia( double parasites_per_ul )
+{
+    y0[dim-1] = parasites_per_ul;
 }
 
 
@@ -101,6 +107,13 @@ int pkpd_ppq::rhs_ode(double t, const double y[], double f[], void *pkd_object )
 }
 
 
+void pkpd_ppq::give_next_dose_to_patient( double fractional_dose_taken )
+{
+    redraw_params_before_newdose(); // these are the dose-specific parameters that you're drawing here
+    y0[0] +=  v_dosing_amounts[num_doses_given] * vprms[i_ppq_F1_thisdose] * fractional_dose_taken;
+    num_doses_given++;
+}
+
 
 void pkpd_ppq::predict( double t0, double t1 )
 {
@@ -115,19 +128,19 @@ void pkpd_ppq::predict( double t0, double t1 )
     while (t < t1)
     {
         // check if there are still doses to give
-        if( num_doses_given < v_dosing_times.size() )
-        {
+        //if( num_doses_given < v_dosing_times.size() )
+        //{
             // check if time t is equal to or larger than the next scheduled dose
-            if( t >= v_dosing_times[num_doses_given]  )
-            {
-                redraw_params_before_newdose();
+            //if( t >= v_dosing_times[num_doses_given]  )
+            //{
+                //redraw_params_before_newdose();
                 
                 // add the new dose amount to the "dose compartment", i.e. the first compartment
-                y0[0] +=  v_dosing_amounts[num_doses_given] * vprms[i_ppq_F1_thisdose];
+                //y0[0] +=  v_dosing_amounts[num_doses_given] * vprms[i_ppq_F1_thisdose];
                 
-                num_doses_given++;
-            }
-        }
+                //num_doses_given++;
+            //}
+        //}
 
         // check if time t is equal to or larger than the next scheduled hour to log
         if( t >= ((double)num_hours_logged)  )
@@ -281,7 +294,7 @@ void pkpd_ppq::initialize_params( void )
     double MT = TVMT_pe * exp( ETA7_rv );
     
     // NOTE at this point you have an MT value without any effect of dose order (i.e. whether it's dose 1, dose 2, etc.
-    //      later, you musy draw another mean-zero normal rv, and multiply by the value above
+    //      later, you must draw another mean-zero normal rv, and multiply by the value above
     
     double KTR = 3.0/MT;
     vprms[i_ppq_k15] = KTR;
@@ -377,7 +390,7 @@ void pkpd_ppq::redraw_params_before_newdose()
     double OCC = 1.0 + (double)num_doses_given; // NOTE the RHS here is a class member
     
     double F1COVD = (1.0 + F1D_pe*(OCC-1.0));   // THE REASON THIS EXISTS IS THAT DOSE ABSORBTION REALLY DOES INCREASE FOR PATIENTS 
-                                                // FROM FOSE TO DOSE, **ONLY** IN THE PPQ DATA; THIS MAY NOT OCCUR FOR OTHER DRUGS
+                                                // FROM DOSE TO DOSE, **ONLY** IN THE PPQ DATA; THIS MAY NOT OCCUR FOR OTHER DRUGS
     // double THETA8 = 1.0;  // this is just fixed at one
     // double TVF1 = THETA8*F1COVD;
     double TVF1 = F1COVD;
@@ -403,7 +416,19 @@ void pkpd_ppq::redraw_params_before_newdose()
     
 }
 
+bool pkpd_ppq::we_are_past_a_dosing_time( double current_time )
+{
+    // check if there are still any doses left to give
+    if( num_doses_given < v_dosing_times.size() )
+    {
+        if( current_time >= v_dosing_times[num_doses_given] )
+        {
+            return true;
+        }
+    }
 
+    return false;
+}
 
 void pkpd_ppq::generate_recommended_dosing_schedule()
 {

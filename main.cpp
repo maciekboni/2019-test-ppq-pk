@@ -1,4 +1,3 @@
-#include "pkdynamics_ppq.h"
 #include "pkpd_ppq.h"
 #include "pkpd_dha.h"
 
@@ -65,20 +64,28 @@ int main(int argc, char* argv[])
     fprintf(fp, "PID , HOUR, COMP2CONC , PARASITEDENSITY\n" );
     fprintf(fp2, "PID , HOUR, COMP2CONC , PARASITEDENSITY\n" );
     
-    for(int pi=0; pi < 100; pi++)
+    for(int pi=0; pi < 10; pi++)
     {
         auto dyn = new pkpd_ppq();
         dyn->rng = G_RNG;    
         dyn->age = 25.0;
         dyn->initialize();
+        dyn->set_parasitaemia( 1000.0 );
         t0=0.0;
         t1=maximum_enforced_stepsize;
         
+        //BEGIN - INTEGRATION
         while( t0 < 168.0*4.0 )
         {
+            if( dyn->we_are_past_a_dosing_time(t0) )
+            {
+                dyn->give_next_dose_to_patient(1.0);
+            }
+
             dyn->predict(t0, t1);
             t0+=maximum_enforced_stepsize; t1+=maximum_enforced_stepsize;
         }
+        //END - INTEGRATION 
 
         for(int j=0; j<dyn->v_concentration_in_blood.size(); j++ )
         {
@@ -89,7 +96,7 @@ int main(int argc, char* argv[])
     }
 
     
-    for(int pi=0; pi<100; pi++)
+    for(int pi=0; pi<10; pi++)
     {
         auto dyn = new pkpd_dha();
         dyn->rng = G_RNG;    

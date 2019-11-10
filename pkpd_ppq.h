@@ -49,11 +49,13 @@ public:
     void initialize();
     void initialize_params_w_population_means();
     void initialize_params();
+
+    void set_parasitaemia( double parasites_per_ul );
     
-    // TODO implement this function; we should remove the dosing from the predict function
-    void give_patient_new_dose( double fraction_of_dose_take );
     void redraw_params_before_newdose();
-    
+    bool we_are_past_a_dosing_time( double current_time );    
+    void give_next_dose_to_patient( double fractional_dose_taken );
+
     // these are the pharmacodynamic parameters that appear in this hill function
     double pdparam_n;
     double pdparam_EC50;
@@ -62,7 +64,7 @@ public:
     
     // the members below are used to create and manage the dose schedule; i.e. the course of treatment
     void generate_recommended_dosing_schedule();
-    vector<double> v_dosing_times;
+    vector<double> v_dosing_times; // in hours
     vector<double> v_dosing_amounts;
     int num_doses_given;
 
