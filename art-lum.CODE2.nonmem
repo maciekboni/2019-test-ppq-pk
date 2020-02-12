@@ -1,0 +1,136 @@
+Please use the following reference:  
+WWARN NONMEM Code 2 file used to develop: Artemether-lumefantrine dosing for malaria treatment in young children and pregnant women: a pharmacokinetic-pharmacodynamic meta-analysis.
+F. Kloprogge, L. Workman, S. Borrmann, M. Tékété, G. Lefèvre, K. Hamed, P. Piola, J. Ursing, P.E. Kofoed, A. Mårtensson, B. Ngasala, A. Björkman, M. Ashton, S.F. Hietala, F. Aweeka, S. Parikh, L. Mwai, T.M.E. Davis, H. Karunajeewa, S. Salman, F. Checchi, C. Fogg, P.N. Newton, M. Mayxay, P. Deloron, J.F. Faucher, F. Nosten, E.A. Ashley, R. McGready, M. van Vugt, S. Proux, R.N. Price, J. Karbwang, F. Ezzet, R. Bakshi,  K. Stepniewska, N.J. White, P.J. Guerin, K.I. Barnes, J. Tarning. 
+PLoS Medicine. 2018 Jun 12;15(6):e1002579.
+Read the full summary of the Antimalarial – Lumefantrine POP/PK Study Group 
+
+
+$INPUT     
+           ID 	; Patient ID
+           TIME 	; Time of sample 
+           DV 	; Dependent variable (natural logarithm of observed concentrations, nmol/L)
+           WT 	; Body weight (covariate) 
+           EVID 	; Event ID record 
+           MDV 	; Missing dependent variable (1=missing)
+           AMT 	; Dose amount (μmol)
+           CMT 	; Compartment (1=dose, 2= lumefantrine, 4= desbutyl-lumefantrine) 
+           PREG 	; Pregnancy (covariate; 0=non-pregnant, 1=pregnant) 
+           LNPC 	; Parasite count (covariate; logarithm of parasite count)
+           DOSE 	; Lumefantrine dosage (covariate; mg/kg)
+
+$DATA  
+           dataset.csv  IGNORE=#
+
+$SUBROUTINE  
+           ADVAN5 TRANS1
+
+$MODEL      
+           COMP = (1) 	 ; Dose
+           COMP = (2) 	 ; Lumefantrine (LUM) central compartment 
+           COMP = (3) 	 ; LUM peripheral compartment 
+           COMP = (4) 	 ; Desbutyl-lumefantrine (DLF) central compartment  
+           COMP = (5) 	 ; DLF peripheral compartment
+
+$PK
+;------------------------------------Dose covariate----------------------------------------------------------------------
+        D50 = THETA(12) 		; Dose (mg/kg) to reach 50% of full saturation effect
+       DS = 1 - (DOSE/(DOSE+D50) )		; Dose (mg/kg) covariate relationship 
+;------------------------------------------------------------------------------------------------------------------------------------
+
+;------------------------------------ Pregnancy covariate ----------------------------------------------------------------
+         PREGNANCY = (1 + THETA(13) * PREG)	; Linear covariate relationship for pregnancy
+;------------------------------------------------------------------------------------------------------------------------------------
+
+;------------------------------------Parasite biomass covariate-------------------------------------------------------------
+           PARASITE = ((LNPC /4.20)**THETA(14))	; Power covariate relationship for parasite biomass
+;--------------------------------------------------------------------------------------------------------------------------------------
+           TVCL	= THETA(1) *  ((WT/42)**0.75)	; Population LUM clearance
+           CL	= TVCL * EXP(ETA(1)) 	; Individual LUM clearance
+
+           TVV2	= THETA(2) * ((WT/42)**1)	; Population LUM central volume
+           V2	= TVV2 * EXP(ETA(2))	; Individual LUM central volume
+
+           TVQ1	= THETA(3) * ((WT/42)**0.75) 	; Population LUM inter-compartment clearance
+           Q1	= TVQ1 * EXP(ETA(3))	; Individual LUM inter-compartment clearance
+
+           TVV3	= THETA(4) * ((WT/42)**1)	; Population LUM peripheral volume
+           V3	= TVV3 * EXP(ETA(4))	; Individual LUM peripheral volume
+
+          TVKA	= THETA(5)  *   PREGNANCY	; Population absorption rate constant
+          KA	= TVKA * EXP(ETA(5))	; Individual absorption rate constant
+
+           TVF1	= THETA(6) * DS * PARASITE	; Population relative bioavailability
+           BXPAR 	= THETA(11)	; Box-Cox shape parameter
+           PHI 	= EXP(ETA(6))	; Exponential of IIV
+           ETATR 	= (PHI**BXPAR-1)/BXPAR	; Box-Cox tranfomation of IIV
+           F1	= TVF1 * EXP(ETATR)	; Individual relative bioavailability
+
+           TVV4	= THETA(7) * ((WT/42)**1)	; Population DLF central volume
+           V4	= TVV4 * EXP(ETA(7))	; Individual DLF central volume
+
+           TVCLM	= THETA(8) * ((WT/42)**0.75)	; Population DLF clearance
+           CLM	= TVCLM* EXP(ETA(8))	; Individual DLF clearance
+
+
+           TVQ2	= THETA(9) * ((WT/42)**0.75)	; Population DLF inter-compartment clearance
+           Q2	= TVQ2* EXP(ETA(9))	; Individual DLF inter-compartment clearance
+
+
+           TVV5	= THETA(10) * ((WT/42)**1)	; Population DLF peripheral volume
+           V5	= TVV5 * EXP(ETA(10))	; Individual DLF peripheral volume
+
+           K12 = KA	; Absorption rate constant
+           K23 = Q1/V2	; LUM distribution rate constant (COMP 2 --> 3)
+           K32 = Q1/V3	; LUM distribution rate constant (COMP 3 --> 2)
+           K24 = CL/V2	; LUM elimination rate constant (COMP 2 --> 4)
+           K45 = Q2/V4	; DLF distribution rate constant (COMP 4 --> 5)
+           K54 = Q2/V5	; DLF distribution rate constant (COMP 5 --> 4)
+           K40 = CLM/V4	; DLF elimination rate constant (COMP 4 --> 0)
+           S2 = V2/1000	; Scaling for LUM central volume
+           S4 = V4/1000	; Scaling for DLF central volume
+
+$ERROR
+            IF (CMT.EQ.2)   CP = A(2) / S2	; Predicted LUM plasma concentration
+            IF (CMT.EQ.4)   CP = A(4) / S4	; Predicted DLF plasma concentration
+            IF(CP.GT.0)  IPRED = LOG(CP)	; Natural logarithm of predictions
+            IF (CMT.EQ.2)     W = SQRT(SIGMA(1,1))	; LUM residual error
+            IF (CMT.EQ.4)     W = SQRT(SIGMA(2,2))	; DLF residual error
+            IRES = IPRED – DV	; Individual residual error
+            IWRES = IRES / W	; Individual weighted residual error
+            IF (CMT.EQ.2)    Y = IPRED + EPS(1)	; LUM additive residual error
+            IF (CMT.EQ.4)    Y = IPRED + EPS(2)	; DLF additive residual error
+
+;------------------------------------------------------------------------------------------------------------------------------------
+
+$THETA	; Initial estimates of theta
+            (0, 1.56)	; 1. LUM clearance
+            (0, 21.2)	; 2. LUM central volume of distribution
+            (0, 0.381)	; 3. LUM inter-compartment clearance
+            (0, 53.8)	; 4. LUM peripheral volume of distribution
+            (0, 0.0409)	; 5. Absoprtion rate constant
+            (1 FIX)	; 6. Relative bioavailability
+            (0, 2470)	; 7. DLF central volume of distribution
+            (0, 78.4)	; 8. DLF clearance
+            (0, 104)	; 9. DLF inter-compartment clearance
+            (0, 8650)	; 10. DLF peripheral volume of distribution
+            (-1, -0.449)	; 11. Box-Cox shape parameter
+            (3.86 FIX)	; 12. Dose (mg/kg) reaching 50% of full absoption 
+            (-1, 0.513)	; 13. Pregnancy on absoprtion rate constant
+            (-1, -0.226)	; 14. Parasite biomass on relative bioavailability
+$OMEGA	; Initial estimates for omega
+           (0 FIX)	; 1. LUM IIV clearance
+           (0.803)	; 2. LUM IIV central volume
+           (0  FIX)	; 3. LUM IIV inter-compartment clearance
+           (0 FIX)	; 4. LUM IIV peripheral volume
+          (0 FIX)	; 5. IIV absorption rate constant
+           (0.289)	; 6. IIV relative bioavailability
+           (0.554)	; 7. DLF IIV central volume
+           (0.140)	; 8.  DLF IIV clearance
+           (0.115)	; 9. DLF IIV inter-compartment clearance
+           (0.205)	; 10 DLF IIV peripheral volume
+
+$SIGMA	; Initial estimates of sigma
+           (0.251)	; 1. LUM residual variability
+           (0.0560)	; 2. DLF residual variability 
+
+$ESTIMATION   POSTHOC MAXEVAL=9999   METHOD=1 INTER 
