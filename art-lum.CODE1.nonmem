@@ -15,7 +15,7 @@ Read the full summary of the Antimalarial – Lumefantrine POP/PK Study Group
 // NOTE MFB :     dx3/dt  =  k_23 x2  -  k_32 x3 
 // NOTE MFB : 
 // NOTE MFB : and the code below tells you which of these get variation added to them;
-// NOTE MFB : there is no inter-dose variation in this model; there is only inter-patient variability
+// NOTE MFB : there is no inter-dose (i.e. inter-occassion) variation in this model; there is only inter-patient variability
 
 
 
@@ -58,7 +58,7 @@ $PK
 ;------------------------------------------------------------------------------------------------------------------------------------
 
 ;------------------------------------Parasite biomass covariate-------------------------------------------------------------
-// NOTE MFB : LNPC is the log parasite count TODO ask Richard if it is log10 or log_e and if the count is per/ul or something else
+// NOTE MFB : LNPC is the log parasite count TODO ask Richard if it is log10 or log_e (LOG_E, CONFIRMED) and if the count is per/ul or something else; 3/25/2024 Joel says it is probably total parasite biomass
 // NOTE MFB : 
            PARASITE = ((LNPC /4.20)**THETA(9))	; Power covariate relationship for parasite biomass
 ;------------------------------------------------------------------------------------------------------------------------------------
@@ -113,7 +113,7 @@ $THETA	; Initial estimates of theta
             (-1, -0.643)	; 9. Parasite biomass on relative bioavailability
             (-1, -0.343)	; 10. Box-Cox shape parameter
 
-$OMEGA	; Initial estimates for omega
+$OMEGA	; Initial estimates for omega      // MFB NOTE : THESE ARE REALLY ETAS
            (0 FIX)	; 1. IIV clearance
            (1.12)	; 2. IIV central volume of distribution
            (0  FIX)	; 3. IIV Inter-compartment clearance

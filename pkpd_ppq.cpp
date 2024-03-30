@@ -68,7 +68,7 @@ void pkpd_ppq::set_parasitaemia( double parasites_per_ul )
 }
 
 
-// NOTE :: MUST REMEMBER THAT THE FUNCTION BELOW IS A STATIC MEMBER FUNCTIONS OF THIS CLASS
+// NOTE :: MUST REMEMBER THAT THE FUNCTION BELOW IS A STATIC MEMBER FUNCTION OF THIS CLASS
 //
 // i think "rhs_ode" must be defined with these four arguments for it to work in
 // in the GSL ODE routines
