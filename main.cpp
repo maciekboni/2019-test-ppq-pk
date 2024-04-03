@@ -125,12 +125,12 @@ int main(int argc, char* argv[])
 
     if( G_CLO_LUM )
     {
-        fp3 = fopen("out.lum.allpatients.20240330.csv","w");
+        fp3 = fopen("out.lum.allpatients.20240401.csv","w");
         fprintf(fp3, "PID,HOUR,COMP2CONC,PARASITEDENSITY\n" );
 
         fprintf(stderr, "\n");
         // pi is patient index
-        for(int pi=0; pi < 100; pi++)
+        for(int pi=0; pi < 1000; pi++)
         {
             auto dyn = new pkpd_lum();
             fprintf(stderr, "\tlum object created pi = %d \r", pi); fflush(stderr);

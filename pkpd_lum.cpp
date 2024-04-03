@@ -247,8 +247,8 @@ void pkpd_lum::initialize_params( void )
 
     
     
-    // PARASITE = ((LNPC /4.20)**THETA(9)) -- TODO -- check if it's log-natural parasitaemia (CONFIRMED)
-    //      CHECK if it's parasites/microliter (NOT YET CONFIRMED)
+    // PARASITE = ((LNPC /4.20)**THETA(9)) -- TODO -- check the log type parasitaemia (CONFIRMED on 3/31/2024 that it is log-10)
+    //      check if it's parasites/microliter (CONFIRMED also on 3/31/2024)
     //      
     //fprintf(stderr, "\n\tinside initialize_params function -- about to set PARASITE param"); fflush(stderr);
     double PARASITE = pow( log( parasites_per_ul_at_first_lum_dose ) / 4.20 , THETA9 );
