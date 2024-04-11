@@ -35,10 +35,12 @@ pkpd_adq::pkpd_adq(  )
     patient_weight = -1.0;
     median_weight  =  54.0;     // in kilograms 
     weight = median_weight;     // this is the weight that is actually used in the calculations
+    pregnant = false;
 
     num_doses_given = 0;
     num_hours_logged = 0;    
     doses_still_remain_to_be_taken = true;
+    total_mg_dose_per_occassion = -99.0;    // meaning it is not set yet
     
     age = 25.0;
     patient_blood_volume = 5500000.0; // 5.5L of blood for an adult individual
@@ -156,9 +158,9 @@ void pkpd_adq::predict( double t0, double t1 )
         // check if time t is equal to or larger than the next scheduled hour to log
         if( t >= ((double)num_hours_logged)  )
         {
-            v_concentration_in_blood.push_back( y0[1] );                // TODO you need to push_back 1000 * y0[1] / V
+            v_concentration_in_blood.push_back( y0[1] );                // TODO: you need to push_back 1000 * y0[1] / V
                                                                         // and the result is microgram per liter = ng/mL
-            v_concentration_in_blood_metabolite.push_back( y0[3] );     // TODO you need to push_back 1000 * y0[3] / VC
+            v_concentration_in_blood_metabolite.push_back( y0[3] );     // TODO: you need to push_back 1000 * y0[3] / VC
                                                                         // and the result is microgram per liter = ng/mL
             v_parasitedensity_in_blood.push_back( y0[dim-1] );
             v_concentration_in_blood_hourtimes.push_back( t );
@@ -193,7 +195,7 @@ void pkpd_adq::initialize( void )
 void pkpd_adq::initialize_params( void )
 {
     
-     // all 10 below are point estimates .. they should end with a '_pe' for point estimate
+     // all 18 below are point estimates
     double THETA1 = 2960.0;
     double THETA2 = 13500.0;
     double THETA3 = 2310.0;
@@ -271,13 +273,13 @@ void pkpd_adq::initialize_params( void )
     double TVKA = THETA5;
     double KA   = TVKA * exp( ETA5_rv );
 
-    // --BLOCK COMMENTED OUT FOR EFFICIENCY--
+    // ----BLOCK1 COMMENTED OUT FOR EFFICIENCY----
     // double TCOV          =  1.0;
     // double F1_D          = (1.0 - THETA14*TCOV);
     // double TVF1          = THETA6 * F1_D;
     // double F1            = TVF1 * exp( ETA6_rv );
     // double F1_later_dose = THETA6 * exp( ETA6_rv );
-    // --BLOCK COMMENTED OUT FOR EFFICIENCY--
+    // ----BLOCK1 COMMENTED OUT FOR EFFICIENCY----
     double F1_later_dose = exp( ETA6_rv );
     double F1            = (1.0 - THETA14) * F1_later_dose;
 
@@ -309,12 +311,12 @@ void pkpd_adq::initialize_params( void )
     double NN = 2.0;
     double KTR = (NN+1.0)/MT; // this is the transition param btw dosing and central compartments
 
-    // --BLOCK COMMENTED OUT FOR EFFICIENCY--
+    // ----BLOCK2 COMMENTED OUT FOR EFFICIENCY----
     // double MW_AQ   =  355.87                             ; Molecular weight AQ (g/mol)
     // double MW_DEAQ =  327.813                            ; Molecular weight DEAQ (g/mol)
     // double CF = MW_DEAQ / MW_AQ                          ; Conversion factor AQ -> DEAQ molecular mass
     // double CF = 0.921159412;
-    // --BLOCK COMMENTED OUT FOR EFFICIENCY--
+    // ----BLOCK2 COMMENTED OUT FOR EFFICIENCY----
 
 
     // these are the three transitions params from dose to central; normally they are all the same
@@ -336,7 +338,7 @@ void pkpd_adq::initialize_params( void )
 
     vprms[i_adq_k40] = CLM/VC;
 
-    vprms[i_adq_CF] = 0.921159412;
+    vprms[i_adq_CF] = 0.921159412; // this is the commented out value from BLOCK2
 
     vprms[i_adq_F1_indiv_first_dose] = F1;
     vprms[i_adq_F1_indiv_later_dose] = F1_later_dose; // basically, this is just a rv log-normally distributed around 1.0
@@ -371,10 +373,11 @@ bool pkpd_adq::we_are_past_a_dosing_time( double current_time )
 void pkpd_adq::generate_recommended_dosing_schedule()
 {
     
-    // TODO -- this dosing schedule function needs to be made specific to amodiaquine
+    // CHECK -- that this dosing schedule function indeed corresponds to amodiaquine
 
-    double num_tablets_per_dose;
+    double num_tablets_per_dose = -99.0;
     
+    // this is in kilograms
     if( weight < 8.0 )
     {
         num_tablets_per_dose = 1.0;
@@ -393,14 +396,14 @@ void pkpd_adq::generate_recommended_dosing_schedule()
     }
    
     // 
-    double total_mg_dose = num_tablets_per_dose * 67.5; // this is 67.5mg of amodiaquine, which is the pediatric strength
-                                                        // PS - in reality, there are different tablet sizes
+    total_mg_dose_per_occassion = num_tablets_per_dose * 67.5;  // this is 67.5mg of amodiaquine, which is the pediatric strength
+                                                                // PS - in reality, there are different tablet sizes
     
     v_dosing_times.insert( v_dosing_times.begin(), 3, 0.0 );
     v_dosing_times[1] = 24.0;
     v_dosing_times[2] = 48.0; 
 
-    v_dosing_amounts.insert( v_dosing_amounts.begin(), 3, total_mg_dose );
+    v_dosing_amounts.insert( v_dosing_amounts.begin(), 3, total_mg_dose_per_occassion );
     
 }
 
