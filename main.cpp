@@ -78,7 +78,9 @@ int main(int argc, char* argv[])
     
     
     
-    FILE *fp, *fp2, *fp3, *fp4;
+    //FILE *fp, *fp2, *fp3, *fp4;
+
+
     //fp = fopen("out.ppq.allpatients.v20240318.csv","w");
     //fp2 = fopen("out.dha.allpatients.v20240318.csv","w");
     
@@ -125,8 +127,8 @@ int main(int argc, char* argv[])
 
     if( G_CLO_LUM )
     {
-        fp3 = fopen("out.lum.allpatients.20240401.csv","w");
-        fprintf(fp3, "PID,HOUR,COMP2CONC,PARASITEDENSITY\n" );
+        //fp3 = fopen("out.lum.allpatients.20240401.csv","w");
+        fprintf(stdout, "PID,HOUR,COMP2CONC,PARASITEDENSITY\n" );
 
         fprintf(stderr, "\n");
         // pi is patient index
@@ -166,14 +168,14 @@ int main(int argc, char* argv[])
 
             for(int j=0; j<dyn->v_concentration_in_blood.size(); j++ )
             {
-                fprintf(fp3, "%d , %10.3f , %10.3f , %10.3f \n", pi, dyn->v_concentration_in_blood_hourtimes[j], dyn->v_concentration_in_blood[j], dyn->v_parasitedensity_in_blood[j] );
+                fprintf(stdout, "%d , %10.3f , %10.3f , %10.3f \n", pi, dyn->v_concentration_in_blood_hourtimes[j], dyn->v_concentration_in_blood[j], dyn->v_parasitedensity_in_blood[j] );
             }
         
             delete dyn;
         }
 
         fprintf(stderr, "\n");
-        fclose(fp3);
+        //fclose(fp3);
     }
 
 
