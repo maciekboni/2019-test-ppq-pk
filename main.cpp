@@ -20,6 +20,8 @@ bool G_CLO_ADQ = false;
 double G_CLO_AGE = 25.0;
 double G_CLO_WEIGHT = 54.0;
 
+int G_CLO_N = 1; // this is the number of patients
+
 
 // FUNCTION DECLARATIONS
 void ParseArgs(int argc, char **argv);
@@ -132,10 +134,10 @@ int main(int argc, char* argv[])
 
         fprintf(stderr, "\n");
         // pi is patient index
-        for(int pi=0; pi < 1000; pi++)
+        for(int pi=0; pi < G_CLO_N; pi++)
         {
             auto dyn = new pkpd_lum();
-            fprintf(stderr, "\tlum object created pi = %d \r", pi); fflush(stderr);
+            //fprintf(stderr, "\tlum object created pi = %d \r", pi); fflush(stderr);
             dyn->set_parasitaemia( 1000.0 );    
             dyn->parasites_per_ul_at_first_lum_dose = 1000.0;   // YOU MUST DO THIS SEPARATELY because the parasitaemia level "at first
                                                             // lum dose" is a special quantity that affects the lum absorption
@@ -278,6 +280,7 @@ void ParseArgs(int argc, char **argv)
 	    else if( str == "-adq" ) 		G_CLO_ADQ  		= true;
         else if( str == "-age" ) 		G_CLO_AGE  		= atof( argv[++i] );
         else if( str == "-weight" ) 	G_CLO_WEIGHT	= atof( argv[++i] );
+        else if( str == "-n" ) 	        G_CLO_N	        = atoi( argv[++i] );
         /*else if( str == "-endttr" ) 		G_CLO_END_TITER	        = atof( argv[++i] );
         else if( str == "-chainlength" )        G_CLO_CHAIN_LENGTH	= atoi( argv[++i] );
         else if( str == "-showevery" ) 		G_CLO_SHOW_EVERY	= atoi( argv[++i] );
