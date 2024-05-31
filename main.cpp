@@ -20,6 +20,10 @@ bool G_CLO_ADQ = false;
 double G_CLO_AGE = 25.0;
 double G_CLO_WEIGHT = 54.0;
 
+// PARASITE MULTIPLICATION FACTOR (PMF) - this is the number of parasites that are produced by each parasite in the blood per 48h life cycle
+// The default value is 10.0 for a 48h cycle. Change this in the differential equations to make sure it is scaled correctly
+doublle G_CLO_PMF = 10.0;
+
 int G_CLO_N = 1; // this is the number of patients
 
 
@@ -146,6 +150,7 @@ int main(int argc, char* argv[])
             dyn->age = G_CLO_AGE;
             dyn->weight = G_CLO_WEIGHT;
             dyn->initialize();                              // NB: parasitaemia must be set before initializing parameters
+            dyn->vprms[i_lum_pmf] = G_CLO_PMF;
             //fprintf(stderr, "\n\tlum object initialized pi=%d", pi); fflush(stderr);
         
             t0=0.0;
@@ -276,11 +281,12 @@ void ParseArgs(int argc, char **argv)
     for(i=start; i<argc; i++)
     {
         str = argv[i];
-             if( str == "-lum" )		G_CLO_LUM  		= true;
-	    else if( str == "-adq" ) 		G_CLO_ADQ  		= true;
-        else if( str == "-age" ) 		G_CLO_AGE  		= atof( argv[++i] );
-        else if( str == "-weight" ) 	G_CLO_WEIGHT	= atof( argv[++i] );
+             if( str == "--lum" )		G_CLO_LUM  		= true;
+	    else if( str == "--adq" ) 		G_CLO_ADQ  		= true;
+        else if( str == "--age" ) 		G_CLO_AGE  		= atof( argv[++i] );
+        else if( str == "--weight" ) 	G_CLO_WEIGHT	= atof( argv[++i] );
         else if( str == "-n" ) 	        G_CLO_N	        = atoi( argv[++i] );
+        else if( str == "--pmf" ) 	    G_CLO_PMF	    = atof( argv[++i] );
         /*else if( str == "-endttr" ) 		G_CLO_END_TITER	        = atof( argv[++i] );
         else if( str == "-chainlength" )        G_CLO_CHAIN_LENGTH	= atoi( argv[++i] );
         else if( str == "-showevery" ) 		G_CLO_SHOW_EVERY	= atoi( argv[++i] );

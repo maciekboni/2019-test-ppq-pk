@@ -15,7 +15,7 @@ using namespace std;
 
 
 // these are the flow or rate parameters in the ODEs, and some additional dose and scaling parameters
-enum parameter_index_lum { i_lum_k12, i_lum_k23, i_lum_k32,  i_lum_k20, i_lum_F1_indiv, i_lum_F1_thisdose, lum_num_params }; 
+enum parameter_index_lum { i_lum_k12, i_lum_k23, i_lum_k32,  i_lum_k20, i_lum_F1_indiv, i_lum_F1_thisdose, i_lum_pmf, lum_num_params }; 
 
 
 class pkpd_lum
