@@ -18,8 +18,9 @@ endif ()
 
 find_package(GSL REQUIRED)
 
-
-set(SRC_FILES main.cpp pkdynamics_ppq.cpp pkdynamics_ppq.h pkpd_dha.cpp pkpd_dha.h)
+#Add all .cpp files and .h files here
+# Add pkpd_mfq.cpp pkpd_mfq.h when needed
+set(SRC_FILES main.cpp pkpd_adq.cpp pkpd_adq.h pkpd_dha.cpp pkpd_dha.h pkpd_lum.cpp pkpd_lum.h pkpd_ppq.cpp pkpd_ppq.h)
 
 add_executable(run_ppq_pk ${SRC_FILES})
 target_link_libraries(run_ppq_pk PRIVATE GSL::gsl GSL::gslcblas)
