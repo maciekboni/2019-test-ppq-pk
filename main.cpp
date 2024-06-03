@@ -22,7 +22,7 @@ double G_CLO_WEIGHT = 54.0;
 
 // PARASITE MULTIPLICATION FACTOR (PMF) - this is the number of parasites that are produced by each parasite in the blood per 48h life cycle
 // The default value is 10.0 for a 48h cycle. Change this in the differential equations to make sure it is scaled correctly
-doublle G_CLO_PMF = 10.0;
+double G_CLO_PMF = 10.0;
 
 int G_CLO_N = 1; // this is the number of patients
 
