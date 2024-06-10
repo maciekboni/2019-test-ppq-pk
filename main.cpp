@@ -17,6 +17,9 @@ gsl_rng *G_RNG;
 bool G_CLO_LUM = false;
 bool G_CLO_ADQ = false;
 
+enum therapy_type { none , therapy_artemisinin , therapy_lumefantrine , therapy_amodiaquine , therapy_AL }; 
+enum therapy_type G_CLO_THERAPY = none;
+
 double G_CLO_AGE = 25.0;
 double G_CLO_WEIGHT = 54.0;
 
@@ -131,7 +134,7 @@ int main(int argc, char* argv[])
     }*/ 
 
 
-    if( G_CLO_LUM )
+    if( G_CLO_THERAPY == therapy_lumefantrine )
     {
         //fp3 = fopen("out.lum.allpatients.20240401.csv","w");
         fprintf(stdout, "PID,HOUR,COMP2CONC,PARASITEDENSITY\n" );
@@ -179,6 +182,149 @@ int main(int argc, char* argv[])
             }
         
             delete dyn;
+        }
+
+        fprintf(stderr, "\n");
+        //fclose(fp3);
+    }
+
+
+    if( G_CLO_THERAPY == therapy_artemisinin )
+    {
+        //fp3 = fopen("out.lum.allpatients.20240401.csv","w");
+        fprintf(stdout, "PID,HOUR,COMP2CONC,PARASITEDENSITY\n" );
+
+        fprintf(stderr, "\n");
+        // pi is patient index
+        for(int pi=0; pi < G_CLO_N; pi++)
+        {
+            auto dyn = new pkpd_dha;
+            //fprintf(stderr, "\tlum object created pi = %d \r", pi); fflush(stderr);
+            dyn->set_parasitaemia( 1000.0 );    
+
+            dyn->rng = G_RNG;    
+            dyn->age = G_CLO_AGE;
+            dyn->weight = G_CLO_WEIGHT;
+            dyn->initialize_params();                              // NB: parasitaemia must be set before initializing parameters
+            // dyn->vprms[i_lum_pmf] = G_CLO_PMF;
+            //fprintf(stderr, "\n\tlum object initialized pi=%d", pi); fflush(stderr);
+        
+            t0=0.0;
+            t1=maximum_enforced_stepsize;
+        
+
+            //BEGIN - INTEGRATION
+            while( t0 < 168.0*4.0 )
+            {
+                if( dyn->doses_still_remain_to_be_taken )
+                {
+                    if( dyn->we_are_past_a_dosing_time(t0) )   
+                    {
+                        dyn->give_next_dose_to_patient(1.0);    // 1.0 means the full dose is given
+                                                                // if no dose remains to be given, function does nothing
+                    }
+                }
+                dyn->predict(t0, t1);
+                t0 += maximum_enforced_stepsize; t1 += maximum_enforced_stepsize;
+            }
+            //END - INTEGRATION 
+
+            for(int j=0; j<dyn->v_concentration_in_blood.size(); j++ )
+            {
+                fprintf(stdout, "%d , %10.3f , %10.3f , %10.3f \n", pi, dyn->v_concentration_in_blood_hourtimes[j], dyn->v_concentration_in_blood[j], dyn->v_parasitedensity_in_blood[j] );
+            }
+        
+            delete dyn;
+        }
+
+        fprintf(stderr, "\n");
+        //fclose(fp3);
+    }
+
+
+
+
+    if( G_CLO_THERAPY == therapy_AL )
+    {
+        //fp3 = fopen("out.lum.allpatients.20240401.csv","w");
+        fprintf(stdout, "PID,HOUR,COMP2CONC,PARASITEDENSITY\n" );
+
+        fprintf(stderr, "\n");
+        // pi is patient index
+        for(int pi=0; pi < G_CLO_N; pi++)
+        {
+            auto dyn1 = new pkpd_dha();
+            auto dyn2 = new pkpd_lum();
+            //fprintf(stderr, "\tlum object created pi = %d \r", pi); fflush(stderr);
+            dyn1->set_parasitaemia( 1000.0 );    
+            dyn2->set_parasitaemia( 1000.0 );    
+            
+            dyn2->parasites_per_ul_at_first_lum_dose = 1000.0;      // NOTE YOU MUST DO THIS SEPARATELY because the parasitaemia level "at first
+                                                                    // lum dose" is a special quantity that affects the lum absorption
+
+            dyn1->rng = G_RNG;    
+            dyn1->age = G_CLO_AGE;
+            dyn1->weight = G_CLO_WEIGHT;
+            dyn1->initialize_params();                      // TODO: change the name of this function to initialize
+            dyn2->rng = G_RNG;    
+            dyn2->age = G_CLO_AGE;
+            dyn2->weight = G_CLO_WEIGHT;
+            dyn2->initialize();                             // NB: parasitaemia must be set before initializing parameters
+            
+            
+            //dyn1->vprms[i_art_pmf] = G_CLO_PMF;       // TODO: need to add pmf param into dha class
+            dyn2->vprms[i_lum_pmf] = G_CLO_PMF;
+            //fprintf(stderr, "\n\tlum object initialized pi=%d", pi); fflush(stderr);
+        
+            t0=0.0;
+            t1=maximum_enforced_stepsize;           // normally set to 0.5 hours
+        
+
+            //BEGIN - INTEGRATION
+            while( t0 < 168.0*4.0 )
+            {
+
+                // ---- first, calculate artemisinin clearance and killing over a 30-minute period (maximum_enforced_stepsize)
+                if( dyn1->doses_still_remain_to_be_taken )
+                {
+                    if( dyn1->we_are_past_a_dosing_time(t0) )   
+                    {
+                        dyn1->give_next_dose_to_patient(1.0);    // 1.0 means the full dose is given
+                                                                // if no dose remains to be given, function does nothing
+                    }
+                }
+                dyn1->predict(t0, t1);
+
+
+
+
+
+
+
+
+                if( dyn2->doses_still_remain_to_be_taken )
+                {
+                    if( dyn2->we_are_past_a_dosing_time(t0) )   
+                    {
+                        dyn2->give_next_dose_to_patient(1.0);    // 1.0 means the full dose is given
+                                                                // if no dose remains to be given, function does nothing
+                    }
+                }
+                dyn2->predict(t0, t1);
+                t0 += maximum_enforced_stepsize; t1 += maximum_enforced_stepsize;
+
+
+
+            }
+            //END - INTEGRATION 
+
+            /*for(int j=0; j<dyn->v_concentration_in_blood.size(); j++ )
+            {
+                fprintf(stdout, "%d , %10.3f , %10.3f , %10.3f \n", pi, dyn->v_concentration_in_blood_hourtimes[j], dyn->v_concentration_in_blood[j], dyn->v_parasitedensity_in_blood[j] );
+            }*/
+        
+            delete dyn1;
+            delete dyn2;
         }
 
         fprintf(stderr, "\n");
@@ -281,8 +427,10 @@ void ParseArgs(int argc, char **argv)
     for(i=start; i<argc; i++)
     {
         str = argv[i];
-             if( str == "--lum" )		G_CLO_LUM  		= true;
-	    else if( str == "--adq" ) 		G_CLO_ADQ  		= true;
+             if( str == "--lum" )		G_CLO_THERAPY  		= therapy_lumefantrine;
+	    else if( str == "--adq" ) 		G_CLO_THERAPY  		= therapy_amodiaquine;
+        else if( str == "--AL" ) 		G_CLO_THERAPY  		= therapy_AL;
+        else if( str == "--art" ) 		G_CLO_THERAPY  		= therapy_artemisinin;
         else if( str == "--age" ) 		G_CLO_AGE  		= atof( argv[++i] );
         else if( str == "--weight" ) 	G_CLO_WEIGHT	= atof( argv[++i] );
         else if( str == "-n" ) 	        G_CLO_N	        = atoi( argv[++i] );

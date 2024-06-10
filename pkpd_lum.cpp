@@ -58,6 +58,8 @@ pkpd_lum::pkpd_lum(  )
     pdparam_Pmax = 0.9; // here you want to enter the max daily killing rate; it will be converted to hourly later
 
     rng=NULL;
+
+    //printf("\n\nFinished constructing pkpd_lum, the lumefantrine PKPD object that manages drug clearance and parasite clearance.\n");
 }
 
 // destructor

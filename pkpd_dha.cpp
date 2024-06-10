@@ -43,14 +43,15 @@ pkpd_dha::pkpd_dha(  )
     patient_blood_volume = 5500000.0; // 5.5L of blood for an adult individual
     is_male=false;
     is_pregnant=false;
-    
+    doses_still_remain_to_be_taken = true;
+
     initial_log10_totalparasitaemia = log10( y0[dim-1]*patient_blood_volume );
 
     
     // the parameters 15, exp( 0.525 * log(2700)), and 0.9 give about a 90% drug efficacy for an initial parasitaemia of 10,000/ul (25yo patient, 54kg)
-    pdparam_n = 15.0;
-    pdparam_EC50 = exp( 0.525 * log(2700));
-    pdparam_Pmax = 0.9; // here you want to enter the max daily killing rate; it will be converted to hourly later
+    pdparam_n = 1.0;
+    pdparam_EC50 = 0.001;
+    pdparam_Pmax = 0.9995; // here you want to enter the max daily killing rate; it will be converted to hourly later
 
     // TODO CHECK IF THIS IS THE RIGHT PLACE TO CALL THIS FUNCTION
     generate_recommended_dosing_schedule();
@@ -66,6 +67,12 @@ pkpd_dha::~pkpd_dha()
     gsl_odeiv_control_free(oc);
     gsl_odeiv_step_free(os);
 }
+
+void pkpd_dha::set_parasitaemia( double parasites_per_ul )
+{
+    y0[dim-1] = parasites_per_ul; //  the final ODE equation is always the Pf asexual parasitaemia
+}
+
 
 
 // NOTE NOTE NOTE MUST REMEMBER THAT THE FUNCTION BELOW IS A STATIC MEMBER FUNCTIONS OF THIS CLASS
@@ -103,6 +110,26 @@ int pkpd_dha::rhs_ode(double t, const double y[], double f[], void *pkd_object )
     return GSL_SUCCESS;
 }
 
+void pkpd_dha::give_next_dose_to_patient( double fractional_dose_taken )
+{
+    if( doses_still_remain_to_be_taken )
+    {
+        // redraw_params_before_newdose(); // these are the dose-specific parameters that you're drawing here
+        
+        // basically, for LUM, we do not redraw, bc there is no inter-occassion variability
+        // so this whole function just adds a dose or fractional dose
+
+        // for LUM there is no need to get a new F1 param for each dose
+        // y0[0] +=  v_dosing_amounts[num_doses_given] * vprms[i_lum_F1_thisdose] * fractional_dose_taken;
+
+        y0[0] +=  v_dosing_amounts[num_doses_given] * fractional_dose_taken;
+        
+        num_doses_given++;
+
+        if( num_doses_given >= v_dosing_amounts.size() ) doses_still_remain_to_be_taken=false;
+    }
+
+}
 
 
 void pkpd_dha::predict( double t0, double t1 )
@@ -228,7 +255,7 @@ void pkpd_dha::initialize_params( void )
 void pkpd_dha::redraw_params_before_newdose()
 {
      
-    // ### first, you don't receive the full dose.  You may receive 80% or 110% of the dose depending
+    // ---- first, you don't receive the full dose.  You may receive 80% or 110% of the dose depending
     // on whether you're sitting or standing, whether you've recently had a big meal, whether some gets stuck
     // between your teeth; below, we set the parameter F1 (with some random draws) to adjust this initial dose
 
@@ -238,7 +265,7 @@ void pkpd_dha::redraw_params_before_newdose()
     if(pkpd_dha::stochastic) 
     {
         double ETA_rv = gsl_ran_gaussian( rng, sqrt(0.23000) ); // this is ETA6, ETA7, and ETA8
-        vprms[i_dha_KTR] *= exp(-ETA_rv);
+        vprms[i_dha_KTR] *= exp(-ETA_rv);       // WARNING this behavior is strange ... check if this is the right way to do it
     }
     //double IOV_rv = ETA_rv;
     
@@ -254,6 +281,21 @@ void pkpd_dha::redraw_params_before_newdose()
     //double THETA4_pe = 1.0; //TODO check if this is really fixed at 1.0 as a point estimate; checked.  It is fixed at 1.0.
     //double ETA4_rv = gsl_ran_gaussian( rng, sqrt(0.08800) );
     
+}
+
+
+bool pkpd_dha::we_are_past_a_dosing_time( double current_time )
+{
+    // check if there are still any doses left to give
+    if( num_doses_given < v_dosing_times.size() )
+    {
+        if( current_time >= v_dosing_times[num_doses_given] )
+        {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 
