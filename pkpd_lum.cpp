@@ -100,8 +100,8 @@ int pkpd_lum::rhs_ode(double t, const double y[], double f[], void *pkd_object )
     
     // this is the per/ul parasite population size
     double a = (-1.0/24.0) * log( 1.0 - p->pdparam_Pmax * pow(y[1],p->pdparam_n) / (pow(y[1],p->pdparam_n) + pow(p->pdparam_EC50,p->pdparam_n)) );
-    f[3] = ( p->vprms[i_lum_pmf] / 48.0 ) * y[3]  -  a * y[3];  // TODO: remove this pmf parameter and place it in the main diff-eq integration loop
-                                                                // since you need to be able to make it work for combination therapies
+    f[3] = - a * y[3];          // NOTE there is no parasite growth here because the PMF factor for parasite growth is done
+                                // manually in the main diff-eq loop
     //f[3] = 0.02 * y[3]  -  a * y[3];
     
     

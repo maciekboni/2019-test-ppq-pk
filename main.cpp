@@ -25,7 +25,7 @@ double G_CLO_WEIGHT = 54.0;
 
 // PARASITE MULTIPLICATION FACTOR (PMF) - this is the number of parasites that are produced by each parasite in the blood per 48h life cycle
 // The default value is 10.0 for a 48h cycle. Change this in the differential equations to make sure it is scaled correctly
-double G_CLO_PMF = 10.0;
+double G_CLO_PMF = 1.0;
 
 int G_CLO_N = 1; // this is the number of patients
 
@@ -50,24 +50,13 @@ int main(int argc, char* argv[])
     G_RNG = gsl_rng_alloc(TT_RAND);
     gsl_rng_set( G_RNG, seed ); // seed the RNG    
 
-
-    
-    auto dyn_ppq = new pkpd_ppq();
-    auto dyn_dha = new pkpd_dha();
-    //pkpd_ppq* dyn_ppq = new pkpd_ppq();   // the above syntax is the more modern way 
-    
+    // these will always be stochastic unless we are debugging something    
     pkpd_dha::stochastic = true;
     pkpd_ppq::stochastic = true;
     pkpd_lum::stochastic = true;
     pkpd_adq::stochastic = true;
     
-    dyn_ppq->rng = G_RNG;    
-    dyn_ppq->age = 25.0;
-    dyn_ppq->initialize();
-    dyn_dha->rng = G_RNG;    
-    dyn_dha->age = 25.0;
-    dyn_dha->initialize_params();
-
+    // declaring and initializing the standard time-keeping variables for the main ODE loop
     double maximum_enforced_stepsize = 0.5; // in hours
     double t0=0.0;
     double t1=maximum_enforced_stepsize;
@@ -200,17 +189,18 @@ int main(int argc, char* argv[])
         {
             auto dyn = new pkpd_dha;
             //fprintf(stderr, "\tlum object created pi = %d \r", pi); fflush(stderr);
-            dyn->set_parasitaemia( 1000.0 );    
+            dyn->set_parasitaemia( 20000.0 );    
 
             dyn->rng = G_RNG;    
             dyn->age = G_CLO_AGE;
             dyn->weight = G_CLO_WEIGHT;
-            dyn->initialize_params();                              // NB: parasitaemia must be set before initializing parameters
+            dyn->initialize_params();                              // NOTE parasitaemia must be set before initializing parameters
             // dyn->vprms[i_lum_pmf] = G_CLO_PMF;
             //fprintf(stderr, "\n\tlum object initialized pi=%d", pi); fflush(stderr);
         
             t0=0.0;
             t1=maximum_enforced_stepsize;
+            double stepsize_PMF = pow( G_CLO_PMF, 1.0 / (48.0/maximum_enforced_stepsize) );
         
 
             //BEGIN - INTEGRATION
@@ -225,11 +215,17 @@ int main(int argc, char* argv[])
                     }
                 }
                 dyn->predict(t0, t1);
+
+                // after integrating the differential equations in the predict function above,
+                // we need to 'grow' the parasites for half-an-hour (i.e the maximum_enforced_stepsize)   
+                dyn->y0[ dyn->dim - 1 ] *= stepsize_PMF; 
+
                 t0 += maximum_enforced_stepsize; t1 += maximum_enforced_stepsize;
             }
             //END - INTEGRATION 
 
-            for(int j=0; j<dyn->v_concentration_in_blood.size(); j++ )
+            //for(int j=0; j<dyn->v_concentration_in_blood.size(); j++ )
+            for(int j=0; j<60; j++ )
             {
                 fprintf(stdout, "%d , %10.3f , %10.3f , %10.3f \n", pi, dyn->v_concentration_in_blood_hourtimes[j], dyn->v_concentration_in_blood[j], dyn->v_parasitedensity_in_blood[j] );
             }
@@ -407,8 +403,8 @@ int main(int argc, char* argv[])
     
 
     // free memory
-    delete dyn_ppq;
-    delete dyn_dha;
+    // delete dyn_ppq;
+    // delete dyn_dha;
     
 
     gsl_rng_free( G_RNG );

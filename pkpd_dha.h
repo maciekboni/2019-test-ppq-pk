@@ -65,7 +65,7 @@ public:
     //void initialize_params_w_population_means();
     void initialize_params();
 
-    // TODO implement this function; we should remove the dosing from the predict function
+    // TODO: implement this function; we should remove the dosing from the predict function
     void redraw_params_before_newdose();
     
 
@@ -110,7 +110,7 @@ public:
     double patient_blood_volume;    // in microliters, so should be between 250,000 (infant) to 6,000,000 (large adult)
     //bool pregnant;                  // usually means just 2nd or 3rd trimester -- TODO: have this replace the "is_pregnant" bool
     bool is_pregnant; // TODO: deprecate
-
+    bool is_male;
 
 
 
@@ -130,7 +130,7 @@ public:
     vector<double> v_parasitedensity_in_blood;
     int num_hours_logged;
     
-    bool is_male;
+    
 
     
     gsl_rng *rng;		

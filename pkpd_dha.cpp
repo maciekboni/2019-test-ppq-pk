@@ -49,9 +49,9 @@ pkpd_dha::pkpd_dha(  )
 
     
     // the parameters 15, exp( 0.525 * log(2700)), and 0.9 give about a 90% drug efficacy for an initial parasitaemia of 10,000/ul (25yo patient, 54kg)
-    pdparam_n = 1.0;
-    pdparam_EC50 = 0.001;
-    pdparam_Pmax = 0.9995; // here you want to enter the max daily killing rate; it will be converted to hourly later
+    pdparam_n = 20.0;
+    pdparam_EC50 = 0.1;
+    pdparam_Pmax = 0.99997; // here you want to enter the max daily killing rate; it will be converted to hourly later
 
     // TODO CHECK IF THIS IS THE RIGHT PLACE TO CALL THIS FUNCTION
     generate_recommended_dosing_schedule();
@@ -75,9 +75,9 @@ void pkpd_dha::set_parasitaemia( double parasites_per_ul )
 
 
 
-// NOTE NOTE NOTE MUST REMEMBER THAT THE FUNCTION BELOW IS A STATIC MEMBER FUNCTIONS OF THIS CLASS
+// NOTE MUST REMEMBER THAT THE FUNCTION BELOW IS A STATIC MEMBER FUNCTIONS OF THIS CLASS
 //
-// i think "rhs_ode" must be defined with these four arguments for it to work in
+// "rhs_ode" must be defined with these four arguments for it to work in
 // in the GSL ODE routines
 //
 int pkpd_dha::rhs_ode(double t, const double y[], double f[], void *pkd_object )
@@ -100,10 +100,13 @@ int pkpd_dha::rhs_ode(double t, const double y[], double f[], void *pkd_object )
     f[7] = y[6]*p->vprms[i_dha_KTR] - y[7]*p->vprms[i_dha_KTR];
     
     // this is the central compartment (the blood)
+    //
+    // and the current units here (Aug 7 2024) are simply the total mg of DHA in the blood
+    // however TODO: eventually, we will need to update this to nanograms per ml of "blood volume" or "central volume of distribution"
     f[8] = y[7]*p->vprms[i_dha_KTR] - y[8]*p->vprms[i_dha_k20];
     
     // this is the per/ul parasite population size
-    double a = (-1.0/24.0) * log( 1.0 - p->pdparam_Pmax * pow(y[1],p->pdparam_n) / (pow(y[1],p->pdparam_n) + pow(p->pdparam_EC50,p->pdparam_n)) );
+    double a = (-1.0/24.0) * log( 1.0 - p->pdparam_Pmax * pow(y[8],p->pdparam_n) / (pow(y[8],p->pdparam_n) + pow(p->pdparam_EC50,p->pdparam_n)) );
     f[9] = -a * y[9];
     
     
@@ -114,19 +117,14 @@ void pkpd_dha::give_next_dose_to_patient( double fractional_dose_taken )
 {
     if( doses_still_remain_to_be_taken )
     {
-        // redraw_params_before_newdose(); // these are the dose-specific parameters that you're drawing here
+        redraw_params_before_newdose(); // these are the dose-specific parameters that you're drawing here
         
-        // basically, for LUM, we do not redraw, bc there is no inter-occassion variability
-        // so this whole function just adds a dose or fractional dose
-
-        // for LUM there is no need to get a new F1 param for each dose
-        // y0[0] +=  v_dosing_amounts[num_doses_given] * vprms[i_lum_F1_thisdose] * fractional_dose_taken;
-
         y0[0] +=  v_dosing_amounts[num_doses_given] * fractional_dose_taken;
         
         num_doses_given++;
 
         if( num_doses_given >= v_dosing_amounts.size() ) doses_still_remain_to_be_taken=false;
+
     }
 
 }
@@ -222,7 +220,7 @@ void pkpd_dha::initialize_params( void )
                                                             //        be the STANDARD DEVIATION not the variance
     // ETA3 is fixed at zero in this model
     // therefore, below, we do no add any variation into MT
-    double MT = TVMT_pe; // * exp(ETA3_rv)
+    double MT = TVMT_pe; // * exp(ETA3_rv); we think that "MT" here stands for mean time to transition from dose compartment to blood
 
     // NOTE at this point you have an MT value without any effect of dose order (i.e. whether it's dose 1, dose 2, etc.
     //      later, you must/may draw another mean-zero normal rv, and multiply by the value above
@@ -304,9 +302,9 @@ void pkpd_dha::generate_recommended_dosing_schedule()
 {
     // TODO NEEDS TO BE DONE BY AGE AND WEIGHT
 	
-    // one tablet is 40 mg of dihydroartemisinin
+    // one tablet is 40mg of dihydroartemisinin
     
-    //TODO need to get tablet schedule by weight, age, pregnancy status
+    // TODO: need to get tablet schedule by weight, age, pregnancy status
     double num_tablets_per_dose;
     
     if( weight < 5.0 )
