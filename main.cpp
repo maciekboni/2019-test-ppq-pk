@@ -224,8 +224,8 @@ int main(int argc, char* argv[])
             }
             //END - INTEGRATION 
 
-            //for(int j=0; j<dyn->v_concentration_in_blood.size(); j++ )
-            for(int j=0; j<60; j++ )
+            for(int j=0; j<dyn->v_concentration_in_blood.size(); j++ )
+            //for(int j=0; j<60; j++ )
             {
                 fprintf(stdout, "%d , %10.3f , %10.3f , %10.3f \n", pi, dyn->v_concentration_in_blood_hourtimes[j], dyn->v_concentration_in_blood[j], dyn->v_parasitedensity_in_blood[j] );
             }
