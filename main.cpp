@@ -134,7 +134,7 @@ int main(int argc, char* argv[])
         {
             auto dyn = new pkpd_lum();
             //fprintf(stderr, "\tlum object created pi = %d \r", pi); fflush(stderr);
-            dyn->set_parasitaemia( 1000.0 );    
+            dyn->set_parasitaemia( 20000.0 );    
             dyn->parasites_per_ul_at_first_lum_dose = 1000.0;   // YOU MUST DO THIS SEPARATELY because the parasitaemia level "at first
                                                             // lum dose" is a special quantity that affects the lum absorption
 
@@ -142,12 +142,12 @@ int main(int argc, char* argv[])
             dyn->age = G_CLO_AGE;
             dyn->weight = G_CLO_WEIGHT;
             dyn->initialize();                              // NB: parasitaemia must be set before initializing parameters
-            dyn->vprms[i_lum_pmf] = G_CLO_PMF;
+            //dyn->vprms[i_lum_pmf] = G_CLO_PMF; // TODO: deprecate this pmf enum
             //fprintf(stderr, "\n\tlum object initialized pi=%d", pi); fflush(stderr);
         
             t0=0.0;
             t1=maximum_enforced_stepsize;
-        
+            double stepsize_PMF = pow( G_CLO_PMF, 1.0 / (48.0/maximum_enforced_stepsize) );
 
             //BEGIN - INTEGRATION
             while( t0 < 168.0*4.0 )
@@ -161,11 +161,17 @@ int main(int argc, char* argv[])
                     }
                 }
                 dyn->predict(t0, t1);
+
+                // after integrating the differential equations in the predict function above,
+                // we need to ---- GROW THE PARASITES ---- for half-an-hour (i.e the maximum_enforced_stepsize)   
+                dyn->y0[ dyn->dim - 1 ] *= stepsize_PMF; 
+
                 t0 += maximum_enforced_stepsize; t1 += maximum_enforced_stepsize;
             }
             //END - INTEGRATION 
 
-            for(int j=0; j<dyn->v_concentration_in_blood.size(); j++ )
+            //for(int j=0; j<dyn->v_concentration_in_blood.size(); j++ )
+            for(int j=0; j<96; j++ )
             {
                 fprintf(stdout, "%d , %10.3f , %10.3f , %10.3f \n", pi, dyn->v_concentration_in_blood_hourtimes[j], dyn->v_concentration_in_blood[j], dyn->v_parasitedensity_in_blood[j] );
             }
@@ -217,7 +223,7 @@ int main(int argc, char* argv[])
                 dyn->predict(t0, t1);
 
                 // after integrating the differential equations in the predict function above,
-                // we need to 'grow' the parasites for half-an-hour (i.e the maximum_enforced_stepsize)   
+                // we need to ---- GROW THE PARASITES ---- for half-an-hour (i.e the maximum_enforced_stepsize)   
                 dyn->y0[ dyn->dim - 1 ] *= stepsize_PMF; 
 
                 t0 += maximum_enforced_stepsize; t1 += maximum_enforced_stepsize;
@@ -252,10 +258,10 @@ int main(int argc, char* argv[])
             auto dyn1 = new pkpd_dha();
             auto dyn2 = new pkpd_lum();
             //fprintf(stderr, "\tlum object created pi = %d \r", pi); fflush(stderr);
-            dyn1->set_parasitaemia( 1000.0 );    
-            dyn2->set_parasitaemia( 1000.0 );    
+            dyn1->set_parasitaemia( 20000.0 ); // NOTE: you must set both of these to the same thing    
+            dyn2->set_parasitaemia( 20000.0 );    
             
-            dyn2->parasites_per_ul_at_first_lum_dose = 1000.0;      // NOTE YOU MUST DO THIS SEPARATELY because the parasitaemia level "at first
+            dyn2->parasites_per_ul_at_first_lum_dose = 20000.0;      // NOTE YOU MUST DO THIS SEPARATELY because the parasitaemia level "at first
                                                                     // lum dose" is a special quantity that affects the lum absorption
 
             dyn1->rng = G_RNG;    
@@ -268,12 +274,12 @@ int main(int argc, char* argv[])
             dyn2->initialize();                             // NB: parasitaemia must be set before initializing parameters
             
             
-            //dyn1->vprms[i_art_pmf] = G_CLO_PMF;       // TODO: need to add pmf param into dha class
-            dyn2->vprms[i_lum_pmf] = G_CLO_PMF;
-            //fprintf(stderr, "\n\tlum object initialized pi=%d", pi); fflush(stderr);
         
             t0=0.0;
             t1=maximum_enforced_stepsize;           // normally set to 0.5 hours
+
+            // this is the PMF adjusted to the 30-minute stepsize 
+            double stepsize_PMF = pow( G_CLO_PMF, 1.0 / (48.0/maximum_enforced_stepsize) );
         
 
             //BEGIN - INTEGRATION
@@ -291,13 +297,13 @@ int main(int argc, char* argv[])
                 }
                 dyn1->predict(t0, t1);
 
+                // now that we have killed some parasites with the art component of the therapy, we need to
+                // adjust the parasite density in the lum object (dyn2) so that it matches the parasite density
+                // in the art object (dyn1)
+                dyn2->y0[ dyn2->dim - 1 ] = dyn1->y0[ dyn1->dim - 1 ];
 
 
-
-
-
-
-
+                // ---- then, calculate lumefantrine clearance and killing over a 30-minute period (maximum_enforced_stepsize)
                 if( dyn2->doses_still_remain_to_be_taken )
                 {
                     if( dyn2->we_are_past_a_dosing_time(t0) )   
@@ -307,6 +313,17 @@ int main(int argc, char* argv[])
                     }
                 }
                 dyn2->predict(t0, t1);
+
+                // now that we have killed some parasites with the lum component of the therapy, we need to
+                // adjust the parasite density in the art object (dyn1) so that it matches the parasite density
+                // in the lum object (dyn2)
+                dyn1->y0[ dyn1->dim - 1 ] = dyn2->y0[ dyn2->dim - 1 ];
+
+                // after integrating the differential equations in the predict functions above,
+                // we need to ---- GROW THE PARASITES ---- for half-an-hour (i.e the maximum_enforced_stepsize)   
+                dyn1->y0[ dyn1->dim - 1 ] *= stepsize_PMF; 
+                dyn2->y0[ dyn2->dim - 1 ] *= stepsize_PMF; 
+
                 t0 += maximum_enforced_stepsize; t1 += maximum_enforced_stepsize;
 
 
@@ -314,10 +331,10 @@ int main(int argc, char* argv[])
             }
             //END - INTEGRATION 
 
-            /*for(int j=0; j<dyn->v_concentration_in_blood.size(); j++ )
+            for(int j=0; j<dyn1->v_concentration_in_blood.size(); j++ )
             {
-                fprintf(stdout, "%d , %10.3f , %10.3f , %10.3f \n", pi, dyn->v_concentration_in_blood_hourtimes[j], dyn->v_concentration_in_blood[j], dyn->v_parasitedensity_in_blood[j] );
-            }*/
+                fprintf(stdout, "%d , %10.3f , %10.3f , %10.3f , %10.3f \n", pi, dyn1->v_concentration_in_blood_hourtimes[j], dyn1->v_concentration_in_blood[j], dyn2->v_concentration_in_blood[j], dyn1->v_parasitedensity_in_blood[j] );
+            }
         
             delete dyn1;
             delete dyn2;

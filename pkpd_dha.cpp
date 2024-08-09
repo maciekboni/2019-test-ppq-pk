@@ -102,7 +102,7 @@ int pkpd_dha::rhs_ode(double t, const double y[], double f[], void *pkd_object )
     // this is the central compartment (the blood)
     //
     // and the current units here (Aug 7 2024) are simply the total mg of DHA in the blood
-    // however TODO: eventually, we will need to update this to nanograms per ml of "blood volume" or "central volume of distribution"
+    // NOTE it looks like all of our blood concentrations in these PK classes simply track "total mg of molecule in blood"
     f[8] = y[7]*p->vprms[i_dha_KTR] - y[8]*p->vprms[i_dha_k20];
     
     // this is the per/ul parasite population size
