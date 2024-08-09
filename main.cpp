@@ -29,6 +29,10 @@ double G_CLO_PMF = 1.0;
 
 int G_CLO_N = 1; // this is the number of patients
 
+// according to Giorgiadou et al (Nat Microbiol 2019) the parasite density level at which growth is inhibited 
+// to 50% of its max value occurs at 133,252 parasites per microliter 
+double G_DENSITY_50 = 133252.353;
+
 
 // FUNCTION DECLARATIONS
 void ParseArgs(int argc, char **argv);
@@ -321,8 +325,10 @@ int main(int argc, char* argv[])
 
                 // after integrating the differential equations in the predict functions above,
                 // we need to ---- GROW THE PARASITES ---- for half-an-hour (i.e the maximum_enforced_stepsize)   
-                dyn1->y0[ dyn1->dim - 1 ] *= stepsize_PMF; 
-                dyn2->y0[ dyn2->dim - 1 ] *= stepsize_PMF; 
+                double dd_PMF = stepsize_PMF * ( 1.0 / ( 1.0 + ( dyn1->y0[ dyn1->dim - 1 ] / G_DENSITY_50 ) ) );
+                dyn1->y0[ dyn1->dim - 1 ] *= dd_PMF; 
+                dyn2->y0[ dyn2->dim - 1 ] *= dd_PMF; 
+
 
                 t0 += maximum_enforced_stepsize; t1 += maximum_enforced_stepsize;
 
