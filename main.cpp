@@ -29,9 +29,10 @@ double G_CLO_PMF = 1.0;
 
 int G_CLO_N = 1; // this is the number of patients
 
-// according to Giorgiadou et al (Nat Microbiol 2019) the parasite density level at which growth is inhibited 
-// to 50% of its max value occurs at 133,252 parasites per microliter 
-double G_DENSITY_50 = 133252.353;
+// from correspondence with Aubrey Cunnington, the parasite density level at which growth is inhibited 
+// to 50% of its max value occurs at ln(10.82) (10.49), 11.54) parasites per microliter 
+// estimated from n=64 Gambian children with uncomplicated malaria (Giorgiadou et al, Nat Microbiol 2019)
+double G_DENSITY_50 = 50011.087; // calculated as (e^10.82)
 
 
 // FUNCTION DECLARATIONS
@@ -446,21 +447,21 @@ void ParseArgs(int argc, char **argv)
     for(i=start; i<argc; i++)
     {
         str = argv[i];
-             if( str == "--lum" )		G_CLO_THERAPY  		= therapy_lumefantrine;
-	    else if( str == "--adq" ) 		G_CLO_THERAPY  		= therapy_amodiaquine;
-        else if( str == "--AL" ) 		G_CLO_THERAPY  		= therapy_AL;
-        else if( str == "--art" ) 		G_CLO_THERAPY  		= therapy_artemisinin;
-        else if( str == "--age" ) 		G_CLO_AGE  		= atof( argv[++i] );
-        else if( str == "--weight" ) 	G_CLO_WEIGHT	= atof( argv[++i] );
-        else if( str == "-n" ) 	        G_CLO_N	        = atoi( argv[++i] );
-        else if( str == "--pmf" ) 	    G_CLO_PMF	    = atof( argv[++i] );
-        /*else if( str == "-endttr" ) 		G_CLO_END_TITER	        = atof( argv[++i] );
-        else if( str == "-chainlength" )        G_CLO_CHAIN_LENGTH	= atoi( argv[++i] );
-        else if( str == "-showevery" ) 		G_CLO_SHOW_EVERY	= atoi( argv[++i] );
-        else if( str == "-burnin" ) 		G_CLO_BURNIN	        = atoi( argv[++i] );
-        else if( str == "-iltau" ) 		G_CLO_INTEGRATION_LIMIT_FOR_TAU	= atof( argv[++i] );
-        else if( str == "-profile" ) 		G_CLO_PROFILE  		= true;
-        else if( str == "-censored" ) 		G_CLO_CENSORED 		= true;*/
+             if( str == "--lum" )		    G_CLO_THERAPY  		                = therapy_lumefantrine;
+	    else if( str == "--adq" ) 		    G_CLO_THERAPY  		                = therapy_amodiaquine;
+        else if( str == "--AL" ) 		    G_CLO_THERAPY  		                = therapy_AL;
+        else if( str == "--art" ) 		    G_CLO_THERAPY  		                = therapy_artemisinin;
+        else if( str == "--age" ) 		    G_CLO_AGE  		                    = atof( argv[++i] );
+        else if( str == "--weight" ) 	    G_CLO_WEIGHT	                    = atof( argv[++i] );
+        else if( str == "-n" ) 	            G_CLO_N	                            = atoi( argv[++i] );
+        else if( str == "--pmf" ) 	        G_CLO_PMF	                        = atof( argv[++i] );
+        /*else if( str == "-endttr" ) 		G_CLO_END_TITER	                    = atof( argv[++i] );
+        else if( str == "-chainlength" )    G_CLO_CHAIN_LENGTH	                = atoi( argv[++i] );
+        else if( str == "-showevery" ) 		G_CLO_SHOW_EVERY	                = atoi( argv[++i] );
+        else if( str == "-burnin" ) 		G_CLO_BURNIN	                    = atoi( argv[++i] );
+        else if( str == "-iltau" ) 		    G_CLO_INTEGRATION_LIMIT_FOR_TAU	    = atof( argv[++i] );
+        else if( str == "-profile" ) 		G_CLO_PROFILE  		                = true;
+        else if( str == "-censored" ) 		G_CLO_CENSORED 		                = true;*/
 	else
         {
             fprintf(stderr, "\n\tUnknown option [%s] on command line.\n\n", argv[i]);
