@@ -34,11 +34,19 @@ int G_CLO_N = 1; // this is the number of patients
 // estimated from n=64 Gambian children with uncomplicated malaria (Giorgiadou et al, Nat Microbiol 2019)
 double G_DENSITY_50 = 50011.087; // calculated as (e^10.82)
 
+// Adding the following parameters for customizing the hill coefficient, EC50 and Pmax for artemisinin and lumefantrine
+
+// enum hill_coefficient { none , hill_art, hill_lum };
+// enum hill_coefficient G_CLO_HILL_COEFF = none;
+
+// enum ec50 { none , ec50_art, ec50_lum };
+// enum ec50 G_CLO_EC50 = none;
+
+// enum pmax { none, pmax_art, pmax_lum };
+// enum pmax G_CLO_PMAX = none;
 
 // FUNCTION DECLARATIONS
 void ParseArgs(int argc, char **argv);
-
-
 
 int main(int argc, char* argv[])
 {
@@ -447,21 +455,29 @@ void ParseArgs(int argc, char **argv)
     for(i=start; i<argc; i++)
     {
         str = argv[i];
-             if( str == "--lum" )		    G_CLO_THERAPY  		                = therapy_lumefantrine;
-	    else if( str == "--adq" ) 		    G_CLO_THERAPY  		                = therapy_amodiaquine;
-        else if( str == "--AL" ) 		    G_CLO_THERAPY  		                = therapy_AL;
-        else if( str == "--art" ) 		    G_CLO_THERAPY  		                = therapy_artemisinin;
-        else if( str == "--age" ) 		    G_CLO_AGE  		                    = atof( argv[++i] );
-        else if( str == "--weight" ) 	    G_CLO_WEIGHT	                    = atof( argv[++i] );
-        else if( str == "-n" ) 	            G_CLO_N	                            = atoi( argv[++i] );
-        else if( str == "--pmf" ) 	        G_CLO_PMF	                        = atof( argv[++i] );
-        /*else if( str == "-endttr" ) 		G_CLO_END_TITER	                    = atof( argv[++i] );
-        else if( str == "-chainlength" )    G_CLO_CHAIN_LENGTH	                = atoi( argv[++i] );
-        else if( str == "-showevery" ) 		G_CLO_SHOW_EVERY	                = atoi( argv[++i] );
-        else if( str == "-burnin" ) 		G_CLO_BURNIN	                    = atoi( argv[++i] );
-        else if( str == "-iltau" ) 		    G_CLO_INTEGRATION_LIMIT_FOR_TAU	    = atof( argv[++i] );
-        else if( str == "-profile" ) 		G_CLO_PROFILE  		                = true;
-        else if( str == "-censored" ) 		G_CLO_CENSORED 		                = true;*/
+             if( str == "--lum" )		                G_CLO_THERAPY  		                = therapy_lumefantrine;
+	    else if( str == "--adq" ) 		                G_CLO_THERAPY  		                = therapy_amodiaquine;
+        else if( str == "--AL" ) 		                G_CLO_THERAPY  		                = therapy_AL;
+        else if( str == "--art" ) 		                G_CLO_THERAPY  		                = therapy_artemisinin;
+        else if( str == "--age" ) 		                G_CLO_AGE  		                    = atof( argv[++i] );
+        else if( str == "--weight" ) 	                G_CLO_WEIGHT	                    = atof( argv[++i] );
+        else if( str == "-n" ) 	                        G_CLO_N	                            = atoi( argv[++i] );
+        else if( str == "--pmf" ) 	                    G_CLO_PMF	                        = atof( argv[++i] );
+        
+        //else if( str == "--hill_art" ) 		        G_CLO_HILL_COEFF	                = atoi( argv[++i] );
+        //else if( str == "--hill_lum" ) 		        G_CLO_HILL_COEFF	                = atoi( argv[++i] );
+        //else if( str == "--ec50_art" ) 		        G_CLO_EC50	                        = atoi( argv[++i] );
+        //else if( str == "--ec50_lum" ) 		        G_CLO_EC50	                        = atoi( argv[++i] );
+        //else if( str == "--pmax_art" ) 		        G_CLO_PMAX	                        = atoi( argv[++i] );
+        //else if (str == "--pmax_lum" ) 		        G_CLO_PMAX	                        = atoi( argv[++i] );
+        
+        /*else if( str == "--endttr" ) 		            G_CLO_END_TITER	                    = atof( argv[++i] );
+        else if( str == "--chainlength" )                G_CLO_CHAIN_LENGTH	                = atoi( argv[++i] );
+        else if( str == "--showevery" ) 		            G_CLO_SHOW_EVERY	                = atoi( argv[++i] );
+        else if( str == "--burnin" ) 		            G_CLO_BURNIN	                    = atoi( argv[++i] );
+        else if( str == "--iltau" ) 		                G_CLO_INTEGRATION_LIMIT_FOR_TAU	    = atof( argv[++i] );
+        else if( str == "--profile" ) 		            G_CLO_PROFILE  		                = true;
+        else if( str == "--censored" ) 		            G_CLO_CENSORED 		                = true;*/
 	else
         {
             fprintf(stderr, "\n\tUnknown option [%s] on command line.\n\n", argv[i]);
