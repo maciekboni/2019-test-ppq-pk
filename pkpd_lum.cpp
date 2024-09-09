@@ -53,11 +53,10 @@ pkpd_lum::pkpd_lum(  )
     central_volume_of_distribution = -99.0; // meaning it is not set yet
 
     // the parameters 15, exp( 0.525 * log(2700)), and 0.9 give about a 90% drug efficacy for an initial parasitaemia of 10,000/ul (25yo patient, 54kg)
-    pdparam_n = 15.0; // default parameter if CLO is not specified
+    pdparam_n = 15.0; 
     pdparam_EC50 = exp( 0.525 * log(2700)); // this is about 63.3, TODO: determine where this came from
-                                            // default parameter if CLO is not specified
     pdparam_Pmax = 0.9995; // here you want to enter the max daily killing rate; it will be converted to hourly later
-                           // default parameter if CLO is not specified
+                           
 
     rng=NULL;
 
