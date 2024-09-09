@@ -17,8 +17,8 @@ gsl_rng *G_RNG;
 bool G_CLO_LUM = false;
 bool G_CLO_ADQ = false;
 
-enum therapy_type { none , therapy_artemisinin , therapy_lumefantrine , therapy_amodiaquine , therapy_AL }; 
-enum therapy_type G_CLO_THERAPY = none;
+enum therapy_type { therapy_none , therapy_artemisinin , therapy_lumefantrine , therapy_amodiaquine , therapy_AL }; 
+enum therapy_type G_CLO_THERAPY = therapy_none;
 
 double G_CLO_AGE = 25.0;
 double G_CLO_WEIGHT = 54.0;
@@ -36,14 +36,14 @@ double G_DENSITY_50 = 50011.087; // calculated as (e^10.82)
 
 // Adding the following parameters for customizing the hill coefficient, EC50 and Pmax for artemisinin and lumefantrine
 
-// enum hill_coefficient { none , hill_art, hill_lum };
-// enum hill_coefficient G_CLO_HILL_COEFF = none;
+enum hill_coefficient { hill_none , hill_art, hill_lum };
+enum hill_coefficient G_CLO_HILL_COEFF = hill_none;
 
-// enum ec50 { none , ec50_art, ec50_lum };
-// enum ec50 G_CLO_EC50 = none;
+enum ec50 { ec50_none , ec50_art, ec50_lum };
+enum ec50 G_CLO_EC50 = ec50_none;
 
-// enum pmax { none, pmax_art, pmax_lum };
-// enum pmax G_CLO_PMAX = none;
+enum pmax { pmax_none, pmax_art, pmax_lum };
+enum pmax G_CLO_PMAX = pmax_none;
 
 // FUNCTION DECLARATIONS
 void ParseArgs(int argc, char **argv);
@@ -220,7 +220,6 @@ int main(int argc, char* argv[])
             t0=0.0;
             t1=maximum_enforced_stepsize;
             double stepsize_PMF = pow( G_CLO_PMF, 1.0 / (48.0/maximum_enforced_stepsize) );
-        
 
             //BEGIN - INTEGRATION
             while( t0 < 168.0*4.0 )
@@ -280,10 +279,37 @@ int main(int argc, char* argv[])
             dyn1->rng = G_RNG;    
             dyn1->age = G_CLO_AGE;
             dyn1->weight = G_CLO_WEIGHT;
+
+            if (G_CLO_HILL_COEFF != hill_none) {
+                dyn1->pdparam_n = G_CLO_HILL_COEFF;
+            }
+            
+            if (G_CLO_EC50 != ec50_none) {
+                dyn1->pdparam_EC50 = G_CLO_EC50;
+            }
+
+            if (G_CLO_PMAX != pmax_none) {
+                dyn1->pdparam_Pmax = G_CLO_PMAX;
+            }
+
             dyn1->initialize_params();                      // TODO: change the name of this function to initialize
+            
             dyn2->rng = G_RNG;    
             dyn2->age = G_CLO_AGE;
             dyn2->weight = G_CLO_WEIGHT;
+
+            if (G_CLO_HILL_COEFF != hill_none) {
+                dyn2->pdparam_n = G_CLO_HILL_COEFF;
+            }
+            
+            if (G_CLO_EC50 != ec50_none) {
+                dyn2->pdparam_EC50 = G_CLO_EC50;
+            }
+
+            if (G_CLO_PMAX != pmax_none) {
+                dyn2->pdparam_Pmax = G_CLO_PMAX;
+            }
+
             dyn2->initialize();                             // NB: parasitaemia must be set before initializing parameters
             
             
@@ -464,12 +490,12 @@ void ParseArgs(int argc, char **argv)
         else if( str == "-n" ) 	                        G_CLO_N	                            = atoi( argv[++i] );
         else if( str == "--pmf" ) 	                    G_CLO_PMF	                        = atof( argv[++i] );
         
-        //else if( str == "--hill_art" ) 		        G_CLO_HILL_COEFF	                = atoi( argv[++i] );
-        //else if( str == "--hill_lum" ) 		        G_CLO_HILL_COEFF	                = atoi( argv[++i] );
-        //else if( str == "--ec50_art" ) 		        G_CLO_EC50	                        = atoi( argv[++i] );
-        //else if( str == "--ec50_lum" ) 		        G_CLO_EC50	                        = atoi( argv[++i] );
-        //else if( str == "--pmax_art" ) 		        G_CLO_PMAX	                        = atoi( argv[++i] );
-        //else if (str == "--pmax_lum" ) 		        G_CLO_PMAX	                        = atoi( argv[++i] );
+        else if( str == "--hill_art" ) 		            G_CLO_HILL_COEFF	                = hill_art;
+        else if( str == "--hill_lum" ) 		            G_CLO_HILL_COEFF	                = hill_lum;
+        else if( str == "--ec50_art" ) 		            G_CLO_EC50	                        = ec50_art;
+        else if( str == "--ec50_lum" ) 		            G_CLO_EC50	                        = ec50_lum;
+        else if( str == "--pmax_art" ) 		            G_CLO_PMAX	                        = pmax_art;
+        else if (str == "--pmax_lum" ) 		            G_CLO_PMAX	                        = pmax_lum;
         
         /*else if( str == "--endttr" ) 		            G_CLO_END_TITER	                    = atof( argv[++i] );
         else if( str == "--chainlength" )                G_CLO_CHAIN_LENGTH	                = atoi( argv[++i] );
