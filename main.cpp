@@ -41,7 +41,7 @@ double G_CLO_HILL_COEFF_DHA = 20.0;
 double G_CLO_HILL_COEFF_LUM = 15.0;
 
 double G_CLO_EC50_DHA = 0.1;
-double G_CLO_EC50_LUM = exp( 0.525 * log (2700));
+double G_CLO_EC50_LUM = exp( 0.525 * log (2700)); //6.058522607
 
 double G_CLO_PMAX_DHA = 0.99997;
 double G_CLO_PMAX_LUM = 0.9995;
@@ -262,7 +262,7 @@ int main(int argc, char* argv[])
     if( G_CLO_THERAPY == therapy_AL )
     {
         //fp3 = fopen("out.lum.allpatients.20240401.csv","w");
-        fprintf(stdout, "PID,HOUR,COMP2CONC,PARASITEDENSITY\n" );
+        fprintf(stdout, "PID,HOUR,COMP2CONC_ART,COMP2CONC_LUM,PARASITEDENSITY\n" );
 
         fprintf(stderr, "\n");
         // pi is patient index

@@ -1,0 +1,7 @@
+/home/venitha_b/Projects/2019-test-ppq-pk/test_build/CMakeFiles/run_ppq_pk.dir
+/home/venitha_b/Projects/2019-test-ppq-pk/test_build/CMakeFiles/edit_cache.dir
+/home/venitha_b/Projects/2019-test-ppq-pk/test_build/CMakeFiles/rebuild_cache.dir
+/home/venitha_b/Projects/2019-test-ppq-pk/test_build/CMakeFiles/list_install_components.dir
+/home/venitha_b/Projects/2019-test-ppq-pk/test_build/CMakeFiles/install.dir
+/home/venitha_b/Projects/2019-test-ppq-pk/test_build/CMakeFiles/install/local.dir
+/home/venitha_b/Projects/2019-test-ppq-pk/test_build/CMakeFiles/install/strip.dir
