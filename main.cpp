@@ -41,7 +41,7 @@ double G_CLO_HILL_COEFF_DHA = 20.0;
 double G_CLO_HILL_COEFF_LUM = 15.0;
 
 double G_CLO_EC50_DHA = 0.1;
-double G_CLO_EC50_LUM = exp( 0.525 * log (2700)); //6.058522607
+double G_CLO_EC50_LUM = exp( 0.525 * log (2700)); // use natural log, 63.30907617
 
 double G_CLO_PMAX_DHA = 0.99997;
 double G_CLO_PMAX_LUM = 0.9995;
