@@ -14,21 +14,33 @@ Example: `run_ppq_pk --AL -n 100`
 ### Available Drug Modules
 
 `--adq`     : Amodiaquine
-`--art`     : Artemisinin monotherapy  
+
+`--art`     : Artemisinin monotherapy
+
 `--AL`      : Artemether-Lumefantrine 
+
 `--lum`     : Lumefantrine
 
 ### Options
 
 `-n`        : Number of patients (default: 1)
-`--age`     : Age of patients 
+
+`--age`     : Age of patients
+
 `--weight`  : Weight of patients
+
 `--pmf`     : Parasite Multiplication Factor (default: 10.0 for a 48h cycle)
 
+
 `--hill_art`: Hill co-efficient for Dihydroartemisinin in the Artemether-Lumefantrine module
+
 `--ec50_art`: EC50 for Dihydroartemisin in the Artemether-Lumefantrine module
+
 `--pmax_art`: PMax for Dihydroartemisin in the Artemether-Lumefantrine module
 
+
 `--hill_lum`: Hill co-efficient for Lumefantrine in the Artemether-Lumefantrine module
+
 `--ec50_lum`: EC50 for Lumefantrine in the Artemether-Lumefantrine module
+
 `--pmax_lum`: PMax for Lumefantrine in the Artemether-Lumefantrine module
