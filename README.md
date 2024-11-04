@@ -25,7 +25,7 @@ Example: `run_ppq_pk --AL -n 100`
 
 `-o`        : Output format. Default outputs hourly drug concentration for all patients, as well as            parasitemia.
 
-              1 - Output only the pmax and corresponding efficacies.
+              1 - Output only the pmax and corresponding efficacies. Currently only implemented for module 'AL'.
 
 `-n`        : Number of patients (default: 1)
 
