@@ -46,8 +46,23 @@ double G_CLO_EC50_LUM = exp( 0.525 * log (2700)); // use natural log, 63.3090761
 double G_CLO_PMAX_DHA = 0.99997;
 double G_CLO_PMAX_LUM = 0.9995;
 
+int G_OUTPUT_TYPE = 0;
 // FUNCTION DECLARATIONS
 void ParseArgs(int argc, char **argv);
+
+void output_results(int pi, pkpd_dha *dyn1, pkpd_lum *dyn2)
+{
+    if (G_OUTPUT_TYPE == 1) {
+        int j = dyn1->v_concentration_in_blood.size()-1;
+        fprintf(stdout, "%d , %10.3f , %10.3f , %10.3f , %10.3f \n", pi, dyn1->v_concentration_in_blood_hourtimes[j], dyn1->v_concentration_in_blood[j], dyn2->v_concentration_in_blood[j], dyn1->v_parasitedensity_in_blood[j] );        
+    }
+    else {
+        for(int j=0; j<dyn1->v_concentration_in_blood.size(); j++ )
+        {
+            fprintf(stdout, "%d , %10.3f , %10.3f , %10.3f , %10.3f \n", pi, dyn1->v_concentration_in_blood_hourtimes[j], dyn1->v_concentration_in_blood[j], dyn2->v_concentration_in_blood[j], dyn1->v_parasitedensity_in_blood[j] );
+        }
+    }
+}
 
 int main(int argc, char* argv[])
 {
@@ -351,11 +366,8 @@ int main(int argc, char* argv[])
 
             }
             //END - INTEGRATION 
-
-            for(int j=0; j<dyn1->v_concentration_in_blood.size(); j++ )
-            {
-                fprintf(stdout, "%d , %10.3f , %10.3f , %10.3f , %10.3f \n", pi, dyn1->v_concentration_in_blood_hourtimes[j], dyn1->v_concentration_in_blood[j], dyn2->v_concentration_in_blood[j], dyn1->v_parasitedensity_in_blood[j] );
-            }
+            output_results(pi, dyn1, dyn2);
+            
         
             delete dyn1;
             delete dyn2;
@@ -450,7 +462,6 @@ int main(int argc, char* argv[])
     return 0;
 }
 
-
 // parses command line arguments
 void ParseArgs(int argc, char **argv)
 {
@@ -476,6 +487,7 @@ void ParseArgs(int argc, char **argv)
         else if( str == "--ec50_lum" ) 		            G_CLO_EC50_LUM	                    = atof( argv[++i] );
         else if( str == "--pmax_art" ) 		            G_CLO_PMAX_DHA	                    = atof( argv[++i] );
         else if (str == "--pmax_lum" ) 		            G_CLO_PMAX_LUM	                    = atof( argv[++i] );
+        else if (str == "-o" ) 		                    G_OUTPUT_TYPE	                    = atoi( argv[++i] );
         
         /*else if( str == "--endttr" ) 		            G_CLO_END_TITER	                    = atof( argv[++i] );
         else if( str == "--chainlength" )                G_CLO_CHAIN_LENGTH	                = atoi( argv[++i] );

@@ -1,0 +1,3 @@
+
+#Command to run the simulation script in the background using nohup
+nohup python pkpd_AL_pfcrt.K76_50k.py > pkpd_AL_pfcrt.K76_50k_output.log 2>&1 &

@@ -23,6 +23,10 @@ Example: `run_ppq_pk --AL -n 100`
 
 ### Options
 
+`-o`        : Output format. Default outputs hourly drug concentration for all patients, as well as            parasitemia.
+
+              1 - Output only the pmax and corresponding efficacies.
+
 `-n`        : Number of patients (default: 1)
 
 `--age`     : Age of patients
