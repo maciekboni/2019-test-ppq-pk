@@ -8,7 +8,7 @@ https://journals.plos.org/plosmedicine/article?id=10.1371/journal.pmed.1002579
 ## Usage:
  `run_ppq_pk [drug module] [options]`
 
-Example: `run_ppq_pk --AL -n 100`
+Example: `run_ppq_pk --AL -n 100 -o 1`
 
 
 ### Available Drug Modules
@@ -23,9 +23,7 @@ Example: `run_ppq_pk --AL -n 100`
 
 ### Options
 
-`-o`        : Output format. Default outputs hourly drug concentration for all patients, as well as            parasitemia.
-
-              1 - Output only the pmax and corresponding efficacies. Currently only implemented for module 'AL'.
+`-o`        : Output format. Default outputs hourly drug concentration for all patients, as well as            parasitemia. 1 - Output only the pmax and corresponding efficacies. Currently only implemented for module 'AL'.
 
 `-n`        : Number of patients (default: 1)
 
