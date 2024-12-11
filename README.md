@@ -25,7 +25,7 @@ Example: `run_ppq_pk --AL -n 100 -o 1`
 
 `-o`        : Output format. By default, the program outputs hourly drug concentration for all patients, as well as the hourly parasitemia. 
 
-            1 - Output the drug concentration and parasitemia only for the final hour (hour 671.0, corrresponding to day 28). Currently only implemented for module 'AL'.
+            `-1`  - Output the drug concentration and parasitemia only for the final hour (hour 671.0, corrresponding to day 28). Currently only implemented for module `--AL`
 
 `-n`        : Number of patients (default: 1)
 
@@ -41,10 +41,17 @@ Example: `run_ppq_pk --AL -n 100 -o 1`
 `--ec50_art`: EC50 for Dihydroartemisin in the Artemether-Lumefantrine module
 
 `--pmax_art`: PMax for Dihydroartemisin in the Artemether-Lumefantrine module
-
+              
+              Default value of `--pmax_art` is 0.983, which gives ~68.9% efficacy (Efficacy of 3-day AS monotherapy) 
 
 `--hill_lum`: Hill co-efficient for Lumefantrine in the Artemether-Lumefantrine module
 
 `--ec50_lum`: EC50 for Lumefantrine in the Artemether-Lumefantrine module
 
 `--pmax_lum`: PMax for Lumefantrine in the Artemether-Lumefantrine module
+
+## Notes
+
+### Dihydroartemisinin (DHA) PKPD Model
+
+    Default value for pmax_art in AL module changed from 0.99997 to 0.983 after calibrating it to the efficacy of 3-day AS monotherapy  (68.9%)
