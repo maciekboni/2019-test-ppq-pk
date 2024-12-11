@@ -24,6 +24,7 @@ Example: `run_ppq_pk --AL -n 100 -o 1`
 ### Options
 
 `-o`        : Output format. By default, the program outputs hourly drug concentration for all patients, as well as the hourly parasitemia. 
+
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; `-1` :  Output the drug concentration and parasitemia only for the final hour (hour 671.0, corrresponding to day 28). Currently only implemented for module `--AL`
 
 `-n`        : Number of patients (default: 1)
@@ -53,4 +54,4 @@ Example: `run_ppq_pk --AL -n 100 -o 1`
 
 ### Dihydroartemisinin (DHA) PKPD Model
 
-Default value for pmax_art in AL module changed from 0.99997 to 0.983 after calibrating it to the efficacy of 3-day AS monotherapy  (68.9%)
+Dec 2024: Default value for pmax_art in AL module changed from 0.99997 to 0.983 after calibrating it to the efficacy of 3-day AS monotherapy  (68.9%)
