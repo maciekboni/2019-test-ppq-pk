@@ -51,7 +51,35 @@ int G_OUTPUT_TYPE = 0;
 // FUNCTION DECLARATIONS
 void ParseArgs(int argc, char **argv);
 
-void output_results(int pi, pkpd_dha *dyn1, pkpd_lum *dyn2)
+void output_results_monotherapy_lum(int pi, pkpd_lum *dyn)
+{
+    if (G_OUTPUT_TYPE == 1) {
+        int j = dyn->v_concentration_in_blood.size()-1;
+        fprintf(stdout, "%d , %10.3f , %10.3f , %10.3f \n", pi, dyn->v_concentration_in_blood_hourtimes[j], dyn->v_concentration_in_blood[j], dyn->v_parasitedensity_in_blood[j] );
+    }
+    else {
+        for(int j=0; j<dyn->v_concentration_in_blood.size(); j++ )
+        {
+            fprintf(stdout, "%d , %10.3f , %10.3f , %10.3f \n", pi, dyn->v_concentration_in_blood_hourtimes[j], dyn->v_concentration_in_blood[j], dyn->v_parasitedensity_in_blood[j] );
+        }
+    }
+}
+
+void output_results_monotherapy_art(int pi, pkpd_dha *dyn)
+{
+    if (G_OUTPUT_TYPE == 1) {
+        int j = dyn->v_concentration_in_blood.size()-1;
+        fprintf(stdout, "%d , %10.3f , %10.3f , %10.3f \n", pi, dyn->v_concentration_in_blood_hourtimes[j], dyn->v_concentration_in_blood[j], dyn->v_parasitedensity_in_blood[j] );
+    }
+    else {
+        for(int j=0; j<dyn->v_concentration_in_blood.size(); j++ )
+        {
+            fprintf(stdout, "%d , %10.3f , %10.3f , %10.3f \n", pi, dyn->v_concentration_in_blood_hourtimes[j], dyn->v_concentration_in_blood[j], dyn->v_parasitedensity_in_blood[j] );
+        }
+    }
+}
+
+void output_results_combination(int pi, pkpd_dha *dyn1, pkpd_lum *dyn2)
 {
     if (G_OUTPUT_TYPE == 1) {
         int j = dyn1->v_concentration_in_blood.size()-1;
@@ -200,11 +228,13 @@ int main(int argc, char* argv[])
             }
             //END - INTEGRATION 
 
+            output_results_monotherapy_lum(pi, dyn);
+
             //for(int j=0; j<dyn->v_concentration_in_blood.size(); j++ )
-            for(int j=0; j<96; j++ )
-            {
-                fprintf(stdout, "%d , %10.3f , %10.3f , %10.3f \n", pi, dyn->v_concentration_in_blood_hourtimes[j], dyn->v_concentration_in_blood[j], dyn->v_parasitedensity_in_blood[j] );
-            }
+            //for(int j=0; j<96; j++ )
+            //{
+            //    fprintf(stdout, "%d , %10.3f , %10.3f , %10.3f \n", pi, dyn->v_concentration_in_blood_hourtimes[j], dyn->v_concentration_in_blood[j], dyn->v_parasitedensity_in_blood[j] );
+            //}
         
             delete dyn;
         }
@@ -259,11 +289,13 @@ int main(int argc, char* argv[])
             }
             //END - INTEGRATION 
 
-            for(int j=0; j<dyn->v_concentration_in_blood.size(); j++ )
+            output_results_monotherapy_art(pi, dyn);
+
+            //for(int j=0; j<dyn->v_concentration_in_blood.size(); j++ )
             //for(int j=0; j<60; j++ )
-            {
-                fprintf(stdout, "%d , %10.3f , %10.3f , %10.3f \n", pi, dyn->v_concentration_in_blood_hourtimes[j], dyn->v_concentration_in_blood[j], dyn->v_parasitedensity_in_blood[j] );
-            }
+            //{
+            //    fprintf(stdout, "%d , %10.3f , %10.3f , %10.3f \n", pi, dyn->v_concentration_in_blood_hourtimes[j], dyn->v_concentration_in_blood[j], dyn->v_parasitedensity_in_blood[j] );
+            //}
         
             delete dyn;
         }
@@ -367,7 +399,7 @@ int main(int argc, char* argv[])
 
             }
             //END - INTEGRATION 
-            output_results(pi, dyn1, dyn2);
+            output_results_combination(pi, dyn1, dyn2);
             
         
             delete dyn1;
