@@ -1,0 +1,10 @@
+Run 1 - Efficacy: 85.55%
+Run 2 - Efficacy: 84.88%
+Run 3 - Efficacy: 84.94%
+Run 4 - Efficacy: 85.59%
+Run 5 - Efficacy: 85.17%
+Run 6 - Efficacy: 85.75%
+Run 7 - Efficacy: 85.07%
+Run 8 - Efficacy: 84.87%
+Run 9 - Efficacy: 85.40%
+Run 10 - Efficacy: 85.52%
