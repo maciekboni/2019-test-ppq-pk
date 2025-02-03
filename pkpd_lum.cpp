@@ -49,7 +49,7 @@ pkpd_lum::pkpd_lum(  )
     total_mg_dose_per_occassion = -99.0;    // meaning it is not set yet
     
     age = 25.0;
-    patient_blood_volume = 5500000.0;       // 5.5L of blood for an adult individual
+    patient_blood_volume = 5500000.0;       // 5.5L of blood for an adult individual; 5500000 ul gives 5.5 L
     central_volume_of_distribution = -99.0; // meaning it is not set yet
 
     // the parameters 15, exp( 0.525 * log(2700)), and 0.9 give about a 90% drug efficacy for an initial parasitaemia of 10,000/ul (25yo patient, 54kg)

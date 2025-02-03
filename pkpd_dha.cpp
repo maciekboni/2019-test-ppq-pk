@@ -40,7 +40,7 @@ pkpd_dha::pkpd_dha(  )
     num_hours_logged = 0;    
     
     age = 25.0;
-    patient_blood_volume = 5500000.0; // 5.5L of blood for an adult individual
+    patient_blood_volume = 5500000.0; // 5.5L of blood for an adult individual // 5500000 ul gives 5.5 L
     is_male=false;
     is_pregnant=false;
     doses_still_remain_to_be_taken = true;
