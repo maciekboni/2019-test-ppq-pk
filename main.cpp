@@ -310,7 +310,7 @@ int main(int argc, char* argv[])
     if( G_CLO_THERAPY == therapy_AL )
     {
         //fp3 = fopen("out.lum.allpatients.20240401.csv","w");
-        fprintf(stdout, "PID,HOUR,COMP2CONC_ART,COMP2CONC_LUM,PARASITEDENSITY\n" );
+        //fprintf(stdout, "PID,HOUR,COMP2CONC_ART,COMP2CONC_LUM,PARASITEDENSITY\n" );
 
         fprintf(stderr, "\n");
         // pi is patient index
@@ -331,7 +331,7 @@ int main(int argc, char* argv[])
             dyn1->pdparam_n = G_CLO_HILL_COEFF_DHA;
             dyn1->pdparam_EC50 = G_CLO_EC50_DHA;
             dyn1->pdparam_Pmax = G_CLO_PMAX_DHA;
-            dyn1->initialize_params();                      // TODO: change the name of this function to initialize
+            dyn1->initialize();                      
             
             dyn2->rng = G_RNG;    
             dyn2->age = G_CLO_AGE;
@@ -348,10 +348,29 @@ int main(int argc, char* argv[])
             // this is the PMF adjusted to the 30-minute stepsize 
             double stepsize_PMF = pow( G_CLO_PMF, 1.0 / (48.0/maximum_enforced_stepsize) );
         
+            for(int i=0; i < dyn1->v_dosing_times.size(); i++ )
+            {
+                fprintf(stdout, "\ndosing time %d is %1.1f", i, dyn1->v_dosing_times[i]);
+            }
+            for(int i=0; i < dyn1->v_dosing_amounts.size(); i++ )
+            {
+                fprintf(stdout, "\ndosing amounts %d is %1.1f", i, dyn1->v_dosing_amounts[i]);
+            }
+            fprintf(stdout, "\n\n");
+
+
+
 
             //BEGIN - INTEGRATION
             while( t0 < 168.0*4.0 )
             {
+
+                if( t0 < 4.0 )
+                {
+                    fprintf(stdout, "%d doses give so far \t\t | \t\t ", dyn1->num_doses_given );
+                    fprintf(stdout, "%1.1f , %10.5f , %10.5f , %10.3f , %10.3f \n", t0, dyn1->y0[8], dyn2->y0[1], dyn1->y0[9], dyn2->y0[3] );
+                }
+
 
                 // ---- first, calculate artemisinin clearance and killing over a 30-minute period (maximum_enforced_stepsize)
                 if( dyn1->doses_still_remain_to_be_taken )
@@ -389,9 +408,11 @@ int main(int argc, char* argv[])
                 // after integrating the differential equations in the predict functions above,
                 // we need to ---- GROW THE PARASITES ---- for half-an-hour (i.e the maximum_enforced_stepsize)   
                 double dd_PMF = stepsize_PMF * ( 1.0 / ( 1.0 + ( dyn1->y0[ dyn1->dim - 1 ] / G_DENSITY_50 ) ) );
+                
+                //fprintf(stdout, "\n%1.7f \t %1.7f", stepsize_PMF, dd_PMF);
+                
                 dyn1->y0[ dyn1->dim - 1 ] *= dd_PMF; 
                 dyn2->y0[ dyn2->dim - 1 ] *= dd_PMF; 
-
 
                 t0 += maximum_enforced_stepsize; t1 += maximum_enforced_stepsize;
 
@@ -399,7 +420,7 @@ int main(int argc, char* argv[])
 
             }
             //END - INTEGRATION 
-            output_results_combination(pi, dyn1, dyn2);
+            //output_results_combination(pi, dyn1, dyn2);
             
         
             delete dyn1;

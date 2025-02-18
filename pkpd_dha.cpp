@@ -54,7 +54,7 @@ pkpd_dha::pkpd_dha(  )
     pdparam_Pmax = 0.99997; // here you want to enter the max daily killing rate; it will be converted to hourly later
                             
     // TODO CHECK IF THIS IS THE RIGHT PLACE TO CALL THIS FUNCTION
-    generate_recommended_dosing_schedule();
+    // generate_recommended_dosing_schedule();
 
     rng=NULL;
 
@@ -176,7 +176,18 @@ void pkpd_dha::predict( double t0, double t1 )
     
 }
 
+void pkpd_dha::initialize( void )
+{
+    
+    //-- WARNING -- the age member variable must be set before you call this function -- add this check
+    
 
+    // NOTE must call the two functions below in this order -- dosing schedule needs to be set first
+    generate_recommended_dosing_schedule();
+    initialize_params();
+    
+    
+}
 
 
 
@@ -306,7 +317,7 @@ void pkpd_dha::generate_recommended_dosing_schedule()
     // one tablet is 40mg of dihydroartemisinin
     
     // TODO: need to get tablet schedule by weight, age, pregnancy status
-    double num_tablets_per_dose;
+    double num_tablets_per_dose = 1.0;
     
     if( weight < 5.0 )
     {
@@ -346,8 +357,10 @@ void pkpd_dha::generate_recommended_dosing_schedule()
     }
     
     // TODO REMOVE PLACEHOLDER BELOW
-    num_tablets_per_dose = 1.0;
+    // num_tablets_per_dose = 1.0;
     
+    fprintf(stdout, "\npatient is %1.1f kg, taking %1.1f tablets", weight, num_tablets_per_dose );
+
     double total_mg_dose = num_tablets_per_dose * 40.0; // one tablet is 40 mg of dihydroartemisinin
     
     v_dosing_times.insert( v_dosing_times.begin(), 3, 0.0 );

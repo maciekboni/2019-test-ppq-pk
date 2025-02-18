@@ -61,7 +61,7 @@ public:
     // ----  2  ----  PK PARAMETERS
     //
 
-    //void initialize();  // TODO: this function needs to be created and set up
+    void initialize();  // TODO: this function needs to be created and set up
     //void initialize_params_w_population_means();
     void initialize_params();
 
