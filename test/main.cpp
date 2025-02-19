@@ -32,8 +32,8 @@ double G_CLO_PMF = 10.0;
 int G_CLO_N = 1; // this is the number of patients
 
 // from correspondence with Aubrey Cunnington, the parasite density level at which growth is inhibited 
-// to 50% of its max value occurs at ln(10.82) (10.49), 11.54) parasites per microliter 
-// estimated from n=64 Gambian children with uncomplicated malaria (Giorgiadou et al, Nat Microbiol 2019)
+// to 50% of its max value occurs at ln(10.82) estimated from n=64 Gambian children with uncomplicated malaria 
+// actual values log-natural(P_c) n=64 : 10.82 (10.49-11.54) parasites/microliter (Giorgiadou et al, Nat Microbiol 2019)
 double G_DENSITY_50 = 50011.087; // calculated as (e^10.82)
 
 // Adding the following parameters for customizing the hill coefficient, EC50 and Pmax for artemisinin and lumefantrine
