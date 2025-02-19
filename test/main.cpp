@@ -243,8 +243,8 @@ int main(int argc, char* argv[])
 
     if( G_CLO_THERAPY == therapy_AL )
     {
-        fprintf(stdout, "PID,HOUR,COMP2CONC_ART,COMP2CONC_LUM,PARASITEDENSITY\n" );
-
+        //fprintf(stdout, "PID,HOUR,COMP2CONC_ART,COMP2CONC_LUM,PARASITEDENSITY\n" );
+        //Its actually not every hour, but the first/second 30min interval doesn't have a major difference, so we just label the 30 min half as an hour
         fprintf(stderr, "\n");
         // pi is patient index
         for(int pi=0; pi < G_CLO_N; pi++)
@@ -283,11 +283,8 @@ int main(int argc, char* argv[])
             t0=0.0;
             t1=maximum_enforced_stepsize;           // normally set to 0.5 hours
 
-            // this is the PMF adjusted to the 30-minute stepsize 
-            double stepsize_PMF = pow( G_CLO_PMF, 1.0 / (48.0/maximum_enforced_stepsize) ); // (48.0/maximum_enforced_stepsize) = 96.0
-                                                                                        
-            //fprintf(stdout, "\nThe PMF is: %1.1f", G_CLO_PMF);
-            //fprintf(stdout, "\nThe stepsize PMF is: %1.5f", stepsize_PMF);
+                                                                           
+            fprintf(stdout, "\nThe PMF is: %1.1f", G_CLO_PMF);
             
         
             //for(int i=0; i < dyn1->v_dosing_times.size(); i++ )
@@ -301,8 +298,8 @@ int main(int argc, char* argv[])
             //fprintf(stdout, "\n\n");
 
             //BEGIN - INTEGRATION
-            //while( t0 < 168.0*4.0 )
-            while( t0 < 25 )
+            while( t0 < 168.0*4.0 )
+            //while( t0 < 25 )
             {
 
                 //if( t0 < 4.0 )
@@ -311,7 +308,7 @@ int main(int argc, char* argv[])
                    // fprintf(stdout, "%1.1f , %10.5f , %10.5f , %10.3f , %10.3f \n", t0, dyn1->y0[8], dyn2->y0[1], dyn1->y0[9], dyn2->y0[3] );
                // }
 
-               //fprintf(stdout, "\n\n The parasite density before killing is: %1.7f", dyn1->y0[ dyn1->dim - 1 ]);
+               fprintf(stdout, "\n\n The parasite density before killing is: %1.7f", dyn1->y0[ dyn1->dim - 1 ]);
                 
                 // ---- first, calculate artemisinin clearance and killing over a 30-minute period (maximum_enforced_stepsize)
                 if( dyn1->doses_still_remain_to_be_taken )
@@ -341,44 +338,44 @@ int main(int argc, char* argv[])
                 }
                 dyn2->predict(t0, t1);
 
-                //fprintf(stdout, "\n The time is: %1.3f", t0);
-                //fprintf(stdout, "\n The parasite density after killing is: %1.7f", dyn2->y0[ dyn2->dim - 1 ]);
+                fprintf(stdout, "\n The time is: %1.3f", t0);
+                fprintf(stdout, "\n The parasite density after killing is: %1.7f", dyn2->y0[ dyn2->dim - 1 ]);
 
                 // now that we have killed some parasites with the lum component of the therapy, we need to
                 // adjust the parasite density in the art object (dyn1) so that it matches the parasite density
                 // in the lum object (dyn2)
                 dyn1->y0[ dyn1->dim - 1 ] = dyn2->y0[ dyn2->dim - 1 ];
 
-                //fprintf(stdout, "\n The parasite density before growth is: %1.7f", dyn1->y0[ dyn1->dim - 1 ]);
+                fprintf(stdout, "\n The parasite density before growth is: %1.7f", dyn1->y0[ dyn1->dim - 1 ]);
 
                 // after integrating the differential equations in the predict functions above,
                 // we need to ---- GROW THE PARASITES ---- for half-an-hour (i.e the maximum_enforced_stepsize)
                 
-                // if (dyn1->y0[ dyn1->dim - 1 ] >= G_DENSITY_50)
-                // {
-                //     double dd_PMF = stepsize_PMF * ( 1.0 / ( 1.0 + ( dyn1->y0[ dyn1->dim - 1 ] / G_DENSITY_50 ) ) );
-                //     fprintf(stdout, "\n The density dependent PMF : %1.7f", dd_PMF);
-                //     dyn1->y0[ dyn1->dim - 1 ] *= dd_PMF; 
-                //     dyn2->y0[ dyn2->dim - 1 ] *= dd_PMF; 
-                // } else {
-                //     double dd_PMF = stepsize_PMF;
-                //     fprintf(stdout, "\n The density dependent PMF : %1.7f", dd_PMF);
-                //     dyn1->y0[ dyn1->dim - 1 ] *= dd_PMF; 
-                //     dyn2->y0[ dyn2->dim - 1 ] *= dd_PMF; 
-                // }
+                // this is the PMF adjusted to the 30-minute stepsize with density dependence     
+                 if (true)
+                 {
+                     double dd_factor = 1.0 / ( 1.0 + ( dyn1->y0[ dyn1->dim - 1 ] / G_DENSITY_50 ) );
+                     double dd_48hr_PMF = G_CLO_PMF * dd_factor;
+                     double dd_stepsize_PMF = pow( dd_48hr_PMF, 1.0 / (48.0/maximum_enforced_stepsize) );
 
-                double dd_PMF = stepsize_PMF * ( 1.0 / ( 1.0 + ( dyn1->y0[ dyn1->dim - 1 ] / G_DENSITY_50 ) ) );
+                     fprintf(stdout, "\n The density dependent (30-min) factor is : %1.7f", dd_factor);
+                     fprintf(stdout, "\n The density dependent (30-min) PMF : %1.7f", dd_stepsize_PMF);
+                     dyn1->y0[ dyn1->dim - 1 ] *= dd_stepsize_PMF; 
+                     dyn2->y0[ dyn2->dim - 1 ] *= dd_stepsize_PMF; 
+                 }
+
+                // double dd_PMF = stepsize_PMF * ( 1.0 / ( 1.0 + ( dyn1->y0[ dyn1->dim - 1 ] / G_DENSITY_50 ) ) );
                 //fprintf(stdout, "\n The density dependent PMF : %1.7f", dd_PMF);
-                dyn1->y0[ dyn1->dim - 1 ] *= dd_PMF; 
-                dyn2->y0[ dyn2->dim - 1 ] *= dd_PMF; 
+                // dyn1->y0[ dyn1->dim - 1 ] *= dd_PMF; 
+                // dyn2->y0[ dyn2->dim - 1 ] *= dd_PMF; 
 
-                //fprintf(stdout, "\n The parasite density after growth is: %1.7f", dyn1->y0[ dyn1->dim - 1 ]);
+                fprintf(stdout, "\n The parasite density after growth is: %1.7f", dyn1->y0[ dyn1->dim - 1 ]);
 
                 t0 += maximum_enforced_stepsize; t1 += maximum_enforced_stepsize;
 
             }
             //END - INTEGRATION 
-            output_results_combination(pi, dyn1, dyn2);
+            //output_results_combination(pi, dyn1, dyn2);
             
             delete dyn1;
             delete dyn2;
