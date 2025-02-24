@@ -26,13 +26,13 @@ double G_CLO_WEIGHT = 54.0;
 
 // PARASITE MULTIPLICATION FACTOR (PMF) - this is the number of parasites that are produced by each parasite in the blood per 48h life cycle
 // The default value is 10.0 for a 48h cycle. Change this in the differential equations to make sure it is scaled correctly
-double G_CLO_PMF = 1.0;
+double G_CLO_PMF = 10.0;
 
 int G_CLO_N = 1; // this is the number of patients
 
 // from correspondence with Aubrey Cunnington, the parasite density level at which growth is inhibited 
-// to 50% of its max value occurs at ln(10.82) (10.49), 11.54) parasites per microliter 
-// estimated from n=64 Gambian children with uncomplicated malaria (Giorgiadou et al, Nat Microbiol 2019)
+// to 50% of its max value occurs at ln(10.82) estimated from n=64 Gambian children with uncomplicated malaria 
+// actual values log-natural(P_c) n=64 : 10.82 (10.49-11.54) parasites/microliter (Giorgiadou et al, Nat Microbiol 2019)
 double G_DENSITY_50 = 50011.087; // calculated as (e^10.82)
 
 // Adding the following parameters for customizing the hill coefficient, EC50 and Pmax for artemisinin and lumefantrine
@@ -41,13 +41,14 @@ double G_CLO_HILL_COEFF_DHA = 20.0;
 double G_CLO_HILL_COEFF_LUM = 15.0;
 
 double G_CLO_EC50_DHA = 0.1;
-double G_CLO_EC50_LUM = exp( 0.525 * log (2700)); // use natural log, 63.30907617
+double G_CLO_EC50_LUM = exp(0.525 * log(2700)); // use natural log, 63.30907617
 
 double G_CLO_PMAX_DHA = 0.983; //pmax_art = 0.983 gives ~68.9% efficacy for ART monotherapy, calibrated by Venitha in Dec 2024 
                                //Original value = 0.99997
 double G_CLO_PMAX_LUM = 0.9995;
 
 int G_OUTPUT_TYPE = 0;
+
 // FUNCTION DECLARATIONS
 void ParseArgs(int argc, char **argv);
 
@@ -310,7 +311,9 @@ int main(int argc, char* argv[])
     if( G_CLO_THERAPY == therapy_AL )
     {
         //fp3 = fopen("out.lum.allpatients.20240401.csv","w");
-        //fprintf(stdout, "PID,HOUR,COMP2CONC_ART,COMP2CONC_LUM,PARASITEDENSITY\n" );
+        
+        fprintf(stdout, "PID,HOUR,COMP2CONC_ART,COMP2CONC_LUM,PARASITEDENSITY\n" );
+        //Its actually not every hour, but the first/second 30min interval doesn't have a major difference, so we just label the 30 min half as an hour
 
         fprintf(stderr, "\n");
         // pi is patient index
@@ -319,6 +322,7 @@ int main(int argc, char* argv[])
             auto dyn1 = new pkpd_dha();
             auto dyn2 = new pkpd_lum();
             //fprintf(stderr, "\tlum object created pi = %d \r", pi); fflush(stderr);
+            
             dyn1->set_parasitaemia( 20000.0 ); // NOTE: you must set both of these to the same thing    
             dyn2->set_parasitaemia( 20000.0 );    
             
@@ -345,32 +349,9 @@ int main(int argc, char* argv[])
             t0=0.0;
             t1=maximum_enforced_stepsize;           // normally set to 0.5 hours
 
-            // this is the PMF adjusted to the 30-minute stepsize 
-            double stepsize_PMF = pow( G_CLO_PMF, 1.0 / (48.0/maximum_enforced_stepsize) );
-        
-            for(int i=0; i < dyn1->v_dosing_times.size(); i++ )
-            {
-                fprintf(stdout, "\ndosing time %d is %1.1f", i, dyn1->v_dosing_times[i]);
-            }
-            for(int i=0; i < dyn1->v_dosing_amounts.size(); i++ )
-            {
-                fprintf(stdout, "\ndosing amounts %d is %1.1f", i, dyn1->v_dosing_amounts[i]);
-            }
-            fprintf(stdout, "\n\n");
-
-
-
-
             //BEGIN - INTEGRATION
             while( t0 < 168.0*4.0 )
             {
-
-                if( t0 < 4.0 )
-                {
-                    fprintf(stdout, "%d doses give so far \t\t | \t\t ", dyn1->num_doses_given );
-                    fprintf(stdout, "%1.1f , %10.5f , %10.5f , %10.3f , %10.3f \n", t0, dyn1->y0[8], dyn2->y0[1], dyn1->y0[9], dyn2->y0[3] );
-                }
-
 
                 // ---- first, calculate artemisinin clearance and killing over a 30-minute period (maximum_enforced_stepsize)
                 if( dyn1->doses_still_remain_to_be_taken )
@@ -387,7 +368,6 @@ int main(int argc, char* argv[])
                 // adjust the parasite density in the lum object (dyn2) so that it matches the parasite density
                 // in the art object (dyn1)
                 dyn2->y0[ dyn2->dim - 1 ] = dyn1->y0[ dyn1->dim - 1 ];
-
 
                 // ---- then, calculate lumefantrine clearance and killing over a 30-minute period (maximum_enforced_stepsize)
                 if( dyn2->doses_still_remain_to_be_taken )
@@ -407,22 +387,30 @@ int main(int argc, char* argv[])
 
                 // after integrating the differential equations in the predict functions above,
                 // we need to ---- GROW THE PARASITES ---- for half-an-hour (i.e the maximum_enforced_stepsize)   
-                double dd_PMF = stepsize_PMF * ( 1.0 / ( 1.0 + ( dyn1->y0[ dyn1->dim - 1 ] / G_DENSITY_50 ) ) );
                 
-                //fprintf(stdout, "\n%1.7f \t %1.7f", stepsize_PMF, dd_PMF);
+                // this is the PMF adjusted to the 30-minute stepsize with density dependence     
+                if (true)
+                {
+                    double dd_factor = 1.0 / ( 1.0 + ( dyn1->y0[ dyn1->dim - 1 ] / G_DENSITY_50 ) );
+                    double dd_48hr_PMF = G_CLO_PMF * dd_factor;
+                    double dd_stepsize_PMF = pow( dd_48hr_PMF, 1.0 / (48.0/maximum_enforced_stepsize) );
+
+                    fprintf(stdout, "\n The density dependent (30-min) factor is : %1.7f", dd_factor);
+                    fprintf(stdout, "\n The density dependent (30-min) PMF : %1.7f", dd_stepsize_PMF);
+                    dyn1->y0[ dyn1->dim - 1 ] *= dd_stepsize_PMF; 
+                    dyn2->y0[ dyn2->dim - 1 ] *= dd_stepsize_PMF; 
+                }
                 
                 dyn1->y0[ dyn1->dim - 1 ] *= dd_PMF; 
                 dyn2->y0[ dyn2->dim - 1 ] *= dd_PMF; 
 
                 t0 += maximum_enforced_stepsize; t1 += maximum_enforced_stepsize;
 
-
-
             }
+
             //END - INTEGRATION 
-            //output_results_combination(pi, dyn1, dyn2);
+            output_results_combination(pi, dyn1, dyn2);
             
-        
             delete dyn1;
             delete dyn2;
         }
