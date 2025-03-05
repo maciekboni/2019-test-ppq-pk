@@ -359,7 +359,7 @@ void pkpd_dha::generate_recommended_dosing_schedule()
     // TODO REMOVE PLACEHOLDER BELOW
     // num_tablets_per_dose = 1.0;
     
-    fprintf(stdout, "\npatient is %1.1f kg, taking %1.1f tablets", weight, num_tablets_per_dose );
+    //fprintf(stdout, "\npatient is %1.1f kg, taking %1.1f tablets", weight, num_tablets_per_dose );
 
     double total_mg_dose = num_tablets_per_dose * 40.0; // one tablet is 40 mg of dihydroartemisinin
     

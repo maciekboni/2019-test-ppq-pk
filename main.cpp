@@ -102,7 +102,7 @@ int main(int argc, char* argv[])
     auto now = std::chrono::high_resolution_clock::now();
     auto milliseconds =  std::chrono::duration_cast<std::chrono::microseconds>(now.time_since_epoch());
     auto seed = static_cast<unsigned long>(milliseconds.count());
-    //printf("\n seed : %lu\n", seed);
+    //fprintf("\n seed : %lu\n", seed);
     
     // make random number generator (RNG) the Mersenne Twister which has period 2^19937 - 1
     const gsl_rng_type *TT_RAND = gsl_rng_mt19937;
@@ -129,7 +129,7 @@ int main(int argc, char* argv[])
         
     for(int j=0; j<dyn_dha->v_concentration_in_blood.size(); j++ )
     {
-        if(j%1==0) printf("%10.3f \t %10.3f \n", dyn_dha->v_concentration_in_blood_hourtimes[j], dyn_dha->v_concentration_in_blood[j] );
+        if(j%1==0) fprintf("%10.3f \t %10.3f \n", dyn_dha->v_concentration_in_blood_hourtimes[j], dyn_dha->v_concentration_in_blood[j] );
     }*/
 
     
@@ -395,14 +395,9 @@ int main(int argc, char* argv[])
                     double dd_48hr_PMF = G_CLO_PMF * dd_factor;
                     double dd_stepsize_PMF = pow( dd_48hr_PMF, 1.0 / (48.0/maximum_enforced_stepsize) );
 
-                    fprintf(stdout, "\n The density dependent (30-min) factor is : %1.7f", dd_factor);
-                    fprintf(stdout, "\n The density dependent (30-min) PMF : %1.7f", dd_stepsize_PMF);
                     dyn1->y0[ dyn1->dim - 1 ] *= dd_stepsize_PMF; 
                     dyn2->y0[ dyn2->dim - 1 ] *= dd_stepsize_PMF; 
                 }
-                
-                dyn1->y0[ dyn1->dim - 1 ] *= dd_PMF; 
-                dyn2->y0[ dyn2->dim - 1 ] *= dd_PMF; 
 
                 t0 += maximum_enforced_stepsize; t1 += maximum_enforced_stepsize;
 
