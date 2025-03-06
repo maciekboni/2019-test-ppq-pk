@@ -368,7 +368,6 @@ void pkpd_dha::generate_recommended_dosing_schedule()
     v_dosing_times[2] = 48.0;
     
     v_dosing_amounts.insert( v_dosing_amounts.begin(), 3, total_mg_dose );
-    
 }
 
 
