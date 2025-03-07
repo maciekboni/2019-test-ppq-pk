@@ -421,7 +421,7 @@ int main(int argc, char* argv[])
     if( G_CLO_THERAPY == therapy_AL )
     {
 
-        fprintf(stdout, "PID,HOUR,COMP2CONC_ART,COMP2CONC_LUM,PARASITEDENSITY\n" );
+        //fprintf(stdout, "PID,HOUR,COMP2CONC_ART,COMP2CONC_LUM,PARASITEDENSITY\n" );
         //Its actually not every hour, but the first/second 30min interval doesn't have a major difference, so we just label the 30 min half as an hour
 
         fprintf(stderr, "\n");
@@ -512,7 +512,7 @@ int main(int argc, char* argv[])
             }
 
             //END - INTEGRATION 
-            output_results_combination(pi, dyn1, dyn2);
+            //output_results_combination(pi, dyn1, dyn2);
             
             delete dyn1;
             delete dyn2;

@@ -15,7 +15,7 @@ using namespace std;
 
 
 // these are the parameters
-enum parameter_index_dha { i_artemether_KTR, i_artemether_k20, i_artemether_F1_indiv, i_artemether_F1_thisdose, artemether_num_params }; 
+enum parameter_index_artemether { i_artemether_KTR, i_artemether_k20, i_artemether_F1_indiv, i_artemether_F1_thisdose, artemether_num_params }; 
 
 //typedef enum parameter_index_artemether i_artemether;
 
