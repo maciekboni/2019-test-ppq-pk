@@ -89,6 +89,10 @@ int pkpd_artemether::rhs_ode(double t, const double y[], double f[], void *pkd_o
     
     // this is compartment 1, the git or fixed dose compartment, i.e. the hypothetical compartment
     // where the drug goes in first
+    //
+    // the value that is tracked here is the total or absolute mg amount of artemether in the patient's blood; 
+    // it is NOT a drug concentration value of mg or mol artemether per unit blood volume 
+    //
     f[0] =  - p->vprms[i_artemether_KTR] * y[0];
 
     // these are the seven transit compartments
