@@ -69,6 +69,14 @@ pkpd_artemether::~pkpd_artemether()
     gsl_odeiv_step_free(os);
 }
 
+void pkpd_artemether::set_age_and_weight( double a, double w )
+{
+    age = a;
+    weight = w;
+    patient_blood_volume = 5500000.0 * (w/median_weight);
+}
+
+
 void pkpd_artemether::set_parasitaemia( double parasites_per_ul )
 {
     y0[dim-1] = parasites_per_ul; //  the final ODE equation is always the Pf asexual parasitaemia
