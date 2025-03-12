@@ -106,8 +106,8 @@ int pkpd_artemether::rhs_ode(double t, const double y[], double f[], void *pkd_o
     
     // this is the central compartment (the blood)
     //
-    // and the current units here (Aug 7 2024) are simply the total mg of DHA in the blood
-    // NOTE it looks like all of our blood concentrations in these PK classes simply track "total mg of molecule in blood"
+    // and the current units here (Aug 7 2024) are simply the total mg of artemether in the blood
+    // NOTE it looks like all of our blood "concentrations" in these PK classes simply track "total mg of molecule in blood"
     f[8] = y[7]*p->vprms[i_artemether_KTR] - y[8]*p->vprms[i_artemether_k20];
     
     // this is the per/ul parasite population size
