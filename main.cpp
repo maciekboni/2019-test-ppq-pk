@@ -512,7 +512,7 @@ int main(int argc, char* argv[])
             }
 
             //END - INTEGRATION 
-            //output_results_combination(pi, dyn1, dyn2);
+            output_results_combination(pi, dyn1, dyn2);
             
             delete dyn1;
             delete dyn2;

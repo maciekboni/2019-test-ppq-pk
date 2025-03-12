@@ -272,7 +272,7 @@ void pkpd_artemether::initialize_params( void )
     vprms[i_artemether_k20] = CL/V2;
     //fprintf(stdout, "\npatient is %1.1f kg, the CL/V2 ratio is %1.1f\n", weight, vprms[i_artemether_k20]);
     //fprintf(stdout, "WEIGHT,CL,V2,CL/V2\n" );
-    fprintf(stdout, "%1.2f , %1.3f, %1.3f, %1.3f\n", weight, CL, V2, vprms[i_artemether_k20]);        
+    //fprintf(stdout, "%1.2f , %1.3f, %1.3f, %1.3f\n", weight, CL, V2, vprms[i_artemether_k20]);        
 }
 
 // TODO the function below is a copy-and-paste from the PPQ function; must be modified

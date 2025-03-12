@@ -112,6 +112,7 @@ public:
     bool is_pregnant; // TODO: deprecate
     bool is_male;
 
+    void set_age_and_weight(double a, double w);
 
 
     //
