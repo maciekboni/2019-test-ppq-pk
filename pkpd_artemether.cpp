@@ -41,6 +41,10 @@ pkpd_artemether::pkpd_artemether(  )
     
     age = 25.0;
     patient_blood_volume = 5500000.0; // 5.5L of blood for an adult individual // 5500000 ul gives 5.5 L
+    
+    // Scaling patient blood volume by age and weight
+    set_age_and_weight(age, patient_weight);
+
     is_male=false;
     is_pregnant=false;
     doses_still_remain_to_be_taken = true;
@@ -74,6 +78,7 @@ void pkpd_artemether::set_age_and_weight( double a, double w )
     age = a;
     weight = w;
     patient_blood_volume = 5500000.0 * (w/median_weight);
+    
 }
 
 
@@ -119,7 +124,9 @@ int pkpd_artemether::rhs_ode(double t, const double y[], double f[], void *pkd_o
     f[8] = y[7]*p->vprms[i_artemether_KTR] - y[8]*p->vprms[i_artemether_k20];
     
     // this is the per/ul parasite population size
-    double a = (-1.0/24.0) * log( 1.0 - p->pdparam_Pmax * pow(y[8],p->pdparam_n) / (pow(y[8],p->pdparam_n) + pow(p->pdparam_EC50,p->pdparam_n)) );
+    //double a = (-1.0/24.0) * log( 1.0 - p->pdparam_Pmax * pow(y[8],p->pdparam_n) / (pow(y[8],p->pdparam_n) + pow(p->pdparam_EC50,p->pdparam_n)) );
+    double a = (-1.0/24.0) * log( 1.0 - p->pdparam_Pmax * pow((y[8]/p -> patient_blood_volume),p->pdparam_n) / (pow((y[8]/p -> patient_blood_volume),p->pdparam_n) + pow(p->pdparam_EC50,p->pdparam_n)));
+
     f[9] = -a * y[9];
     
     
@@ -328,62 +335,37 @@ void pkpd_artemether::generate_recommended_dosing_schedule()
 {
     // TODO NEEDS TO BE DONE BY AGE AND WEIGHT
 	
-    // one tablet is 40mg of dihydroartemisinin
+    // one tablet is 40mg of artemether
     
     // TODO: need to get tablet schedule by weight, age, pregnancy status
     double num_tablets_per_dose = 1.0;
     
-    if( weight < 5.0 )
+    if( weight < 15.0 )
     {
-        num_tablets_per_dose = 0.0;
-    }
-    else if( weight < 8.0 )
-    {
-        num_tablets_per_dose = 0.5;
-    }
-    else if( weight < 11.0 )
-    {
-        num_tablets_per_dose = 0.75;
-    }
-    else if( weight < 17.0 )
-    {
-        num_tablets_per_dose = 1.0;
+        num_tablets_per_dose = 0.50; // 0.50 * 40.0 = 20 mg
     }
     else if( weight < 25.0 )
     {
-        num_tablets_per_dose = 1.5;
+        num_tablets_per_dose = 1.00; // 1.00 * 40.0 = 40 mg
     }
-    else if( weight < 36.0 )
+    else if( weight < 35.0 )
     {
-        num_tablets_per_dose = 2.0;
-    }
-    else if( weight < 60.0 )
-    {
-        num_tablets_per_dose = 3.0;
-    }
-    else if( weight < 80.0 )
-    {
-        num_tablets_per_dose = 4.0;
+        num_tablets_per_dose = 1.50; // 1.50 * 40.0 = 60 mg
     }
     else
     {
-        num_tablets_per_dose = 5.0;
+        num_tablets_per_dose = 2.00; // 2.00 * 40.0 = 80 mg
     }
     
-    // TODO REMOVE PLACEHOLDER BELOW
-    // num_tablets_per_dose = 1.0;
-    
-    //fprintf(stdout, "\npatient is %1.1f kg, taking %1.1f tablets", weight, num_tablets_per_dose );
-
-    double total_mg_dose = num_tablets_per_dose * 40.0; // one tablet is 40 mg of artemether
+    total_mg_dose = num_tablets_per_dose * 40.0; // one tablet is 40 mg of artemether
 
     v_dosing_times.insert( v_dosing_times.begin(), 6, 0.0 );
     v_dosing_times[0] = 0.0;
-    v_dosing_times[1] = 8.0;
-    v_dosing_times[2] = 20.0; 
-    v_dosing_times[3] = 32.0;
-    v_dosing_times[4] = 44.0;
-    v_dosing_times[5] = 56.0;
+    v_dosing_times[1] = 12.0;
+    v_dosing_times[2] = 24.0; 
+    v_dosing_times[3] = 36.0;
+    v_dosing_times[4] = 48.0;
+    v_dosing_times[5] = 60.0;
     
     v_dosing_amounts.insert( v_dosing_amounts.begin(), 6, total_mg_dose );
 }

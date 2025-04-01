@@ -110,7 +110,7 @@ public:
     double patient_blood_volume;    // in microliters, so should be between 250,000 (infant) to 6,000,000 (large adult)
     bool pregnant;                  // usually means just 2nd or 3rd trimester
 
-
+    void set_age_and_weight(double a, double w);
 
     //
     // ----  6  ----  STORAGE VARIABLES FOR DYNAMICS OF PK AND PD CURVES

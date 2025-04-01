@@ -421,7 +421,7 @@ int main(int argc, char* argv[])
     if( G_CLO_THERAPY == therapy_AL )
     {
 
-        //fprintf(stdout, "PID,HOUR,COMP2CONC_ART,COMP2CONC_LUM,PARASITEDENSITY\n" );
+        fprintf(stdout, "PID,HOUR,COMP2CONC_ART,COMP2CONC_LUM,PARASITEDENSITY\n" );
         //Its actually not every hour, but the first/second 30min interval doesn't have a major difference, so we just label the 30 min half as an hour
 
         fprintf(stderr, "\n");
@@ -440,6 +440,9 @@ int main(int argc, char* argv[])
             dyn1->rng = G_RNG;    
             dyn1->age = G_CLO_AGE;
             dyn1->weight = G_CLO_WEIGHT;
+
+            
+
             dyn1->pdparam_n = G_CLO_HILL_COEFF_ARTEMETHER;
             dyn1->pdparam_EC50 = G_CLO_EC50_ARTEMETHER;
             dyn1->pdparam_Pmax = G_CLO_PMAX_ARTEMETHER;

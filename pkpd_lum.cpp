@@ -52,9 +52,12 @@ pkpd_lum::pkpd_lum(  )
     patient_blood_volume = 5500000.0;       // 5.5L of blood for an adult individual; 5500000 ul gives 5.5 L
     central_volume_of_distribution = -99.0; // meaning it is not set yet
 
+    set_age_and_weight(age, patient_weight); // Scaling the patient's blood volume by age and weight
+
     // the parameters 15, exp( 0.525 * log(2700)), and 0.9 give about a 90% drug efficacy for an initial parasitaemia of 10,000/ul (25yo patient, 54kg)
     pdparam_n = 15.0; 
-    pdparam_EC50 = exp( 0.525 * log(2700)); // this is about 63.3, TODO: determine where this came from
+    pdparam_EC50 = exp(0.525 * log(2700)); // Explicit cast to double
+    //pdparam_EC50 = exp( 0.525 * log(2700)); // this is about 63.3, TODO: determine where this came from
     pdparam_Pmax = 0.9995; // here you want to enter the max daily killing rate; it will be converted to hourly later
                            
 
@@ -70,6 +73,14 @@ pkpd_lum::~pkpd_lum()
     gsl_odeiv_evolve_free(oe);
     gsl_odeiv_control_free(oc);
     gsl_odeiv_step_free(os);
+}
+
+void pkpd_lum::set_age_and_weight( double a, double w )
+{
+    age = a;
+    weight = w;
+    patient_blood_volume = 5500000.0 * (w/median_weight);
+    
 }
 
 void pkpd_lum::set_parasitaemia( double parasites_per_ul )
@@ -100,7 +111,11 @@ int pkpd_lum::rhs_ode(double t, const double y[], double f[], void *pkd_object )
     f[2] = y[1]*p->vprms[i_lum_k23]  -  y[2]*p->vprms[i_lum_k32];
     
     // this is the per/ul parasite population size
-    double a = (-1.0/24.0) * log( 1.0 - p->pdparam_Pmax * pow(y[1],p->pdparam_n) / (pow(y[1],p->pdparam_n) + pow(p->pdparam_EC50,p->pdparam_n)) );
+    // double a = (-1.0/24.0) * log( 1.0 - p->pdparam_Pmax * pow(y[1],p->pdparam_n) / (pow(y[1],p->pdparam_n) + pow(p->pdparam_EC50,p->pdparam_n)) );
+    //double a = (-1.0/24.0) * log( 1.0 - p->pdparam_Pmax * pow((y[1]/p -> patient_blood_volume),p->pdparam_n) / (pow((y[1]/p -> patient_blood_volume),p->pdparam_n) + pow(p->pdparam_EC50,p->pdparam_n)) );
+    double a = (-1.0/24.0) * log( 1.0 - p->pdparam_Pmax * pow((y[1]/p -> central_volume_of_distribution),p->pdparam_n) / (pow((y[1]/p -> central_volume_of_distribution),p->pdparam_n) + pow(p->pdparam_EC50,p->pdparam_n)) );
+    
+    
     f[3] = - a * y[3];          // NOTE there is no parasite growth here because the PMF factor for parasite growth is done
                                 // manually in the main diff-eq loop
     //f[3] = 0.02 * y[3]  -  a * y[3];
@@ -325,19 +340,15 @@ void pkpd_lum::generate_recommended_dosing_schedule()
     
     double num_tablets_per_dose;
     
-    if( weight < 5.0 )
-    {
-        num_tablets_per_dose = 0.0;
-    }
-    else if( weight < 14.0 )
+    if( weight < 15.0 )
     {
         num_tablets_per_dose = 1.0;
     }
-    else if( weight < 24.0 )
+    else if( weight < 25.0 )
     {
         num_tablets_per_dose = 2.0;
     }
-    else if( weight < 34.0 )
+    else if( weight < 35.0 )
     {
         num_tablets_per_dose = 3.0;
     }
@@ -346,8 +357,11 @@ void pkpd_lum::generate_recommended_dosing_schedule()
         num_tablets_per_dose = 4.0;
     }
    
+    
     // NOTE - do not confuse this with daily dosing - AL is taken twice daily, two occassions per day
     total_mg_dose_per_occassion = num_tablets_per_dose * 120.0;
+
+    //fprintf(stdout, "\npatient is %1.1f kg, taking %1.1f tablets of lumefantrine. The total dose per occasion is %1.1f mg", weight, num_tablets_per_dose, total_mg_dose_per_occassion); 
     
     v_dosing_times.insert( v_dosing_times.begin(), 6, 0.0 );
     v_dosing_times[0] = 0.0;

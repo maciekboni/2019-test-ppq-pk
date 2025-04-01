@@ -93,10 +93,10 @@ public:
     vector<double> v_dosing_times;
     vector<double> v_dosing_amounts;
     int num_doses_given;
+    double total_mg_dose;
     bool doses_still_remain_to_be_taken;
     bool we_are_past_a_dosing_time( double current_time );    
     void give_next_dose_to_patient( double fraction_of_dose_taken ); // TODO: this needs to be implemented
-
 
 
     //
