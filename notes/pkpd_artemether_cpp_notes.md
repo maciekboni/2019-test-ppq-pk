@@ -47,8 +47,8 @@
 
 		* Constructor function **declared** in ```pkpd_artemether.h```
 
-		* Constructor Declaration tells the compiler that a constructor exists, but does not specify what it does.
+		* Constructor **declaration** tells the compiler that a constructor exists, but does not specify what it does.
 	
-	* Constructor Definition implements what the constructor does.
+	* Constructor **definition** implements what the constructor does.
 		* Definition specifies what happens when an object of pkpd_artemether is created.
 		

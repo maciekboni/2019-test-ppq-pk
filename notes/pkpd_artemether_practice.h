@@ -1,7 +1,8 @@
 
 // Step 1: Include guards,  required libraries and global variables
 
-
+#ifndef PKPD_ARTEMETHER
+#define PKPD_ARTEMETHER
 
 #include <vector>
 #include <math.h>
@@ -17,7 +18,7 @@
   enum (short for enumeration) is a user-defined data type that assigns names to integer values.
   It makes code more readable and avoids using "magic numbers" (hardcoded numbers with no clear meaning).*/
   
-  enum parameter_index_artemether { i_artemether_KTR, i_artemether_k20, i_artemether_F1_indiv, i_artemether_F1_thisdose, artemether_num_params};
+  enum parameter_index_artemether { i_artemether_KTR, i_artemether_k20, i_artemether_F1_indiv, i_artemether_F1_thisdose, artemether_num_params };
 
 /*Description of parameter_index_artemether:
   This defines a list of named constants for indexing parameters related to artemether.
@@ -46,11 +47,14 @@ class pkpd_artemether {
 public:
 
     // Step 3.a: Constructor
-    pkpd_artemether();
+    // pkpd_artemether(); // Default
+
+    pkpd_artemether(double age, double weight);  // constructor with inputs
+
     /*A constructor is a special function that runs automatically when an object of the class is created.
       It is used to initialize variables or set up the object properly.
       It has the same name as the class and no return type (not even void).*/
-
+    
     // Step 3.b: Destructor
     ~pkpd_artemether();
     /*A destructor is a special function that runs automatically when an object is destroyed (e.g., when it goes out of scope).
@@ -109,9 +113,11 @@ public:
     
     //Step 6: Declare PK parameters via function calls
 
+    void set_age_and_weight(double a, double w);
+
     void initialize();
 
-    void initialize_params();
+    void initialize_parameters();
 
     void redraw_params_before_newdose();
 
@@ -119,22 +125,70 @@ public:
 
     // Step 7: PD variables and methods
 
-    void set_parasitemia(double parasites_per_ul);
+    void set_parasitaemia(double parasites_per_ul);
 
     double pdparam_n;
     double pdparam_EC50;
     double pdparam_Pmax;
 
+    // TODO: check this (from 2019)  Ricardo says it should be the log-natural of the per/ul parasitaemia
+    //          UPDATE - 2024 - this can be deprecated
+    double initial_log10_totalparasitaemia;
+
     //-----------------------------------------------------------------------------------------------------------------------
 
     // Step 8: Declare dosing schedule functions
 
+    double num_tablets_per_dose; 
+    double total_mg_dose;
     void generate_recommended_dosing_schedule();
     std::vector <double> v_dosing_times;
     std::vector <double> v_dosing_amounts;
+
     int num_doses_given;
     bool doses_still_remain_to_be_taken;
     bool we_are_past_a_dosing_time(double current_time);
     void give_next_dose_to_patient(double fractional_dose_taken);
+
+    //-----------------------------------------------------------------------------------------------------------------------
+
+    // Step 9: Set patient characteristics
+
+    double patient_weight;          // this is the kg weight of the current patient
+    double median_weight;           // this is the median weight of a patient that these estimates were calibrated for
+    double weight;                  // this is the weight that is actually used in the calculations (it's one of the two above)
+    double patient_age;             // parameter
+    double age;                     // member/model input   
+                                    // this is the age of the patient in years
+    double patient_blood_volume;    // in microliters, so should be between 250,000 (infant) to 6,000,000 (large adult)
+    bool weight_initialized = false;// this is true if the weight has been set
+    void set_age_and_weight(double a, double w);
+
+
+    //bool pregnant;                // usually means just 2nd or 3rd trimester -- TODO: have this replace the "is_pregnant" bool
+    bool is_pregnant;               // TODO: deprecate
+    bool is_male;
+
+
+
+
+    //-----------------------------------------------------------------------------------------------------------------------
+
+    // Step 10: Declare variables to log drug concentrations and parasite density
+
+
+    // an hourly time series of drug concentrations in the blood compartment only
+    std::vector <double> v_concentration_in_blood;                // an hourly time series of drug concentrations in the blood compartment only
+                                                            // should be in nanograms per milliliter (ng/ml), probably, TODO: Venitha to check
+                                                            // specifically for DHA is this is the case
+    //vector<double> v_concentration_in_blood_metabolite;   // same as above, but this allows you to keep track of a particular metabolite concentration                                                    
+                                                            // no metabolite information is used for lumefantrine
+    std::vector <double> v_concentration_in_blood_hourtimes;
+    std::vector <double> v_parasitedensity_in_blood;
+    int num_hours_logged;
+    
+    gsl_rng *rng;	
     
   };
+
+  #endif // PKPD_ARTEMETHER
