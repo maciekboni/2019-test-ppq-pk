@@ -1,14 +1,14 @@
 #include "assert.h"
-#include "pkpd_artemether.h"
+#include "pkpd_dha.h"
 
-bool pkpd_artemether::stochastic = true;
+bool pkpd_dha::stochastic = true;
 
 // constructor
-pkpd_artemether::pkpd_artemether()
+pkpd_dha::pkpd_dha(  )
 {
     
-    vprms.insert( vprms.begin(), artemether_num_params, 0.0 );
-    assert( vprms.size()==artemether_num_params );
+    vprms.insert( vprms.begin(), dha_num_params, 0.0 );
+    assert( vprms.size()==dha_num_params );
     
     // this is the dimensionality of the ODE system
     // there are 9 PK compartments and 1 variable for the parasite density
@@ -56,7 +56,7 @@ pkpd_artemether::pkpd_artemether()
 }
 
 // destructor
-pkpd_artemether::~pkpd_artemether()
+pkpd_dha::~pkpd_dha()
 {
     delete[] y0;
     gsl_odeiv_evolve_free(oe);
@@ -64,7 +64,7 @@ pkpd_artemether::~pkpd_artemether()
     gsl_odeiv_step_free(os);
 }
 
-void pkpd_artemether::set_parasitaemia( double parasites_per_ul )
+void pkpd_dha::set_parasitaemia( double parasites_per_ul )
 {
     y0[dim-1] = parasites_per_ul; //  the final ODE equation is always the Pf asexual parasitaemia
 }
@@ -76,30 +76,30 @@ void pkpd_artemether::set_parasitaemia( double parasites_per_ul )
 // "rhs_ode" must be defined with these four arguments for it to work in
 // in the GSL ODE routines
 //
-int pkpd_artemether::rhs_ode(double t, const double y[], double f[], void *pkd_object )
+int pkpd_dha::rhs_ode(double t, const double y[], double f[], void *pkd_object )
 {
-    pkpd_artemether* p = (pkpd_artemether*) pkd_object;
+    pkpd_dha* p = (pkpd_dha*) pkd_object;
 
     // these are the right-hand sides of the derivatives of the six compartments
     
     // this is compartment 1, the git or fixed dose compartment, i.e. the hypothetical compartment
     // where the drug goes in first
-    f[0] =  - p->vprms[i_artemether_KTR] * y[0];
+    f[0] =  - p->vprms[i_dha_KTR] * y[0];
 
     // these are the seven transit compartments
-    f[1] = y[0]*p->vprms[i_artemether_KTR] - y[1]*p->vprms[i_artemether_KTR];
-    f[2] = y[1]*p->vprms[i_artemether_KTR] - y[2]*p->vprms[i_artemether_KTR];
-    f[3] = y[2]*p->vprms[i_artemether_KTR] - y[3]*p->vprms[i_artemether_KTR];
-    f[4] = y[3]*p->vprms[i_artemether_KTR] - y[4]*p->vprms[i_artemether_KTR];
-    f[5] = y[4]*p->vprms[i_artemether_KTR] - y[5]*p->vprms[i_artemether_KTR];
-    f[6] = y[5]*p->vprms[i_artemether_KTR] - y[6]*p->vprms[i_artemether_KTR];
-    f[7] = y[6]*p->vprms[i_artemether_KTR] - y[7]*p->vprms[i_artemether_KTR];
+    f[1] = y[0]*p->vprms[i_dha_KTR] - y[1]*p->vprms[i_dha_KTR];
+    f[2] = y[1]*p->vprms[i_dha_KTR] - y[2]*p->vprms[i_dha_KTR];
+    f[3] = y[2]*p->vprms[i_dha_KTR] - y[3]*p->vprms[i_dha_KTR];
+    f[4] = y[3]*p->vprms[i_dha_KTR] - y[4]*p->vprms[i_dha_KTR];
+    f[5] = y[4]*p->vprms[i_dha_KTR] - y[5]*p->vprms[i_dha_KTR];
+    f[6] = y[5]*p->vprms[i_dha_KTR] - y[6]*p->vprms[i_dha_KTR];
+    f[7] = y[6]*p->vprms[i_dha_KTR] - y[7]*p->vprms[i_dha_KTR];
     
     // this is the central compartment (the blood)
     //
-    // and the current units here (Aug 7 2024) are simply the total mg of artemether in the blood
+    // and the current units here (Aug 7 2024) are simply the total mg of DHA in the blood
     // NOTE it looks like all of our blood concentrations in these PK classes simply track "total mg of molecule in blood"
-    f[8] = y[7]*p->vprms[i_artemether_KTR] - y[8]*p->vprms[i_artemether_k20];
+    f[8] = y[7]*p->vprms[i_dha_KTR] - y[8]*p->vprms[i_dha_k20];
     
     // this is the per/ul parasite population size
     double a = (-1.0/24.0) * log( 1.0 - p->pdparam_Pmax * pow(y[8],p->pdparam_n) / (pow(y[8],p->pdparam_n) + pow(p->pdparam_EC50,p->pdparam_n)) );
@@ -109,7 +109,7 @@ int pkpd_artemether::rhs_ode(double t, const double y[], double f[], void *pkd_o
     return GSL_SUCCESS;
 }
 
-void pkpd_artemether::give_next_dose_to_patient( double fractional_dose_taken )
+void pkpd_dha::give_next_dose_to_patient( double fractional_dose_taken )
 {
     if( doses_still_remain_to_be_taken )
     {
@@ -126,9 +126,9 @@ void pkpd_artemether::give_next_dose_to_patient( double fractional_dose_taken )
 }
 
 
-void pkpd_artemether::predict( double t0, double t1 )
+void pkpd_dha::predict( double t0, double t1 )
 {
-    gsl_odeiv_system sys = {pkpd_artemether::rhs_ode, pkpd_artemether::jac, dim, this};   // the fourth argument is a void pointer that you 
+    gsl_odeiv_system sys = {pkpd_dha::rhs_ode, pkpd_dha::jac, dim, this};   // the fourth argument is a void pointer that you 
                                                                             // are supossed to use freely; you normally
                                                                             // use it to access the paramters
     double t = t0;    
@@ -146,7 +146,7 @@ void pkpd_artemether::predict( double t0, double t1 )
                 redraw_params_before_newdose();
                 
                 // add the new dose amount to the "dose compartment", i.e. the first compartment
-                y0[0] +=  v_dosing_amounts[num_doses_given] * vprms[i_artemether_F1_thisdose];
+                y0[0] +=  v_dosing_amounts[num_doses_given] * vprms[i_dha_F1_thisdose];
                 
                 num_doses_given++;
             }
@@ -175,7 +175,7 @@ void pkpd_artemether::predict( double t0, double t1 )
 
 
 
-void pkpd_artemether::initialize_params( void )
+void pkpd_dha::initialize_params( void )
 {
     //WARNING - THE AGE MEMBER VARIABLE MUST BE SET BEFORE YOU CALL THIS FUNCTION
 
@@ -187,8 +187,8 @@ void pkpd_artemether::initialize_params( void )
     
     // initializse these relative dose factors to one (this should be the default behavior if
     // the model is not stochastic or if we decide to remove between-dose and/or between-patient variability
-    vprms[i_artemether_F1_thisdose] = 1.0;
-    vprms[i_artemether_F1_indiv] = 1.0;
+    vprms[i_dha_F1_thisdose] = 1.0;
+    vprms[i_dha_F1_indiv] = 1.0;
     
     //TVF1 = THETA(4)*(1+THETA(7)*(PARA-3.98)) * (1+THETA(6)*FLAG)
     double THETA7_pe = 0.278;
@@ -199,13 +199,13 @@ void pkpd_artemether::initialize_params( void )
     if(is_pregnant) TVF1 *= (1.0+THETA6_pe);
         
     double F1=TVF1;
-    if(pkpd_artemether::stochastic)
+    if(pkpd_dha::stochastic)
     {
         double ETA4_rv = gsl_ran_gaussian( rng, sqrt(0.08800) );
         F1 *= ETA4_rv;
     }
  
-    vprms[i_artemether_F1_indiv] = F1;
+    vprms[i_dha_F1_indiv] = F1;
  
     
     
@@ -220,7 +220,7 @@ void pkpd_artemether::initialize_params( void )
 
     // NOTE at this point you have an MT value without any effect of dose order (i.e. whether it's dose 1, dose 2, etc.
     //      later, you must/may draw another mean-zero normal rv, and multiply by the value above
-    vprms[i_artemether_KTR] = 8.0/MT;
+    vprms[i_dha_KTR] = 8.0/MT;
 
 
     
@@ -235,18 +235,18 @@ void pkpd_artemether::initialize_params( void )
 
     double TVV2 = THETA2_pe * (weight/mw);  
     double V2 = TVV2;
-    if(pkpd_artemether::stochastic) 
+    if(pkpd_dha::stochastic) 
     {
         double ETA2_rv = gsl_ran_gaussian( rng, sqrt(0.0162) );
         V2 *= exp(ETA2_rv);
     }
     
-    vprms[i_artemether_k20] = CL/V2;
+    vprms[i_dha_k20] = CL/V2;
     
 }
 
 // TODO the function below is a copy-and-paste from the PPQ function; must be modified
-void pkpd_artemether::redraw_params_before_newdose()
+void pkpd_dha::redraw_params_before_newdose()
 {
      
     // ---- first, you don't receive the full dose.  You may receive 80% or 110% of the dose depending
@@ -256,10 +256,10 @@ void pkpd_artemether::redraw_params_before_newdose()
     // this is the "dose occassion", i.e. the order of the dose (first, second, etc)
     double OCC = 1.0 + (double)num_doses_given; // NOTE the RHS here is a class member
     
-    if(pkpd_artemether::stochastic) 
+    if(pkpd_dha::stochastic) 
     {
         double ETA_rv = gsl_ran_gaussian( rng, sqrt(0.23000) ); // this is ETA6, ETA7, and ETA8
-        vprms[i_artemether_KTR] *= exp(-ETA_rv);       // WARNING this behavior is strange ... check if this is the right way to do it
+        vprms[i_dha_KTR] *= exp(-ETA_rv);       // WARNING this behavior is strange ... check if this is the right way to do it
     }
     //double IOV_rv = ETA_rv;
     
@@ -278,7 +278,7 @@ void pkpd_artemether::redraw_params_before_newdose()
 }
 
 
-bool pkpd_artemether::we_are_past_a_dosing_time( double current_time )
+bool pkpd_dha::we_are_past_a_dosing_time( double current_time )
 {
     // check if there are still any doses left to give
     if( num_doses_given < v_dosing_times.size() )
@@ -294,7 +294,7 @@ bool pkpd_artemether::we_are_past_a_dosing_time( double current_time )
 
 
 
-void pkpd_artemether::generate_recommended_dosing_schedule()
+void pkpd_dha::generate_recommended_dosing_schedule()
 {
     // TODO NEEDS TO BE DONE BY AGE AND WEIGHT
 	

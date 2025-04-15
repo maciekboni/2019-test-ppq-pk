@@ -115,7 +115,7 @@ public:
 
     void set_age_and_weight(double a, double w);
 
-    void initialize();
+    void initialize_simulation();
 
     void initialize_parameters();
 
@@ -162,6 +162,7 @@ public:
                                     // this is the age of the patient in years
     double patient_blood_volume;    // in microliters, so should be between 250,000 (infant) to 6,000,000 (large adult)
     bool weight_initialized = false;// this is true if the weight has been set
+    bool age_initialized = false;   // this is true if the age has been set
     void set_age_and_weight(double a, double w);
 
 

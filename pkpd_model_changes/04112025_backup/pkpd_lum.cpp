@@ -8,7 +8,7 @@
 bool pkpd_lum::stochastic = true;
 
 // constructor
-pkpd_lum::pkpd_lum(  )
+pkpd_lum::pkpd_lum( double patient_age, double patient_weight )
 {
     
     vprms.insert( vprms.begin(), lum_num_params, 0.0 );
@@ -26,7 +26,7 @@ pkpd_lum::pkpd_lum(  )
     // BUT we do need to set the initial parasitaemia at time zero to something positive
     // this should be obtained from the person class
     // the last differential equation is for the parasitaemia; it is a per/ul measure
-    // y0[dim-1] = 10000.0;
+    //y0[dim-1] = 10000.0;
     set_parasitaemia( 10000.0 ); // simply a wrapper for the statement above
 
     parasites_per_ul_at_first_lum_dose = 10000.0;   // YOU MUST DO THIS SEPARATELY because the parasitaemia level "at first
@@ -38,26 +38,39 @@ pkpd_lum::pkpd_lum(  )
     oc 	= gsl_odeiv_control_y_new (1e-6, 0.0);
     oe 	= gsl_odeiv_evolve_alloc(dim);
     
-    patient_weight = -1.0;
-    median_weight  =  54.0;     // in kilograms 
-    weight = median_weight;     // this is the weight that is actually used in the calculations
-    pregnant = false;
+    // patient_weight = -1.0;
+    // median_weight  =  54.0;     // in kilograms 
+    // weight = median_weight;     // this is the weight that is actually used in the calculations
 
+
+    weight_initialized = false; // To check if the member variable 'weight' has been initialized
+    age_initialized = false;    // To check if the member variable 'age' has been initialized
+    patient_blood_volume = 5500000.0; // 5.5L of blood for an adult individual // 5500000 ul gives 5.5 L
+    //median_weight  = 54.0; // In KG
+    median_weight  = 42.0; // In KG
+    set_age_and_weight(patient_age, patient_weight);  // Scale blood volume by weight
+
+    
+    pregnant = false;
     num_doses_given = 0;
     doses_still_remain_to_be_taken = true; 
     num_hours_logged = 0;    
     total_mg_dose_per_occassion = -99.0;    // meaning it is not set yet
     
-    age = 25.0;
-    patient_blood_volume = 5500000.0;       // 5.5L of blood for an adult individual
+    // age = 25.0;
+    // patient_blood_volume = 5500000.0;       // 5.5L of blood for an adult individual; 5500000 ul gives 5.5 L
+    
     central_volume_of_distribution = -99.0; // meaning it is not set yet
 
     // the parameters 15, exp( 0.525 * log(2700)), and 0.9 give about a 90% drug efficacy for an initial parasitaemia of 10,000/ul (25yo patient, 54kg)
-    pdparam_n = 15.0; // default parameter if CLO is not specified
-    pdparam_EC50 = exp( 0.525 * log(2700)); // this is about 63.3, TODO: determine where this came from
-                                            // default parameter if CLO is not specified
+    pdparam_n = 15.0; 
+    pdparam_EC50 = 2.35 * pow(10, -7);  // This is in mg/ul. 
+                                        // value taken from Zaloumis 2012
+    //pdparam_EC50 = exp(0.525 * log(2700)); 
+    //Explicit cast to double
+    //pdparam_EC50 = exp( 0.525 * log(2700)); // this is about 63.3, TODO: determine where this came from
     pdparam_Pmax = 0.9995; // here you want to enter the max daily killing rate; it will be converted to hourly later
-                           // default parameter if CLO is not specified
+                           
 
     rng=NULL;
 
@@ -71,6 +84,16 @@ pkpd_lum::~pkpd_lum()
     gsl_odeiv_evolve_free(oe);
     gsl_odeiv_control_free(oc);
     gsl_odeiv_step_free(os);
+}
+
+void pkpd_lum::set_age_and_weight( double a, double w )
+{
+    age = a;
+    weight = w;
+    patient_blood_volume = 5500000.0 * (w/median_weight);
+    weight_initialized = true; // this is true if the weight has been set
+    age_initialized = true; // this is true if the age has been set
+    
 }
 
 void pkpd_lum::set_parasitaemia( double parasites_per_ul )
@@ -101,7 +124,18 @@ int pkpd_lum::rhs_ode(double t, const double y[], double f[], void *pkd_object )
     f[2] = y[1]*p->vprms[i_lum_k23]  -  y[2]*p->vprms[i_lum_k32];
     
     // this is the per/ul parasite population size
-    double a = (-1.0/24.0) * log( 1.0 - p->pdparam_Pmax * pow(y[1],p->pdparam_n) / (pow(y[1],p->pdparam_n) + pow(p->pdparam_EC50,p->pdparam_n)) );
+    //double a = (-1.0/24.0) * log( 1.0 - p->pdparam_Pmax * pow(y[1],p->pdparam_n) / (pow(y[1],p->pdparam_n) + pow(p->pdparam_EC50,p->pdparam_n)) );
+    
+    // Testing: adjusting the concentration in the central compartment/EC50 by the PATIENT BLOOD VOLUME
+    // double a = (-1.0/24.0) * log( 1.0 - p->pdparam_Pmax * pow((y[1]/p -> patient_blood_volume),p->pdparam_n) / (pow((y[1]/p -> patient_blood_volume),p->pdparam_n) + pow((p->pdparam_EC50/p -> patient_blood_volume),p->pdparam_n)) );
+    double a = (-1.0/24.0) * log( 1.0 - p->pdparam_Pmax * pow((y[1]/p -> patient_blood_volume),p->pdparam_n) / (pow((y[1]/p -> patient_blood_volume),p->pdparam_n) + pow(p->pdparam_EC50,p->pdparam_n)));
+    
+
+
+    // Testing: adjusting the concentration in the central compartment/EC50 by the CENTRAL VOLUME OF DISTRIBUTION
+    // double a = (-1.0/24.0) * log( 1.0 - p->pdparam_Pmax * pow((y[1]/p -> central_volume_of_distribution),p->pdparam_n) / (pow((y[1]/p -> central_volume_of_distribution),p->pdparam_n) + pow((p->pdparam_EC50/p -> central_volume_of_distribution),p->pdparam_n)) );
+    
+    
     f[3] = - a * y[3];          // NOTE there is no parasite growth here because the PMF factor for parasite growth is done
                                 // manually in the main diff-eq loop
     //f[3] = 0.02 * y[3]  -  a * y[3];
@@ -150,7 +184,8 @@ void pkpd_lum::predict( double t0, double t1 )
         if( t >= ((double)num_hours_logged)  )
         {
             // this is in ng/ml 
-            v_concentration_in_blood.push_back( y0[1] * 1000.0 / central_volume_of_distribution  );                                                      
+            //v_concentration_in_blood.push_back( y0[1] / (central_volume_of_distribution * pow(10.0, 6.0)));  // Changing units to mg/microliter   
+            v_concentration_in_blood.push_back( y0[1] / patient_blood_volume); // mg/microliter                                                 
             v_parasitedensity_in_blood.push_back( y0[dim-1] );
             v_concentration_in_blood_hourtimes.push_back( t );
             
@@ -170,8 +205,11 @@ void pkpd_lum::predict( double t0, double t1 )
 void pkpd_lum::initialize( void )
 {
     
-    //-- WARNING -- the age member variable must be set before you call this function -- add this check
-    
+    // // Added age check on 04/10/2025
+    // if (!age_initialized) {
+    //     fprintf(stderr, "\n\tERROR: Age not initialized. Exiting program.\n");
+    //     return;
+    // }
 
     // NOTE must call the two functions below in this order -- dosing schedule needs to be set first
     generate_recommended_dosing_schedule();
@@ -179,7 +217,6 @@ void pkpd_lum::initialize( void )
     
     
 }
-
 
 
 
@@ -221,14 +258,8 @@ void pkpd_lum::initialize_params( void )
     }
 
 
-
-
-
-
     // in the parameter calculations below
     // "TV" means typical value or population mean for some parameter
-
-
 
     // F1_indiv is the relative absorbtion level for this individual
     
@@ -250,8 +281,6 @@ void pkpd_lum::initialize_params( void )
     // this you keep fixed, and you use the total mg dose per occassion, and NOT any randomly drawn number
     double DS = 1.0 - ( total_mg_dose_per_occassion/weight ) / ( ( total_mg_dose_per_occassion/weight ) + D50  );
 
-
-    
     
     // PARASITE = ((LNPC /4.20)**THETA(9)) -- TODO: -- check the log type on the parasitaemia (CONFIRMED on 3/31/2024 that it is log-10)
     //      check if it's parasites/microliter (CONFIRMED also on 3/31/2024)
@@ -268,7 +297,7 @@ void pkpd_lum::initialize_params( void )
 
     double TVV = THETA2 * pow( weight/42.0 , 1.0 ); 
     double V = TVV * exp( ETA2_rv );  
-    central_volume_of_distribution = V;
+    central_volume_of_distribution = V; // In Liters
 
     double TVCL = THETA1 * pow( weight/42.0 , 0.75 );  // allometric scaling for weight on the clearance parameter
     double CL = TVCL * exp( ETA1_rv );
@@ -326,19 +355,15 @@ void pkpd_lum::generate_recommended_dosing_schedule()
     
     double num_tablets_per_dose;
     
-    if( weight < 5.0 )
-    {
-        num_tablets_per_dose = 0.0;
-    }
-    else if( weight < 14.0 )
+    if( weight < 15.0 )
     {
         num_tablets_per_dose = 1.0;
     }
-    else if( weight < 24.0 )
+    else if( weight < 25.0 )
     {
         num_tablets_per_dose = 2.0;
     }
-    else if( weight < 34.0 )
+    else if( weight < 35.0 )
     {
         num_tablets_per_dose = 3.0;
     }
@@ -347,8 +372,11 @@ void pkpd_lum::generate_recommended_dosing_schedule()
         num_tablets_per_dose = 4.0;
     }
    
+    
     // NOTE - do not confuse this with daily dosing - AL is taken twice daily, two occassions per day
     total_mg_dose_per_occassion = num_tablets_per_dose * 120.0;
+
+    //fprintf(stdout, "\npatient is %1.1f kg, taking %1.1f tablets of lumefantrine. The total dose per occasion is %1.1f mg", weight, num_tablets_per_dose, total_mg_dose_per_occassion); 
     
     v_dosing_times.insert( v_dosing_times.begin(), 6, 0.0 );
     v_dosing_times[0] = 0.0;

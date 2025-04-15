@@ -128,7 +128,8 @@ pkpd_artemether::pkpd_artemether(double patient_age, double patient_weight) {
     
 // Step 4: Default patient characteristics 
 
-    weight_initialized = false; // To check if the weight has been initialized
+    weight_initialized = false; // To check if the member variable 'weight' has been initialized
+    age_initialized = false;    // To check if the member variable 'age' has been initialized
     patient_blood_volume = 5500000.0; // 5.5L of blood for an adult individual // 5500000 ul gives 5.5 L
     median_weight  = 48.5; // In KG, check Hoglund, Kloprogge papers
     set_age_and_weight(patient_age, patient_weight);    
@@ -231,6 +232,7 @@ void pkpd_artemether::set_age_and_weight( double a, double w )
     weight = w;
     patient_blood_volume = 5500000.0 * (w/median_weight);
     weight_initialized = true; // this is true if the weight has been set
+    age_initialized = true; // this is true if the age has been set
     
 }
 
@@ -251,7 +253,7 @@ void pkpd_artemether::generate_recommended_dosing_schedule()
 
     if (!weight_initialized)
     {
-        fprintf(stderr, "\n\tERROR: Weight not initialized.\n");
+        fprintf(stderr, "\n\tERROR: Weight not initialized. Exiting program.\n");
         return;
     }
 
@@ -316,7 +318,7 @@ void pkpd_artemether::redraw_params_before_newdose()
 
     double OCC = 1.0 + static_cast<double>(num_doses_given); // NOTE the RHS here is a class member
                                                              // static_cast<double>(num_doses_given) is used to convert the integer num_doses_given to a double
-                                                             // changed from (double)num_doses_given to static_cast<double>(num_doses_given)
+                                                             // changed (double)num_doses_given from OG code to static_cast<double>(num_doses_given)
     
     if(pkpd_artemether::stochastic) 
     {
@@ -378,13 +380,18 @@ void pkpd_artemether::initialize_parameters() {
             → common in PKPD modeling because parasitaemia can span many orders of magnitude*/
 
     initial_log10_totalparasitaemia = log10( y0[dim-1]*patient_blood_volume ); // Gives the log10 total parasite load in the body at t = 0
+                                                                               // If intial_parasitaemia = 20000 parasiteper microliter, and patient_blood_volume = 5500000 microliters
+                                                                                 // intial_total parasitaemia = 20000*5500000 = 1.1 * 10^11
+                                                                                 // initial_log10_totalparasitaemia = log10(20000*5500000) = 11.041
     double THETA7_pe = 0.278;
     double THETA6_pe = -0.375;
 
-    double TVF1 = 1.0 + THETA7_pe*(initial_log10_totalparasitaemia-3.98);
-    if(is_pregnant) TVF1 *= (1.0+THETA6_pe);
+    double TVF1 = 1.0 + THETA7_pe*(initial_log10_totalparasitaemia-3.98); // TVF1 = 1.0 + (0.278) * (11.041-3.98)
+                                                                          // TVF1 = 1 + (0.278 * 7.061)
+                                                                          // TVF1 = 2.96 if initial_parasitaemia = 20000 and patient_blood_volume = 5500000
+    if(is_pregnant) TVF1 *= (1.0+THETA6_pe); 
     
-    double F1=TVF1;
+    double F1=TVF1; // F1 = 2.96 if initial_parasitaemia = 20000 and patient_blood_volume = 5500000
 
     if(pkpd_artemether::stochastic) // Adjusting the between-patient variability in bioavailability (need to check if F1 is indeed bioavailability) if stochastic is true
     {
@@ -392,31 +399,171 @@ void pkpd_artemether::initialize_parameters() {
         F1 *= ETA4_rv;
     }
  
-    vprms[i_artemether_F1_indiv] = F1;
+    vprms[i_artemether_F1_indiv] = F1; 
 
     double TVMT_pe = 0.982;
     double MT = TVMT_pe; 
-    vprms[i_artemether_KTR] = 8.0/MT;
+    vprms[i_artemether_KTR] = 8.0/MT; // KTR = 8/0.982 = 8.15
 
     double THETA1_pe = 78.0;
     double THETA2_pe = 129.0;
-    double TVCL = THETA1_pe * pow( weight/mw, 0.75 );  
-    double CL = TVCL;
-    double TVV2 = THETA2_pe * (weight/mw);  
-    double V2 = TVV2;
+    double TVCL = THETA1_pe * pow( weight/mw, 0.75 );  // TVCL = 78.0 * ((weight/48.5)^0.75))
+                                                       // for weight = 54, TVCL = 78.0 * ((54/48.5)^0.75) = 84.54
+    double CL = TVCL;   // CL = 84.54
 
+    double TVV2 = THETA2_pe * (weight/mw);  // TVV2 = 129.0 * (weight/48.5)
+                                            // for weight = 54, TVV2 = 129.0 * (54/48.5) = 143.63
+    double V2 = TVV2;   // V2 = 143.63
     if(pkpd_artemether::stochastic) 
     {
-        double ETA2_rv = gsl_ran_gaussian( rng, sqrt(0.0162) );
-        V2 *= exp(ETA2_rv);
+        double ETA2_rv = gsl_ran_gaussian( rng, sqrt(0.0162) ); 
+        V2 *= exp(ETA2_rv); // Meaning V2 = V2 * exp(ETA2_rv)
+                            // Example ETA2_rv = 0.0824, exp(0.0824) = 1.09
+                            // V2 = 143.63 * 1.09 = 156.56
     }
     
-    vprms[i_artemether_k20] = CL/V2;
+    vprms[i_artemether_k20] = CL/V2; // For weight = 54. CL = 84.54, V2 = 156.56 (if stochastic)
+                                    // k20 = 84.54/156.56 = 0.539
 
 }
 
-// Function 7: intialize
+// Function 7: initialize_simulation
+
+void pkpd_artemether::initialize_simulation() {
+    //-- WARNING -- the age member variable must be set before you call this function -- add this check
+      // Check added 04/10/25
+
+    if (!age_initialized) {
+        fprintf(stderr, "\n\tERROR: Age not initialized. Exiting program.\n");
+        return;
+    }
+
+    // NOTE must call the two functions below in this order -- dosing schedule needs to be set first
+    generate_recommended_dosing_schedule();
+    initialize_parameters();
+    
+}
+
 // Function 8: rhs_ode
+
+//
+// "rhs_ode" must be defined with these four arguments for it to work in the GSL ODE routines
+// Meaning GSL expects a very specific function signature, if you don’t match it, GSL won't compile or run correctly
+
+/* For GSL to work, your rhs_ode must:
+    - Take time as a double
+        → GSL gives you the current time t (in hours)
+
+    - Take an array of state values: const double y[]
+        → These are the current values of your compartments (e.g., drug amounts)
+
+    - Take an array to write the derivatives/slopes: double f[]
+        → You fill this in with how each state variable is changing at time t
+        → i.e. f[i] = dy[i]/dt
+
+    - Take a void* pointer to the object (your pkpd_artemether instance)
+        → So you can access vprms, patient_blood_volume, etc.
+        → We type cast this to pkpd_artemether* 
+    
+    - Output of this function is an int (0 for success, 1 for failure) 
+        → GSL uses this to check if the function executed correctly
+        → If it returns 1, GSL will stop the integration and report an error
+        → If it returns 0, GSL continues with the next step */ 
+        
+
+int pkpd_artemether::rhs_ode(double t, const double y[], double f[], void *pkd_object )
+{
+
+    /* What it does:
+        - pkd_object is passed in as a void*
+        - GSL doesn’t know what kind of pointer it is
+        - You cast it to a pointer of the correct type: pkpd_artemether* p
+        - Now p can access all the class members like: p->vprms[...], p->patient_blood_volume etc.
+    
+    In short: This gives us a way to simulate this inside a GSL-compatible function. */
+
+    pkpd_artemether * p = (pkpd_artemether*) pkd_object;
+
+    // this is compartment 1, the GI tract or fixed dose compartment, i.e. the hypothetical compartment where the drug goes in first
+    //
+    // the value that is tracked here is the total or absolute mg amount of artemether in the patient's blood; 
+    // it is NOT a drug concentration value of mg or mol artemether per unit blood volume 
+    
+    // f[0] tracks dy[0]/dt
+
+    f[0] =  - p->vprms[i_artemether_KTR] * y[0]; // y[0] amount of drug in dose compartment at t = 0
+
+     // these are the seven transit compartments
+     f[1] = y[0]*p->vprms[i_artemether_KTR] - y[1]*p->vprms[i_artemether_KTR];
+     f[2] = y[1]*p->vprms[i_artemether_KTR] - y[2]*p->vprms[i_artemether_KTR];
+     f[3] = y[2]*p->vprms[i_artemether_KTR] - y[3]*p->vprms[i_artemether_KTR];
+     f[4] = y[3]*p->vprms[i_artemether_KTR] - y[4]*p->vprms[i_artemether_KTR];
+     f[5] = y[4]*p->vprms[i_artemether_KTR] - y[5]*p->vprms[i_artemether_KTR];
+     f[6] = y[5]*p->vprms[i_artemether_KTR] - y[6]*p->vprms[i_artemether_KTR];
+     f[7] = y[6]*p->vprms[i_artemether_KTR] - y[7]*p->vprms[i_artemether_KTR];
+     
+     // this is the central compartment (the blood)
+     //
+     // and the current units here (Aug 7 2024) are simply the total mg of artemether in the blood
+     // NOTE it looks like all of our blood "concentrations" in these PK classes simply track "total mg of molecule in blood"
+     f[8] = y[7]*p->vprms[i_artemether_KTR] - y[8]*p->vprms[i_artemether_k20];
+     
+     // this is the per/ul parasite population size
+     // Testing: adjusting the concentration in the central compartment/EC50 by the PATIENT BLOOD VOLUME
+     double a = (-1.0/24.0) * log( 1.0 - p->pdparam_Pmax * pow((y[8]/p -> patient_blood_volume),p->pdparam_n) / (pow((y[8]/p -> patient_blood_volume),p->pdparam_n) + pow((p->pdparam_EC50/p -> patient_blood_volume),p->pdparam_n)));
+ 
+     f[9] = -a * y[9];
+     
+     
+     return GSL_SUCCESS;
+ }
+
+
 // Function 9: predict 
 // 
+
+void pkpd_artemether::predict( double t0, double t1 )
+{
+    gsl_odeiv_system sys = {pkpd_artemether::rhs_ode, pkpd_artemether::jac, dim, this};   // the fourth argument is a void pointer that you 
+                                                                            // are supossed to use freely; you normally
+                                                                            // use it to access the paramters
+    double t = t0;    
+    double h = 1e-6;
+    
+    
+    while (t < t1)
+    {
+        // check if there are still doses to give
+        if( num_doses_given < v_dosing_times.size() )
+        {
+            // check if time t is equal to or larger than the next scheduled dose
+            if( t >= v_dosing_times[num_doses_given]  )
+            {
+                redraw_params_before_newdose();
+                
+                // add the new dose amount to the "dose compartment", i.e. the first compartment
+                y0[0] +=  v_dosing_amounts[num_doses_given] * vprms[i_artemether_F1_thisdose]; // Currently F1_thisdose = 1.0 in intialize_params(). Stochasticity not implemented yet.
+                
+                num_doses_given++;
+            }
+        }
+
+        // check if time t is equal to or larger than the next scheduled hour to log
+        if( t >= ((double)num_hours_logged)  )
+        {
+            v_concentration_in_blood.push_back( y0[8]/patient_blood_volume); // this is in mg/microliter
+            v_parasitedensity_in_blood.push_back( y0[dim-1] );
+            v_concentration_in_blood_hourtimes.push_back( t );
+            
+            num_hours_logged++;
+        }
+
+        // carry out the Runge-Kutta integration
+        int status = gsl_odeiv_evolve_apply(oe, oc, os, &sys, &t, t1, &h, y0);
+
+        if (status != GSL_SUCCESS)
+            break;
+    }
+    
+}
 

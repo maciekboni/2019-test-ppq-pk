@@ -4,11 +4,11 @@
 bool pkpd_artemether::stochastic = true;
 
 // constructor
-pkpd_artemether::pkpd_artemether()
+pkpd_artemether::pkpd_artemether( double patient_age, double patient_weight )
 {
     
     vprms.insert( vprms.begin(), artemether_num_params, 0.0 );
-    assert( vprms.size()==artemether_num_params );
+    assert( vprms.size()== artemether_num_params );
     
     // this is the dimensionality of the ODE system
     // there are 9 PK compartments and 1 variable for the parasite density
@@ -17,6 +17,12 @@ pkpd_artemether::pkpd_artemether()
     // this is the main vector of state variables
     y0 = new double[dim];
     for(int i=0; i<dim; i++) y0[i]=0.0;
+    // above y0 is initialized to zero, because it's the dosing schedule that creates
+    // non-zero initial conditions for the ODEs
+    
+    // BUT we do need to set the initial parasitaemia at time zero to something positive
+    // this should be obtained from the person class
+    // the last differential equation is for the parasitaemia; it is a per/ul measure
     y0[dim-1] = 10000.0;
     
     
@@ -26,30 +32,34 @@ pkpd_artemether::pkpd_artemether()
     oc 	= gsl_odeiv_control_y_new (1e-6, 0.0);
     oe 	= gsl_odeiv_evolve_alloc(dim);
     
-    patient_weight = -1.0;
+    // patient_weight = -1.0;
     median_weight  =  48.5;
-    weight = median_weight;  // this is the weight that is actually used in the calculations
+    // weight = 54;  
+    // this is the weight that is actually used in the calculations
 
     num_doses_given = 0;
     num_hours_logged = 0;    
     
-    age = 25.0;
-    patient_blood_volume = 5500000.0; // 5.5L of blood for an adult individual
+    // age = 25.0;
+    patient_blood_volume = 5500000.0; // 5.5L of blood for an adult individual // 5500000 ul gives 5.5 L
+    
+    // Scaling patient blood volume by age and weight
+    set_age_and_weight(patient_age, patient_weight);
+
     is_male=false;
     is_pregnant=false;
     doses_still_remain_to_be_taken = true;
 
-    initial_log10_totalparasitaemia = log10( y0[dim-1]*patient_blood_volume );
-
     
     // the parameters 15, exp( 0.525 * log(2700)), and 0.9 give about a 90% drug efficacy for an initial parasitaemia of 10,000/ul (25yo patient, 54kg)
-    pdparam_n = 20.0; // default parameter if CLO is not specified
-    pdparam_EC50 = 0.1; // default parameter if CLO is not specified
-    pdparam_Pmax = 0.99997; // here you want to enter the max daily killing rate; it will be converted to hourly later
-                            // default parameter if CLO is not specified
-
+    pdparam_n = 20.0; 
+    pdparam_EC50 = 0.1; 
+    //pdparam_EC50 = 2.529 * pow(10.0, -8);
+    //pdparam_Pmax = 0.99997; // here you want to enter the max daily killing rate; it will be converted to hourly later
+    pdparam_Pmax = 0.983; 
+                            
     // TODO CHECK IF THIS IS THE RIGHT PLACE TO CALL THIS FUNCTION
-    generate_recommended_dosing_schedule();
+    // generate_recommended_dosing_schedule();
 
     rng=NULL;
 
@@ -63,6 +73,15 @@ pkpd_artemether::~pkpd_artemether()
     gsl_odeiv_control_free(oc);
     gsl_odeiv_step_free(os);
 }
+
+void pkpd_artemether::set_age_and_weight( double a, double w )
+{
+    age = a;
+    weight = w;
+    patient_blood_volume = 5500000.0 * (w/median_weight);
+    
+}
+
 
 void pkpd_artemether::set_parasitaemia( double parasites_per_ul )
 {
@@ -78,12 +97,16 @@ void pkpd_artemether::set_parasitaemia( double parasites_per_ul )
 //
 int pkpd_artemether::rhs_ode(double t, const double y[], double f[], void *pkd_object )
 {
-    pkpd_artemether* p = (pkpd_artemether*) pkd_object;
+    pkpd_artemether * p = (pkpd_artemether*) pkd_object;
 
     // these are the right-hand sides of the derivatives of the six compartments
     
     // this is compartment 1, the git or fixed dose compartment, i.e. the hypothetical compartment
     // where the drug goes in first
+    //
+    // the value that is tracked here is the total or absolute mg amount of artemether in the patient's blood; 
+    // it is NOT a drug concentration value of mg or mol artemether per unit blood volume 
+    //
     f[0] =  - p->vprms[i_artemether_KTR] * y[0];
 
     // these are the seven transit compartments
@@ -98,11 +121,17 @@ int pkpd_artemether::rhs_ode(double t, const double y[], double f[], void *pkd_o
     // this is the central compartment (the blood)
     //
     // and the current units here (Aug 7 2024) are simply the total mg of artemether in the blood
-    // NOTE it looks like all of our blood concentrations in these PK classes simply track "total mg of molecule in blood"
+    // NOTE it looks like all of our blood "concentrations" in these PK classes simply track "total mg of molecule in blood"
     f[8] = y[7]*p->vprms[i_artemether_KTR] - y[8]*p->vprms[i_artemether_k20];
     
     // this is the per/ul parasite population size
-    double a = (-1.0/24.0) * log( 1.0 - p->pdparam_Pmax * pow(y[8],p->pdparam_n) / (pow(y[8],p->pdparam_n) + pow(p->pdparam_EC50,p->pdparam_n)) );
+     double a = (-1.0/24.0) * log( 1.0 - p->pdparam_Pmax * pow(y[8],p->pdparam_n) / (pow(y[8],p->pdparam_n) + pow(p->pdparam_EC50,p->pdparam_n)) );
+    
+    // Testing: adjusting the concentration in the central compartment/EC50 by the PATIENT BLOOD VOLUME
+    //double a = (-1.0/24.0) * log( 1.0 - p->pdparam_Pmax * pow((y[8]/p -> patient_blood_volume),p->pdparam_n) / (pow((y[8]/p -> patient_blood_volume),p->pdparam_n) + pow((p->pdparam_EC50/p -> patient_blood_volume),p->pdparam_n)));
+    //double a = (-1.0/24.0) * log( 1.0 - p->pdparam_Pmax * pow((y[8]/p -> patient_blood_volume),p->pdparam_n) / (pow((y[8]/p -> patient_blood_volume),p->pdparam_n) + pow(p->pdparam_EC50,p->pdparam_n)));
+
+
     f[9] = -a * y[9];
     
     
@@ -171,7 +200,18 @@ void pkpd_artemether::predict( double t0, double t1 )
     
 }
 
+void pkpd_artemether::initialize( void )
+{
+    
+    //-- WARNING -- the age member variable must be set before you call this function -- add this check
+    
 
+    // NOTE must call the two functions below in this order -- dosing schedule needs to be set first
+    generate_recommended_dosing_schedule();
+    initialize_params();
+    
+    
+}
 
 
 
@@ -194,7 +234,8 @@ void pkpd_artemether::initialize_params( void )
     double THETA7_pe = 0.278;
     double THETA6_pe = -0.375;
     //double THETA4_pe= 1.0;
-    
+
+    initial_log10_totalparasitaemia = log10( y0[dim-1]*patient_blood_volume );
     double TVF1 = 1.0 + THETA7_pe*(initial_log10_totalparasitaemia-3.98);
     if(is_pregnant) TVF1 *= (1.0+THETA6_pe);
         
@@ -242,7 +283,11 @@ void pkpd_artemether::initialize_params( void )
     }
     
     vprms[i_artemether_k20] = CL/V2;
-    
+
+    //fprintf(stdout, "\npatient is %1.1f kg, the CL/V2 ratio is %1.1f\n", weight, vprms[i_artemether_k20]);
+    //fprintf(stdout, "Artemether PK parameters\n");
+    //fprintf(stdout, "WEIGHT,F1,CL,V2,CL/V2\n" );
+    //fprintf(stdout, "%1.2f , %1.3f, %1.3f, %1.3f, %1.3f\n", weight, vprms[i_artemether_F1_indiv],CL, V2, vprms[i_artemether_k20]);        
 }
 
 // TODO the function below is a copy-and-paste from the PPQ function; must be modified
@@ -298,59 +343,39 @@ void pkpd_artemether::generate_recommended_dosing_schedule()
 {
     // TODO NEEDS TO BE DONE BY AGE AND WEIGHT
 	
-    // one tablet is 40mg of dihydroartemisinin
+    // one tablet is 40mg of artemether
     
     // TODO: need to get tablet schedule by weight, age, pregnancy status
-    double num_tablets_per_dose;
+    double num_tablets_per_dose = 1.0;
     
-    if( weight < 5.0 )
+    if( weight < 15.0 )
     {
-        num_tablets_per_dose = 0.0;
-    }
-    else if( weight < 8.0 )
-    {
-        num_tablets_per_dose = 0.5;
-    }
-    else if( weight < 11.0 )
-    {
-        num_tablets_per_dose = 0.75;
-    }
-    else if( weight < 17.0 )
-    {
-        num_tablets_per_dose = 1.0;
+        num_tablets_per_dose = 0.50; // 0.50 * 40.0 = 20 mg
     }
     else if( weight < 25.0 )
     {
-        num_tablets_per_dose = 1.5;
+        num_tablets_per_dose = 1.00; // 1.00 * 40.0 = 40 mg
     }
-    else if( weight < 36.0 )
+    else if( weight < 35.0 )
     {
-        num_tablets_per_dose = 2.0;
-    }
-    else if( weight < 60.0 )
-    {
-        num_tablets_per_dose = 3.0;
-    }
-    else if( weight < 80.0 )
-    {
-        num_tablets_per_dose = 4.0;
+        num_tablets_per_dose = 1.50; // 1.50 * 40.0 = 60 mg
     }
     else
     {
-        num_tablets_per_dose = 5.0;
+        num_tablets_per_dose = 2.00; // 2.00 * 40.0 = 80 mg
     }
     
-    // TODO REMOVE PLACEHOLDER BELOW
-    num_tablets_per_dose = 1.0;
+    total_mg_dose = num_tablets_per_dose * 40.0; // one tablet is 40 mg of artemether
+
+    v_dosing_times.insert( v_dosing_times.begin(), 6, 0.0 );
+    v_dosing_times[0] = 0.0;
+    v_dosing_times[1] = 12.0;
+    v_dosing_times[2] = 24.0; 
+    v_dosing_times[3] = 36.0;
+    v_dosing_times[4] = 48.0;
+    v_dosing_times[5] = 60.0;
     
-    double total_mg_dose = num_tablets_per_dose * 40.0; // one tablet is 40 mg of dihydroartemisinin
-    
-    v_dosing_times.insert( v_dosing_times.begin(), 3, 0.0 );
-    v_dosing_times[1] = 24.0;
-    v_dosing_times[2] = 48.0;
-    
-    v_dosing_amounts.insert( v_dosing_amounts.begin(), 3, total_mg_dose );
-    
+    v_dosing_amounts.insert( v_dosing_amounts.begin(), 6, total_mg_dose );
 }
 
 

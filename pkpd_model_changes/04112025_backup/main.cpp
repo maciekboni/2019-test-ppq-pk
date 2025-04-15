@@ -27,13 +27,13 @@ double G_CLO_WEIGHT = 54.0;
 
 // PARASITE MULTIPLICATION FACTOR (PMF) - this is the number of parasites that are produced by each parasite in the blood per 48h life cycle
 // The default value is 10.0 for a 48h cycle. Change this in the differential equations to make sure it is scaled correctly
-double G_CLO_PMF = 1.0;
+double G_CLO_PMF = 10.0;
 
 int G_CLO_N = 1; // this is the number of patients
 
 // from correspondence with Aubrey Cunnington, the parasite density level at which growth is inhibited 
-// to 50% of its max value occurs at ln(10.82) (10.49), 11.54) parasites per microliter 
-// estimated from n=64 Gambian children with uncomplicated malaria (Giorgiadou et al, Nat Microbiol 2019)
+// to 50% of its max value occurs at ln(10.82) estimated from n=64 Gambian children with uncomplicated malaria 
+// actual values log-natural(P_c) n=64 : 10.82 (10.49-11.54) parasites/microliter (Giorgiadou et al, Nat Microbiol 2019)
 double G_DENSITY_50 = 50011.087; // calculated as (e^10.82)
 
 // Adding the following parameters for customizing the hill coefficient, EC50 and Pmax for artemisinin and lumefantrine
@@ -43,20 +43,51 @@ double G_CLO_HILL_COEFF_ARTEMETHER = 20.0;
 double G_CLO_HILL_COEFF_LUM = 15.0;
 
 double G_CLO_EC50_DHA = 0.1;
-double G_CLO_EC50_ARTEMETHER = 0.1;
-double G_CLO_EC50_LUM = exp( 0.525 * log (2700)); // use natural log, 63.30907617
+//double G_CLO_EC50_ARTEMETHER = 0.1;
+double G_CLO_EC50_ARTEMETHER = 2.529 * pow(10.0, -8);
+//double G_CLO_EC50_LUM = exp(0.525 * log(2700)); 
+// use natural log, 63.30907617
+double G_CLO_EC50_LUM = 2.35 * pow(10, -7); 
 
-double G_CLO_PMAX_DHA = 0.983; //pmax_art = 0.983 gives ~68.9% efficacy for ART monotherapy, calibrated by Venitha in Dec 2024 
-                               //Original value = 0.99997
-
-double G_CLO_PMAX_ARTEMETHER = 0.983; 
+double G_CLO_PMAX_DHA = 0.99997; 
+double G_CLO_PMAX_ARTEMETHER = 0.983; //pmax_art = 0.983 gives ~68.9% efficacy for ART monotherapy, calibrated by Venitha in Dec 2024 
+                                      //Original value = 0.99997                               
 double G_CLO_PMAX_LUM = 0.9995;
 
 int G_OUTPUT_TYPE = 0;
+
 // FUNCTION DECLARATIONS
 void ParseArgs(int argc, char **argv);
 
-void output_results(int pi, pkpd_artemether *dyn1, pkpd_lum *dyn2)
+void output_results_monotherapy_lum(int pi, pkpd_lum *dyn)
+{
+    if (G_OUTPUT_TYPE == 1) {
+        int j = dyn->v_concentration_in_blood.size()-1;
+        fprintf(stdout, "%d , %10.3f , %10.3f , %10.3f \n", pi, dyn->v_concentration_in_blood_hourtimes[j], dyn->v_concentration_in_blood[j], dyn->v_parasitedensity_in_blood[j] );
+    }
+    else {
+        for(int j=0; j<dyn->v_concentration_in_blood.size(); j++ )
+        {
+            fprintf(stdout, "%d , %10.3f , %10.3f , %10.3f \n", pi, dyn->v_concentration_in_blood_hourtimes[j], dyn->v_concentration_in_blood[j], dyn->v_parasitedensity_in_blood[j] );
+        }
+    }
+}
+
+void output_results_monotherapy_art(int pi, pkpd_dha *dyn)
+{
+    if (G_OUTPUT_TYPE == 1) {
+        int j = dyn->v_concentration_in_blood.size()-1;
+        fprintf(stdout, "%d , %10.3f , %10.3f , %10.3f \n", pi, dyn->v_concentration_in_blood_hourtimes[j], dyn->v_concentration_in_blood[j], dyn->v_parasitedensity_in_blood[j] );
+    }
+    else {
+        for(int j=0; j<dyn->v_concentration_in_blood.size(); j++ )
+        {
+            fprintf(stdout, "%d , %10.3f , %10.3f , %10.3f \n", pi, dyn->v_concentration_in_blood_hourtimes[j], dyn->v_concentration_in_blood[j], dyn->v_parasitedensity_in_blood[j] );
+        }
+    }
+}
+
+void output_results_combination(int pi, pkpd_artemether *dyn1, pkpd_lum *dyn2)
 {
     if (G_OUTPUT_TYPE == 1) {
         int j = dyn1->v_concentration_in_blood.size()-1;
@@ -78,7 +109,7 @@ int main(int argc, char* argv[])
     auto now = std::chrono::high_resolution_clock::now();
     auto milliseconds =  std::chrono::duration_cast<std::chrono::microseconds>(now.time_since_epoch());
     auto seed = static_cast<unsigned long>(milliseconds.count());
-    //printf("\n seed : %lu\n", seed);
+    //fprintf("\n seed : %lu\n", seed);
     
     // make random number generator (RNG) the Mersenne Twister which has period 2^19937 - 1
     const gsl_rng_type *TT_RAND = gsl_rng_mt19937;
@@ -87,11 +118,9 @@ int main(int argc, char* argv[])
 
     // these will always be stochastic unless we are debugging something    
     pkpd_dha::stochastic = true;
-    pkpd_artemether::stochastic = true;
     pkpd_ppq::stochastic = true;
     pkpd_lum::stochastic = true;
     pkpd_adq::stochastic = true;
-
     
     // declaring and initializing the standard time-keeping variables for the main ODE loop
     double maximum_enforced_stepsize = 0.5; // in hours
@@ -107,7 +136,7 @@ int main(int argc, char* argv[])
         
     for(int j=0; j<dyn_dha->v_concentration_in_blood.size(); j++ )
     {
-        if(j%1==0) printf("%10.3f \t %10.3f \n", dyn_dha->v_concentration_in_blood_hourtimes[j], dyn_dha->v_concentration_in_blood[j] );
+        if(j%1==0) fprintf("%10.3f \t %10.3f \n", dyn_dha->v_concentration_in_blood_hourtimes[j], dyn_dha->v_concentration_in_blood[j] );
     }*/
 
     
@@ -169,15 +198,15 @@ int main(int argc, char* argv[])
         // pi is patient index
         for(int pi=0; pi < G_CLO_N; pi++)
         {
-            auto dyn = new pkpd_lum();
+            auto dyn = new pkpd_lum(G_CLO_AGE, G_CLO_WEIGHT);
             //fprintf(stderr, "\tlum object created pi = %d \r", pi); fflush(stderr);
             dyn->set_parasitaemia( 20000.0 );    
-            dyn->parasites_per_ul_at_first_lum_dose = 1000.0;   // YOU MUST DO THIS SEPARATELY because the parasitaemia level "at first
+            dyn->parasites_per_ul_at_first_lum_dose = 20000.0;   // YOU MUST DO THIS SEPARATELY because the parasitaemia level "at first
                                                             // lum dose" is a special quantity that affects the lum absorption
 
             dyn->rng = G_RNG;    
-            dyn->age = G_CLO_AGE;
-            dyn->weight = G_CLO_WEIGHT;
+            // dyn->age = G_CLO_AGE;
+            // dyn->weight = G_CLO_WEIGHT;
             dyn->initialize();                              // NB: parasitaemia must be set before initializing parameters
             //dyn->vprms[i_lum_pmf] = G_CLO_PMF; // TODO: deprecate this pmf enum
             //fprintf(stderr, "\n\tlum object initialized pi=%d", pi); fflush(stderr);
@@ -207,11 +236,13 @@ int main(int argc, char* argv[])
             }
             //END - INTEGRATION 
 
+            output_results_monotherapy_lum(pi, dyn);
+
             //for(int j=0; j<dyn->v_concentration_in_blood.size(); j++ )
-            for(int j=0; j<96; j++ )
-            {
-                fprintf(stdout, "%d , %10.3f , %10.3f , %10.3f \n", pi, dyn->v_concentration_in_blood_hourtimes[j], dyn->v_concentration_in_blood[j], dyn->v_parasitedensity_in_blood[j] );
-            }
+            //for(int j=0; j<96; j++ )
+            //{
+            //    fprintf(stdout, "%d , %10.3f , %10.3f , %10.3f \n", pi, dyn->v_concentration_in_blood_hourtimes[j], dyn->v_concentration_in_blood[j], dyn->v_parasitedensity_in_blood[j] );
+            //}
         
             delete dyn;
         }
@@ -266,11 +297,13 @@ int main(int argc, char* argv[])
             }
             //END - INTEGRATION 
 
-            for(int j=0; j<dyn->v_concentration_in_blood.size(); j++ )
+            output_results_monotherapy_art(pi, dyn);
+
+            //for(int j=0; j<dyn->v_concentration_in_blood.size(); j++ )
             //for(int j=0; j<60; j++ )
-            {
-                fprintf(stdout, "%d , %10.3f , %10.3f , %10.3f \n", pi, dyn->v_concentration_in_blood_hourtimes[j], dyn->v_concentration_in_blood[j], dyn->v_parasitedensity_in_blood[j] );
-            }
+            //{
+            //    fprintf(stdout, "%d , %10.3f , %10.3f , %10.3f \n", pi, dyn->v_concentration_in_blood_hourtimes[j], dyn->v_concentration_in_blood[j], dyn->v_parasitedensity_in_blood[j] );
+            //}
         
             delete dyn;
         }
@@ -280,12 +313,13 @@ int main(int argc, char* argv[])
     }
 
 
-
-
-    // if( G_CLO_THERAPY == therapy_AL )
+    
+    //if( G_CLO_THERAPY == therapy_AL )
     // {
     //     //fp3 = fopen("out.lum.allpatients.20240401.csv","w");
+        
     //     fprintf(stdout, "PID,HOUR,COMP2CONC_ART,COMP2CONC_LUM,PARASITEDENSITY\n" );
+    //     //Its actually not every hour, but the first/second 30min interval doesn't have a major difference, so we just label the 30 min half as an hour
 
     //     fprintf(stderr, "\n");
     //     // pi is patient index
@@ -294,6 +328,7 @@ int main(int argc, char* argv[])
     //         auto dyn1 = new pkpd_dha();
     //         auto dyn2 = new pkpd_lum();
     //         //fprintf(stderr, "\tlum object created pi = %d \r", pi); fflush(stderr);
+            
     //         dyn1->set_parasitaemia( 20000.0 ); // NOTE: you must set both of these to the same thing    
     //         dyn2->set_parasitaemia( 20000.0 );    
             
@@ -306,7 +341,7 @@ int main(int argc, char* argv[])
     //         dyn1->pdparam_n = G_CLO_HILL_COEFF_DHA;
     //         dyn1->pdparam_EC50 = G_CLO_EC50_DHA;
     //         dyn1->pdparam_Pmax = G_CLO_PMAX_DHA;
-    //         dyn1->initialize_params();                      // TODO: change the name of this function to initialize
+    //         dyn1->initialize();                      
             
     //         dyn2->rng = G_RNG;    
     //         dyn2->age = G_CLO_AGE;
@@ -319,10 +354,6 @@ int main(int argc, char* argv[])
         
     //         t0=0.0;
     //         t1=maximum_enforced_stepsize;           // normally set to 0.5 hours
-
-    //         // this is the PMF adjusted to the 30-minute stepsize 
-    //         double stepsize_PMF = pow( G_CLO_PMF, 1.0 / (48.0/maximum_enforced_stepsize) );
-        
 
     //         //BEGIN - INTEGRATION
     //         while( t0 < 168.0*4.0 )
@@ -344,7 +375,6 @@ int main(int argc, char* argv[])
     //             // in the art object (dyn1)
     //             dyn2->y0[ dyn2->dim - 1 ] = dyn1->y0[ dyn1->dim - 1 ];
 
-
     //             // ---- then, calculate lumefantrine clearance and killing over a 30-minute period (maximum_enforced_stepsize)
     //             if( dyn2->doses_still_remain_to_be_taken )
     //             {
@@ -363,20 +393,25 @@ int main(int argc, char* argv[])
 
     //             // after integrating the differential equations in the predict functions above,
     //             // we need to ---- GROW THE PARASITES ---- for half-an-hour (i.e the maximum_enforced_stepsize)   
-    //             double dd_PMF = stepsize_PMF * ( 1.0 / ( 1.0 + ( dyn1->y0[ dyn1->dim - 1 ] / G_DENSITY_50 ) ) );
-    //             dyn1->y0[ dyn1->dim - 1 ] *= dd_PMF; 
-    //             dyn2->y0[ dyn2->dim - 1 ] *= dd_PMF; 
+                
+    //             // this is the PMF adjusted to the 30-minute stepsize with density dependence     
+    //             if (true)
+    //             {
+    //                 double dd_factor = 1.0 / ( 1.0 + ( dyn1->y0[ dyn1->dim - 1 ] / G_DENSITY_50 ) );
+    //                 double dd_48hr_PMF = G_CLO_PMF * dd_factor;
+    //                 double dd_stepsize_PMF = pow( dd_48hr_PMF, 1.0 / (48.0/maximum_enforced_stepsize) );
 
+    //                 dyn1->y0[ dyn1->dim - 1 ] *= dd_stepsize_PMF; 
+    //                 dyn2->y0[ dyn2->dim - 1 ] *= dd_stepsize_PMF; 
+    //             }
 
     //             t0 += maximum_enforced_stepsize; t1 += maximum_enforced_stepsize;
 
-
-
     //         }
+
     //         //END - INTEGRATION 
-    //         output_results(pi, dyn1, dyn2);
+    //         output_results_combination(pi, dyn1, dyn2);
             
-        
     //         delete dyn1;
     //         delete dyn2;
     //     }
@@ -387,33 +422,31 @@ int main(int argc, char* argv[])
 
     if( G_CLO_THERAPY == therapy_AL )
     {
-        //fp3 = fopen("out.lum.allpatients.20240401.csv","w");
-        fprintf(stdout, "PID,HOUR,COMP2CONC_ARTEMETHER,COMP2CONC_LUM,PARASITEDENSITY\n" );
+
+        //fprintf(stdout, "PID,HOUR,COMP2CONC_ART,COMP2CONC_LUM,PARASITEDENSITY\n" );
+        //fprintf(stdout, "PID,HOUR,CONC_ART,CONC_LUM,PARASITEDENSITY\n" );
+        //Its actually not every hour, but the first/second 30min interval doesn't have a major difference, so we just label the 30 min half as an hour
 
         fprintf(stderr, "\n");
         // pi is patient index
         for(int pi=0; pi < G_CLO_N; pi++)
         {
-            auto dyn1 = new pkpd_artemether();
-            auto dyn2 = new pkpd_lum();
-            //fprintf(stderr, "\tlum object created pi = %d \r", pi); fflush(stderr);
-            dyn1->set_parasitaemia( 20000.0 ); // NOTE: you must set both of these to the same thing    
+            auto dyn1 = new pkpd_artemether(G_CLO_AGE, G_CLO_WEIGHT);
+            auto dyn2 = new pkpd_lum(G_CLO_AGE, G_CLO_WEIGHT);
+            
+            dyn1->set_parasitaemia( 20000.0 );                        // NOTE: you must set both of these to the same thing    
             dyn2->set_parasitaemia( 20000.0 );    
             
             dyn2->parasites_per_ul_at_first_lum_dose = 20000.0;      // NOTE YOU MUST DO THIS SEPARATELY because the parasitaemia level "at first
                                                                     // lum dose" is a special quantity that affects the lum absorption
 
             dyn1->rng = G_RNG;    
-            dyn1->age = G_CLO_AGE;
-            dyn1->weight = G_CLO_WEIGHT;
             dyn1->pdparam_n = G_CLO_HILL_COEFF_ARTEMETHER;
             dyn1->pdparam_EC50 = G_CLO_EC50_ARTEMETHER;
             dyn1->pdparam_Pmax = G_CLO_PMAX_ARTEMETHER;
-            dyn1->initialize_params();                      // TODO: change the name of this function to initialize
+            dyn1->initialize();                      
             
             dyn2->rng = G_RNG;    
-            dyn2->age = G_CLO_AGE;
-            dyn2->weight = G_CLO_WEIGHT;
             dyn2->pdparam_n = G_CLO_HILL_COEFF_LUM;
             dyn2->pdparam_EC50 = G_CLO_EC50_LUM;
             dyn2->pdparam_Pmax = G_CLO_PMAX_LUM;
@@ -422,10 +455,6 @@ int main(int argc, char* argv[])
         
             t0=0.0;
             t1=maximum_enforced_stepsize;           // normally set to 0.5 hours
-
-            // this is the PMF adjusted to the 30-minute stepsize 
-            double stepsize_PMF = pow( G_CLO_PMF, 1.0 / (48.0/maximum_enforced_stepsize) );
-        
 
             //BEGIN - INTEGRATION
             while( t0 < 168.0*4.0 )
@@ -447,7 +476,6 @@ int main(int argc, char* argv[])
                 // in the art object (dyn1)
                 dyn2->y0[ dyn2->dim - 1 ] = dyn1->y0[ dyn1->dim - 1 ];
 
-
                 // ---- then, calculate lumefantrine clearance and killing over a 30-minute period (maximum_enforced_stepsize)
                 if( dyn2->doses_still_remain_to_be_taken )
                 {
@@ -466,20 +494,25 @@ int main(int argc, char* argv[])
 
                 // after integrating the differential equations in the predict functions above,
                 // we need to ---- GROW THE PARASITES ---- for half-an-hour (i.e the maximum_enforced_stepsize)   
-                double dd_PMF = stepsize_PMF * ( 1.0 / ( 1.0 + ( dyn1->y0[ dyn1->dim - 1 ] / G_DENSITY_50 ) ) );
-                dyn1->y0[ dyn1->dim - 1 ] *= dd_PMF; 
-                dyn2->y0[ dyn2->dim - 1 ] *= dd_PMF; 
+                
+                // this is the PMF adjusted to the 30-minute stepsize with density dependence     
+                if (true)
+                {
+                    double dd_factor = 1.0 / ( 1.0 + ( dyn1->y0[ dyn1->dim - 1 ] / G_DENSITY_50 ) );
+                    double dd_48hr_PMF = G_CLO_PMF * dd_factor;
+                    double dd_stepsize_PMF = pow( dd_48hr_PMF, 1.0 / (48.0/maximum_enforced_stepsize) );
 
+                    dyn1->y0[ dyn1->dim - 1 ] *= dd_stepsize_PMF; 
+                    dyn2->y0[ dyn2->dim - 1 ] *= dd_stepsize_PMF; 
+                }
 
                 t0 += maximum_enforced_stepsize; t1 += maximum_enforced_stepsize;
 
-
-
             }
+
             //END - INTEGRATION 
-            output_results(pi, dyn1, dyn2);
+            output_results_combination(pi, dyn1, dyn2);
             
-        
             delete dyn1;
             delete dyn2;
         }
@@ -529,7 +562,6 @@ int main(int argc, char* argv[])
     fprintf(stderr, "\n\n"); */
 
 
-
     
     /*for(int pi=0; pi<100; pi++)
     {
@@ -557,11 +589,11 @@ int main(int argc, char* argv[])
     //for(int k=0; k<num_params; k++) printf("\n\t %3.5f",dyn_ppq->v_individual_pk_prms[k]);
     
     /*fclose(fp);
-    fclose(fp2);
+    //fclose(fp2);
     
     fclose(fp4);*/
     
-    
+
 
     // free memory
     // delete dyn_ppq;
@@ -593,28 +625,24 @@ void ParseArgs(int argc, char **argv)
         else if( str == "--pmf" ) 	                    G_CLO_PMF	                        = atof( argv[++i] );
         
         else if( str == "--hill_dha" ) 		            G_CLO_HILL_COEFF_DHA	            = atof( argv[++i] );
+        else if( str == "--hill_artemether" ) 		    G_CLO_HILL_COEFF_ARTEMETHER	        = atof( argv[++i] );
         else if( str == "--hill_lum" ) 		            G_CLO_HILL_COEFF_LUM	            = atof( argv[++i] );
-        else if( str == "--hill_artemether" ) 		    G_CLO_HILL_COEFF_ARTEMETHER 	    = atof( argv[++i] );
-
-
+        
         else if( str == "--ec50_dha" ) 		            G_CLO_EC50_DHA	                    = atof( argv[++i] );
+        else if( str == "--ec50_artemether" ) 		    G_CLO_EC50_ARTEMETHER	            = atof( argv[++i] );
         else if( str == "--ec50_lum" ) 		            G_CLO_EC50_LUM	                    = atof( argv[++i] );
-        else if( str == "--ec50_artemether" ) 		    G_CLO_EC50_ARTEMETHER	                    = atof( argv[++i] );
-
-
-
+        
         else if( str == "--pmax_dha" ) 		            G_CLO_PMAX_DHA	                    = atof( argv[++i] );
+        else if( str == "--pmax_artemether" ) 		    G_CLO_PMAX_ARTEMETHER	            = atof( argv[++i] );
         else if (str == "--pmax_lum" ) 		            G_CLO_PMAX_LUM	                    = atof( argv[++i] );
-        else if (str == "--pmax_artemether" ) 		    G_CLO_PMAX_ARTEMETHER	            = atof( argv[++i] );
-
         
         else if (str == "-o" ) 		                    G_OUTPUT_TYPE	                    = atoi( argv[++i] );
         
         /*else if( str == "--endttr" ) 		            G_CLO_END_TITER	                    = atof( argv[++i] );
-        else if( str == "--chainlength" )                G_CLO_CHAIN_LENGTH	                = atoi( argv[++i] );
-        else if( str == "--showevery" ) 		            G_CLO_SHOW_EVERY	                = atoi( argv[++i] );
+        else if( str == "--chainlength" )               G_CLO_CHAIN_LENGTH	                = atoi( argv[++i] );
+        else if( str == "--showevery" ) 		        G_CLO_SHOW_EVERY	                = atoi( argv[++i] );
         else if( str == "--burnin" ) 		            G_CLO_BURNIN	                    = atoi( argv[++i] );
-        else if( str == "--iltau" ) 		                G_CLO_INTEGRATION_LIMIT_FOR_TAU	    = atof( argv[++i] );
+        else if( str == "--iltau" ) 		            G_CLO_INTEGRATION_LIMIT_FOR_TAU	    = atof( argv[++i] );
         else if( str == "--profile" ) 		            G_CLO_PROFILE  		                = true;
         else if( str == "--censored" ) 		            G_CLO_CENSORED 		                = true;*/
 	else

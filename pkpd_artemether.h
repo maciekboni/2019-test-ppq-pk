@@ -1,5 +1,5 @@
-#ifndef PKPD_ARTEMETHER
-#define PKPD_ARTEMETHER
+#ifndef PKPD_artemether
+#define PKPD_artemether
 
 #include <vector>
 #include <math.h>
@@ -93,10 +93,10 @@ public:
     vector<double> v_dosing_times;
     vector<double> v_dosing_amounts;
     int num_doses_given;
-    double total_mg_dose;
     bool doses_still_remain_to_be_taken;
     bool we_are_past_a_dosing_time( double current_time );    
     void give_next_dose_to_patient( double fraction_of_dose_taken ); // TODO: this needs to be implemented
+
 
 
     //
@@ -112,7 +112,6 @@ public:
     bool is_pregnant; // TODO: deprecate
     bool is_male;
 
-    void set_age_and_weight(double a, double w);
 
 
     //
@@ -124,7 +123,7 @@ public:
     // an hourly time series of drug concentrations in the blood compartment only
     vector<double> v_concentration_in_blood;                // an hourly time series of drug concentrations in the blood compartment only
                                                             // should be in nanograms per milliliter (ng/ml), probably, TODO: Venitha to check
-                                                            // specifically for DHA is this is the case
+                                                            // specifically for artemether is this is the case
     //vector<double> v_concentration_in_blood_metabolite;   // same as above, but this allows you to keep track of a particular metabolite concentration                                                    
                                                             // no metabolite information is used for lumefantrine
     vector<double> v_concentration_in_blood_hourtimes;
@@ -138,4 +137,4 @@ public:
     
 };
 
-#endif // PKPD_ARTEMETHER
+#endif // PKPD_artemether
