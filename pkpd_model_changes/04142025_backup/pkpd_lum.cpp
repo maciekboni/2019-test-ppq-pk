@@ -8,7 +8,7 @@
 bool pkpd_lum::stochastic = true;
 
 // constructor
-pkpd_lum::pkpd_lum(  )
+pkpd_lum::pkpd_lum(double patient_age, double patient_weight)
 {
     
     vprms.insert( vprms.begin(), lum_num_params, 0.0 );
@@ -38,19 +38,24 @@ pkpd_lum::pkpd_lum(  )
     oc 	= gsl_odeiv_control_y_new (1e-6, 0.0);
     oe 	= gsl_odeiv_evolve_alloc(dim);
     
-    patient_weight = -1.0;
     median_weight  =  54.0;     // in kilograms 
-    weight = patient_weight;     // this is the weight that is actually used in the calculations
+    //patient_blood_volume = 5500000.0; 
+
+    // Scaling patient blood volume by age and weight
+    set_age_and_weight(patient_age, patient_weight);
+
     pregnant = false;
 
     num_doses_given = 0;
     doses_still_remain_to_be_taken = true; 
     num_hours_logged = 0;    
     total_mg_dose_per_occassion = -99.0;    // meaning it is not set yet
+    printf("lum: total_mg_dose_per_occassion = %f\n", total_mg_dose_per_occassion);
     
-    age = 25.0;
-    patient_blood_volume = 5500000.0;       // 5.5L of blood for an adult individual
+    
+          // 5.5L of blood for an adult individual
     central_volume_of_distribution = -99.0; // meaning it is not set yet
+    printf("lum: central_volume_of_distribution = %f\n", central_volume_of_distribution);
 
     // the parameters 15, exp( 0.525 * log(2700)), and 0.9 give about a 90% drug efficacy for an initial parasitaemia of 10,000/ul (25yo patient, 54kg)
     pdparam_n = 15.0; // default parameter if CLO is not specified
@@ -62,6 +67,7 @@ pkpd_lum::pkpd_lum(  )
     rng=NULL;
 
     //printf("\n\nFinished constructing pkpd_lum, the lumefantrine PKPD object that manages drug clearance and parasite clearance.\n");
+    //printf("initial_parasitemia = %f, parasites_per_ul_at_first_lum_dose = %f,  ", y0[dim-1], parasites_per_ul_at_first_lum_dose);
 }
 
 // destructor
@@ -76,8 +82,19 @@ pkpd_lum::~pkpd_lum()
 void pkpd_lum::set_parasitaemia( double parasites_per_ul )
 {
     y0[dim-1] = parasites_per_ul; //  the final ODE equation is always the Pf asexual parasitaemia
+    printf("lum: initial parasitemia = %f\n", y0[dim-1]);
 }
 
+void pkpd_lum::set_age_and_weight( double a, double w )
+{
+    age = a;
+    weight = w;
+    //patient_blood_volume = 5500000.0 * (w/median_weight);
+    patient_blood_volume = weight * (70*1000.0); 
+    printf("lum: age = %f, weight = %f, patient_blood_volume = %f\n", age, weight, patient_blood_volume);
+    
+    
+}
 
 // MUST REMEMBER THAT THE FUNCTION BELOW IS A STATIC MEMBER FUNCTIONS OF THIS CLASS
 // 
@@ -94,28 +111,26 @@ int pkpd_lum::rhs_ode(double t, const double y[], double f[], void *pkd_object )
     // where the drug goes in first, ka is the transition from this fixed dose compartment to the central compartment (blood)
     f[0] =  - p->vprms[i_lum_k12] * y[0];
 
+    printf("y[0] = %f\n", y[0]);
+
     // this is compartment 2, the central compartment, i.e. the blood
     f[1] =  y[0]*p->vprms[i_lum_k12]  +  y[2]*p->vprms[i_lum_k32]  -  y[1]*p->vprms[i_lum_k23]  -  y[1]*p->vprms[i_lum_k20];
+
+    printf("y[1] = %f\n", y[1]);
     
     // this is compartment 3, the only peripheral compartment in this model
     f[2] = y[1]*p->vprms[i_lum_k23]  -  y[2]*p->vprms[i_lum_k32];
+
+    printf("y[2] = %f\n", y[2]);
     
     // this is the per/ul parasite population size
-    //double a = (-1.0/24.0) * log( 1.0 - p->pdparam_Pmax * pow(y[1],p->pdparam_n) / (pow(y[1],p->pdparam_n) + pow(p->pdparam_EC50,p->pdparam_n)) );
-
-    // Testing: adjusting the concentration in the central compartment/EC50 by the PATIENT BLOOD VOLUME
-     double a = (-1.0/24.0) * log( 1.0 - p->pdparam_Pmax * pow((y[1]/p -> patient_blood_volume),p->pdparam_n) / (pow((y[1]/p -> patient_blood_volume),p->pdparam_n) + pow((p->pdparam_EC50/p -> patient_blood_volume),p->pdparam_n)) );
-
-
-    // Testing: adjusting the concentration in the central compartment/EC50 by the CENTRAL VOLUME OF DISTRIBUTION
-    // double a = (-1.0/24.0) * log( 1.0 - p->pdparam_Pmax * pow((y[1]/p -> central_volume_of_distribution),p->pdparam_n) / (pow((y[1]/p -> central_volume_of_distribution),p->pdparam_n) + pow((p->pdparam_EC50/p -> central_volume_of_distribution),p->pdparam_n)) );
-    
-
-
+    double a = (-1.0/24.0) * log( 1.0 - p->pdparam_Pmax * pow((y[1]/p->patient_blood_volume),p->pdparam_n) / (pow((y[1]/p-> patient_blood_volume),p->pdparam_n) + pow(p->pdparam_EC50,p->pdparam_n)) );
     f[3] = - a * y[3];          // NOTE there is no parasite growth here because the PMF factor for parasite growth is done
                                 // manually in the main diff-eq loop
     //f[3] = 0.02 * y[3]  -  a * y[3];
     
+    printf("a = %f\n", a);
+    printf("y[3] = %f\n", y[3]);
     
     return GSL_SUCCESS;
 }
@@ -159,19 +174,15 @@ void pkpd_lum::predict( double t0, double t1 )
         // check if time t is equal to or larger than the next scheduled hour to log
         if( t >= ((double)num_hours_logged)  )
         {
-            
-            
-            v_dosing_compartment.push_back( y0[0] );
-        
-            v_concentration_in_blood.push_back( y0[1] * 1000.0 / central_volume_of_distribution  );                                                      
-            
-            v_peripheral_concentration.push_back( y0[2] * 1000.0 / central_volume_of_distribution  );
-
-            v_killing_rate.push_back( y0[3] ); // Same as y0[dim-1]
-
+            // this is in ng/ml 
+            v_concentration_in_blood.push_back( (y0[1] / 1000.0) / central_volume_of_distribution  );                                                      
             v_parasitedensity_in_blood.push_back( y0[dim-1] );
             v_concentration_in_blood_hourtimes.push_back( t );
             
+            printf("lum_v_concentration_in_blood = %f\n", v_concentration_in_blood.back());
+            printf("lum_v_parasitedensity_in_blood = %f\n", v_parasitedensity_in_blood.back());
+            printf("lum_v_concentration_in_blood_hourtimes = %f\n", v_concentration_in_blood_hourtimes.back());
+
             num_hours_logged++;
         }
 
@@ -277,6 +288,8 @@ void pkpd_lum::initialize_params( void )
     //fprintf(stderr, "\n\tinside initialize_params function -- about to set PARASITE param"); fflush(stderr);
     double PARASITE = pow( log10( parasites_per_ul_at_first_lum_dose ) / 4.20 , THETA9 );
     //fprintf(stderr, "\n\tinside initialize_params function -- PARASITE param set"); fflush(stderr);
+    
+    printf("\n PARASITE = %f\n", PARASITE);
 
     double TVF1 = THETA6 * DS * PARASITE;
     double F1 = TVF1 * exp(ETATR);
@@ -287,6 +300,8 @@ void pkpd_lum::initialize_params( void )
     double TVV = THETA2 * pow( weight/42.0 , 1.0 ); 
     double V = TVV * exp( ETA2_rv );  
     central_volume_of_distribution = V;
+
+    printf("lum: central_volume_of_distribution = %f\n", central_volume_of_distribution);
 
     double TVCL = THETA1 * pow( weight/42.0 , 0.75 );  // allometric scaling for weight on the clearance parameter
     double CL = TVCL * exp( ETA1_rv );
@@ -306,6 +321,14 @@ void pkpd_lum::initialize_params( void )
     vprms[i_lum_k32] = Q/VP;
     vprms[i_lum_k20] = CL/V;
     vprms[i_lum_F1_indiv] = F1;
+
+    printf("vprms[i_lum_k12] = %f\n", vprms[i_lum_k12]);
+    printf("vprms[i_lum_k23] = %f\n", vprms[i_lum_k23]);
+    printf("vprms[i_lum_k32] = %f\n", vprms[i_lum_k32]);
+    printf("vprms[i_lum_k20] = %f\n", vprms[i_lum_k20]);
+    printf("vprms[i_lum_F1_indiv] = %f\n", vprms[i_lum_F1_indiv]);
+
+
     //vprms[i_lum_pmf] = 10.0; // this will get assigned in the main file; the reason is that we don't know what it is and we need to experiment with it a bit
 }
 
@@ -341,7 +364,6 @@ void pkpd_lum::generate_recommended_dosing_schedule()
     // DOSING GUIDELINES SAY    0,  8, 24, 36, 48, 60
     // BUT WE CAN JUST DO       0, 12, 24, 36, 48, 60
 
-    //printf("The age and weight is %f and %f\n", age, weight);
     
     double num_tablets_per_dose;
     
@@ -375,10 +397,9 @@ void pkpd_lum::generate_recommended_dosing_schedule()
 
     v_dosing_amounts.insert( v_dosing_amounts.begin(), 6, total_mg_dose_per_occassion );
 
-    //printf("For weight %f with patient blood volume %f, the lum amount is %f\n", weight, patient_blood_volume, total_mg_dose_per_occassion);
+    printf("lum: patient weight = %f, total_mg_dose_per_occassion = %f\n", weight, total_mg_dose_per_occassion);
     
 }
-
 
 
 

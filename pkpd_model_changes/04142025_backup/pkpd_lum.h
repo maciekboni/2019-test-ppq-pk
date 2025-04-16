@@ -21,7 +21,7 @@ enum parameter_index_lum { i_lum_k12, i_lum_k23, i_lum_k32,  i_lum_k20, i_lum_F1
 class pkpd_lum
 {   
 public:    
-    explicit pkpd_lum();    // constructor
+    explicit pkpd_lum(double patient_age, double patient_weight);    // constructor
     ~pkpd_lum();            // destructor
 
     gsl_rng *rng;		
@@ -102,8 +102,7 @@ public:
     //
     // ----  5  ----  PATIENT CHARACTERISTICS
     //
-
-    double patient_weight;          // this is the kg weight of the current patient
+       
     double median_weight;           // this is the median weight of a patient that these estimates were calibrated for
     double weight;                  // this is the weight that is actually used in the calculations (it's one of the two above)
     double age;                     // in years
@@ -115,11 +114,6 @@ public:
     //
     // ----  6  ----  STORAGE VARIABLES FOR DYNAMICS OF PK AND PD CURVES
     //
-
-    
-    vector<double> v_dosing_compartment;
-    vector<double> v_peripheral_concentration;
-    vector<double> v_killing_rate;
 
     vector<double> v_concentration_in_blood;                // an hourly time series of drug concentrations in the blood compartment only
                                                             // should be in nanograms per milliliter (ng/ml)
