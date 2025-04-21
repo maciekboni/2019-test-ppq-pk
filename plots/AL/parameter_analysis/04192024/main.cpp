@@ -46,10 +46,9 @@ double G_CLO_EC50_DHA = 0.1;
 double G_CLO_EC50_ARTEMETHER = 0.1;
 double G_CLO_EC50_LUM = exp( 0.525 * log (2700)); // use natural log, 63.30907617
 
-double G_CLO_PMAX_DHA = 0.983; //pmax_dha = 0.983 gives ~68.9% efficacy for DHA monotherapy, calibrated by Venitha in Dec 2024 
+double G_CLO_PMAX_DHA = 0.983; //pmax_art = 0.983 gives ~68.9% efficacy for ART monotherapy, calibrated by Venitha in Dec 2024 
                                //Original value = 0.99997
-
-double G_CLO_PMAX_ARTEMETHER = 0.983; 
+double G_CLO_PMAX_ARTEMETHER = 0.983;
 double G_CLO_PMAX_LUM = 0.9995;
 
 int G_CLO_OUTPUT_TYPE = 0;
@@ -75,9 +74,6 @@ void output_results_monotherapy_dha(int pi, pkpd_dha *dyn)
 // {
     
 //     if (G_CLO_OUTPUT_TYPE == 1) {
-        
-//         //printf("foo: %s "
-//        //"bar: %d", foo, bar);
 
 //         int j = dyn1->v_concentration_in_blood.size()-1;
 
@@ -218,15 +214,16 @@ void output_results_combination_AL(int pi, pkpd_artemether *dyn1, pkpd_lum *dyn2
 {
     if (G_CLO_OUTPUT_TYPE == 1) {
         int j = dyn1->v_concentration_in_blood.size()-1;
-        fprintf(stdout, "%d %10.3f %10.3f %10.3f %10.3f \n", pi, dyn1->v_concentration_in_blood_hourtimes[j], dyn1->v_concentration_in_blood[j], dyn2->v_concentration_in_blood[j], dyn1->v_parasitedensity_in_blood[j] );        
+        fprintf(stdout, "%d %10.3f %10.5f %10.5f %10.3f \n", pi, dyn1->v_concentration_in_blood_hourtimes[j], dyn1->v_concentration_in_blood[j], dyn2->v_concentration_in_blood[j], dyn1->v_parasitedensity_in_blood[j] );        
     }
     else {
         for(int j=0; j<dyn1->v_concentration_in_blood.size(); j++ )
         {
-            fprintf(stdout, "%d %10.3f %10.3f %10.3f %10.3f \n", pi, dyn1->v_concentration_in_blood_hourtimes[j], dyn1->v_concentration_in_blood[j], dyn2->v_concentration_in_blood[j], dyn1->v_parasitedensity_in_blood[j] );
+            fprintf(stdout, "%d %10.3f %10.5f %10.5f %10.5f \n", pi, dyn1->v_concentration_in_blood_hourtimes[j], dyn1->v_concentration_in_blood[j], dyn2->v_concentration_in_blood[j], dyn1->v_parasitedensity_in_blood[j] );
         }
     }
 }
+
 
 
 int main(int argc, char* argv[])
@@ -253,8 +250,8 @@ int main(int argc, char* argv[])
     
     // declaring and initializing the standard time-keeping variables for the main ODE loop
     double maximum_enforced_stepsize = 0.5; // in hours
-    double t0=0.0;
-    double t1=maximum_enforced_stepsize;
+    double t0 = 0.0;
+    double t1 = maximum_enforced_stepsize;
     
     /*while( t0 < 52.0 )
     {
@@ -322,6 +319,7 @@ int main(int argc, char* argv[])
     {
         //fp3 = fopen("out.lum.allpatients.20240401.csv","w");
         fprintf(stdout, "PID,HOUR,COMP2CONC,PARASITEDENSITY\n" );
+
         fprintf(stderr, "\n");
         // pi is patient index
         for(int pi=0; pi < G_CLO_N; pi++)
@@ -447,8 +445,27 @@ int main(int argc, char* argv[])
     {
         //fp3 = fopen("out.lum.allpatients.20240401.csv","w");
         fprintf(stdout, "PID,HOUR,COMP2CONC_ART,COMP2CONC_LUM,PARASITEDENSITY\n" );
-        fprintf(stderr, "\n");
+        // fprintf(stdout, 
+        //     "PID"
+        //     "\tHOUR"
+        //     "\tDOSINGCOMP_ARTEMETHER"
+        //     "\tTR1_ARTEMETHER" 
+        //     "\tTR2_ARTEMETHER"
+        //     "\tTR3_ARTEMETHER"
+        //     "\tTR4_ARTEMETHER"
+        //     "\tTR5_ARTEMETHER"
+        //     "\tTR6_ARTEMETHER"
+        //     "\tTR7_ARTEMETHER"
+        //     "\tCENTRALCONC_ARTEMETHER"
+        //     "\tKILLINGCOMP_ARTEMETHER"
+        //     "\tDOSINGCOMP_LUM"
+        //     "\tCENTRALCONC_LUM"
+        //     "\tPERIPHERALCONC_LUM"
+        //     "\tKILLINGCOMP_LUM"
+        //     "\tPARASITEDENSITY\n" );
+        // fprintf(stderr, "\n");
 
+        fprintf(stderr, "\n");
         // pi is patient index
         for(int pi=0; pi < G_CLO_N; pi++)
         {
@@ -466,12 +483,14 @@ int main(int argc, char* argv[])
             dyn1->patient_weight = G_CLO_WEIGHT;
             dyn1->weight = dyn1->patient_weight; 
 
-            dyn1-> patient_blood_volume = 5500000.0 * (dyn1-> weight/dyn1-> median_weight);       // 5.5L of blood for an adult individual
-            //dyn1-> patient_blood_volume = dyn1-> weight * (70.0 * 1000);                        // Scaling patient blood volume to 70ml/kg
+            //dyn1-> patient_blood_volume = 5500000.0 * (dyn1-> weight/dyn1-> median_weight);       // 5.5L of blood for an adult individual
+            //printf("The patient age and weight for artemether is %f and %f\n", dyn1-> age, dyn1-> weight);
+            //printf("The patient blood volume for artemether is %f\n", dyn1-> patient_blood_volume);
 
             dyn1->pdparam_n = G_CLO_HILL_COEFF_ARTEMETHER;
             dyn1->pdparam_EC50 = G_CLO_EC50_ARTEMETHER;
             dyn1->pdparam_Pmax = G_CLO_PMAX_ARTEMETHER;
+            //dyn1->initialize_params();                      // TODO: change the name of this function to initialize
             dyn1->initialize();
             
             dyn2->rng = G_RNG;    
@@ -480,8 +499,9 @@ int main(int argc, char* argv[])
             dyn2->weight = dyn2->patient_weight;
 
             dyn2-> patient_blood_volume = 5500000.0 * (dyn2-> weight/dyn2-> median_weight);       // 5.5L of blood for an adult individual
-            
-            //dyn2-> patient_blood_volume = dyn2-> weight * (70.0 * 1000);     // Scaling patient blood volume to 70ml/kg
+            //printf("The patient age and weight for LUM is %f and %f\n", dyn2-> age, dyn2-> weight);
+            //printf("The patient blood volume for LUM is %f\n", dyn2-> patient_blood_volume);
+
             dyn2->pdparam_n = G_CLO_HILL_COEFF_LUM;
             dyn2->pdparam_EC50 = G_CLO_EC50_LUM;
             dyn2->pdparam_Pmax = G_CLO_PMAX_LUM;
@@ -541,8 +561,8 @@ int main(int argc, char* argv[])
 
                     dyn1->y0[ dyn1->dim - 1 ] *= dd_stepsize_PMF;
                     dyn2->y0[ dyn2->dim - 1 ] *= dd_stepsize_PMF; 
-                    
                 }
+
 
                 t0 += maximum_enforced_stepsize; t1 += maximum_enforced_stepsize;
 
@@ -551,6 +571,7 @@ int main(int argc, char* argv[])
             
             output_results_combination_AL(pi, dyn1, dyn2);
             
+        
             delete dyn1;
             delete dyn2;
         }
@@ -680,7 +701,7 @@ void ParseArgs(int argc, char **argv)
         
         /*else if( str == "--endttr" ) 		            G_CLO_END_TITER	                    = atof( argv[++i] );
         else if( str == "--chainlength" )                G_CLO_CHAIN_LENGTH	                = atoi( argv[++i] );
-        else if( str == "--showevery" ) 		         G_CLO_SHOW_EVERY	                = atoi( argv[++i] );
+        else if( str == "--showevery" ) 		            G_CLO_SHOW_EVERY	                = atoi( argv[++i] );
         else if( str == "--burnin" ) 		            G_CLO_BURNIN	                    = atoi( argv[++i] );
         else if( str == "--iltau" ) 		                G_CLO_INTEGRATION_LIMIT_FOR_TAU	    = atof( argv[++i] );
         else if( str == "--profile" ) 		            G_CLO_PROFILE  		                = true;

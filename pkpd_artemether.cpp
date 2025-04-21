@@ -19,22 +19,23 @@ pkpd_artemether::pkpd_artemether( )
     y0[dim-1] = 10000.0;
     
     
-    
     const gsl_odeiv_step_type* T = gsl_odeiv_step_rkf45;
     os 	= gsl_odeiv_step_alloc(T, dim);
     oc 	= gsl_odeiv_control_y_new (1e-6, 0.0);
     oe 	= gsl_odeiv_evolve_alloc(dim);
     
-    patient_weight = -1.0;
+    patient_weight = 54.0;      // default weight of the patient in kg, can be overwritten via command line input
     //median_weight  =  48.5;
     median_weight  =  54.0;     // in kilograms
-    weight = patient_weight;  // this is the weight that is actually used in the calculations
+    weight = patient_weight;    // this is the weight that is actually used in the calculations
 
     num_doses_given = 0;
     num_hours_logged = 0;    
+    total_mg_dose_per_occassion = -99.0;    // Moved to constructor for uniformity with other classes
     
     age = 25.0;
-    patient_blood_volume = 5500000.0; // 5.5L of blood for an adult individual
+    patient_blood_volume = 5500000.0; // 5.5L of blood for an adult individual of weight 54kg. 
+                                      // Scaled later according to patient_weight in main function
     is_male=false;
     is_pregnant=false;
     doses_still_remain_to_be_taken = true;
@@ -42,12 +43,9 @@ pkpd_artemether::pkpd_artemether( )
     // the parameters 15, exp( 0.525 * log(2700)), and 0.9 give about a 90% drug efficacy for an initial parasitaemia of 10,000/ul (25yo patient, 54kg)
     pdparam_n = 20.0; // default parameter if CLO is not specified
     pdparam_EC50 = 0.1; // default parameter if CLO is not specified
-    pdparam_Pmax = 0.99997; 
+    pdparam_Pmax = 0.99997; // default parameter if CLO is not specified
     //pdparam_Pmax = 0.983; // here you want to enter the max daily killing rate; it will be converted to hourly later
-                            // default parameter if CLO is not specified
-
-    // TODO CHECK IF THIS IS THE RIGHT PLACE TO CALL THIS FUNCTION
-
+                            
     rng=NULL;
 
 }
@@ -114,6 +112,7 @@ void pkpd_artemether::give_next_dose_to_patient( double fractional_dose_taken )
 {
     if( doses_still_remain_to_be_taken )
     {
+
         redraw_params_before_newdose(); // these are the dose-specific parameters that you're drawing here
         
         y0[0] +=  v_dosing_amounts[num_doses_given] * fractional_dose_taken;
@@ -134,8 +133,7 @@ void pkpd_artemether::predict( double t0, double t1 )
                                                                             // use it to access the paramters
     double t = t0;    
     double h = 1e-6;
-    
-    
+
     while (t < t1)
     {
         // check if there are still doses to give
@@ -156,21 +154,22 @@ void pkpd_artemether::predict( double t0, double t1 )
         // check if time t is equal to or larger than the next scheduled hour to log
         if( t >= ((double)num_hours_logged)  )
         {
-            v_dosing_compartment.push_back( y0[0] );
-            v_transit_compartment1.push_back( y0[1] );
-            v_transit_compartment2.push_back( y0[2] );
-            v_transit_compartment3.push_back( y0[3] );
-            v_transit_compartment4.push_back( y0[4] );
-            v_transit_compartment5.push_back( y0[5] );
-            v_transit_compartment6.push_back( y0[6] );
-            v_transit_compartment7.push_back( y0[7] );
-            v_concentration_in_blood.push_back( y0[8]/patient_blood_volume ); 
+            //v_dosing_compartment.push_back( y0[0] );
+            //v_transit_compartment1.push_back( y0[1] );
+            // v_transit_compartment2.push_back( y0[2] );
+            // v_transit_compartment3.push_back( y0[3] );
+            // v_transit_compartment4.push_back( y0[4] );
+            // v_transit_compartment5.push_back( y0[5] );
+            // v_transit_compartment6.push_back( y0[6] );
+            // v_transit_compartment7.push_back( y0[7] );
 
-            v_killing_rate.push_back( y0[9] );
+
+            v_concentration_in_blood.push_back( y0[8]); // Not the concentration in the blood, but the total mg of artemether in the blood
+
+            //v_killing_rate.push_back( y0[9] );
 
             v_parasitedensity_in_blood.push_back( y0[dim-1] );
             v_concentration_in_blood_hourtimes.push_back( t );
-            
             
             num_hours_logged++;
         }
@@ -190,6 +189,7 @@ void pkpd_artemether::predict( double t0, double t1 )
 
 void pkpd_artemether::initialize_params( void )
 {
+    
     //WARNING - THE AGE MEMBER VARIABLE MUST BE SET BEFORE YOU CALL THIS FUNCTION
 
     //NOTE --- in this function alone, THE KTR PARAM HERE HAS INTER-PATIENT VARIABILITY BUT NO INTER-DOSE VARIABILITY
@@ -237,7 +237,6 @@ void pkpd_artemether::initialize_params( void )
     vprms[i_artemether_KTR] = 8.0/MT;
 
 
-    
     // ### ### this is the exit rate from the central compartment (the final exit rate in the model
     double THETA1_pe = 78.0;
     double THETA2_pe = 129.0;
@@ -262,6 +261,7 @@ void pkpd_artemether::initialize_params( void )
 void pkpd_artemether::initialize() {
     generate_recommended_dosing_schedule();
     initialize_params();
+            
 }
 
 // TODO the function below is a copy-and-paste from the PPQ function; must be modified
@@ -279,6 +279,7 @@ void pkpd_artemether::redraw_params_before_newdose()
     {
         double ETA_rv = gsl_ran_gaussian( rng, sqrt(0.23000) ); // this is ETA6, ETA7, and ETA8
         vprms[i_artemether_KTR] *= exp(-ETA_rv);       // WARNING this behavior is strange ... check if this is the right way to do it
+                                                       // Seems okay - Venitha, April 2025
     }
     //double IOV_rv = ETA_rv;
     
@@ -286,14 +287,12 @@ void pkpd_artemether::redraw_params_before_newdose()
     // BUT:  KTR = 8/MT, so instead, simply multiple KTR by exp(-ETA_rv)
     
     
-    
-    
     //  TVF1 = THETA(4)*(1+THETA(6)*FLAG)*(1+THETA(7)*(PARA-3.98));;
     //  F1   = TVF1*EXP(ETA(4));
 
     //double THETA4_pe = 1.0; //TODO check if this is really fixed at 1.0 as a point estimate; checked.  It is fixed at 1.0.
     //double ETA4_rv = gsl_ran_gaussian( rng, sqrt(0.08800) );
-    
+
 }
 
 
@@ -302,6 +301,7 @@ bool pkpd_artemether::we_are_past_a_dosing_time( double current_time )
     // check if there are still any doses left to give
     if( num_doses_given < v_dosing_times.size() )
     {
+        
         if( current_time >= v_dosing_times[num_doses_given] )
         {
             return true;
@@ -340,7 +340,7 @@ void pkpd_artemether::generate_recommended_dosing_schedule()
     }
    
     // Artemether given by weight, twice daily, for a total of three days - WHO guidelines, 2024
-    double total_mg_dose_per_occassion = num_tablets_per_dose * 40.0;
+    total_mg_dose_per_occassion = num_tablets_per_dose * 40.0;
     
     v_dosing_times.insert( v_dosing_times.begin(), 6, 0.0 );
     v_dosing_times[0] = 0.0;
@@ -352,6 +352,4 @@ void pkpd_artemether::generate_recommended_dosing_schedule()
 
     v_dosing_amounts.insert( v_dosing_amounts.begin(), 6, total_mg_dose_per_occassion );
 
-    //printf("For weight %f with patient blood volume %f, the artemether dosing amount is %f\n", weight, patient_blood_volume, total_mg_dose_per_occassion);
-    
 }

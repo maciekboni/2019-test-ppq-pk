@@ -1,0 +1,17 @@
+void output_results_monotherapy_lum(int pi, pkpd_lum *dyn)
+{
+    if (G_CLO_OUTPUTTYPE == 1) {
+        int j = dyn->v_concentration_in_blood.size()-1;
+        fprintf(stdout, "%d , %10.3f , %10.3f , %10.3f \n", pi, dyn->v_concentration_in_blood_hourtimes[j], dyn->v_concentration_in_blood[j], dyn->v_parasitedensity_in_blood[j] );
+    }
+    else {
+        for(int j=0; j<dyn->v_concentration_in_blood.size(); j++ )
+        {
+            fprintf(stdout, "%d , %10.3f , %10.3f , %10.3f \n", pi, dyn->v_concentration_in_blood_hourtimes[j], dyn->v_concentration_in_blood[j], dyn->v_parasitedensity_in_blood[j] );
+        }
+    }
+}
+
+
+
+

@@ -119,28 +119,28 @@ public:
     //
 
 
-    // vector<double> v_dosing_compartment;                // an hourly time series of drug concentrations in the dosing compartment
-    // vector<double> v_transit_compartment1;              // an hourly time series of drug concentrations in the transit compartment 1
-    // vector<double> v_transit_compartment2;              // an hourly time series of drug concentrations in the transit compartment 2
-    // vector<double> v_transit_compartment3;              // an hourly time series of drug concentrations in the transit compartment 3
-    // vector<double> v_transit_compartment4;              // an hourly time series of drug concentrations in the transit compartment 4
-    // vector<double> v_transit_compartment5;              // an hourly time series of drug concentrations in the transit compartment 5
-    // vector<double> v_transit_compartment6;              // an hourly time series of drug concentrations in the transit compartment 6
-    // vector<double> v_transit_compartment7;              // an hourly time series of drug concentrations in the transit compartment 7
+    vector<double> v_dosing_compartment;                // an hourly time series of drug concentrations in the dosing compartment
+    vector<double> v_transit_compartment1;              // an hourly time series of drug concentrations in the transit compartment 1
+    vector<double> v_transit_compartment2;              // an hourly time series of drug concentrations in the transit compartment 2
+    vector<double> v_transit_compartment3;              // an hourly time series of drug concentrations in the transit compartment 3
+    vector<double> v_transit_compartment4;              // an hourly time series of drug concentrations in the transit compartment 4
+    vector<double> v_transit_compartment5;              // an hourly time series of drug concentrations in the transit compartment 5
+    vector<double> v_transit_compartment6;              // an hourly time series of drug concentrations in the transit compartment 6
+    vector<double> v_transit_compartment7;              // an hourly time series of drug concentrations in the transit compartment 7
 
-    // vector<double> v_killing_rate;                            // an hourly time series of the killing rate
-    
+    vector<double> v_killing_rate;                            // an hourly time series of the killing rate
     // an hourly time series of drug concentrations in the blood compartment only
     vector<double> v_concentration_in_blood;                // an hourly time series of drug concentrations in the blood compartment only
                                                             // should be in nanograms per milliliter (ng/ml), probably, TODO: Venitha to check
                                                             // specifically for artemether is this is the case
-    
-                                                            //vector<double> v_concentration_in_blood_metabolite;   // same as above, but this allows you to keep track of a particular metabolite concentration                                                    
+    //vector<double> v_concentration_in_blood_metabolite;   // same as above, but this allows you to keep track of a particular metabolite concentration                                                    
                                                             // no metabolite information is used for lumefantrine
     vector<double> v_concentration_in_blood_hourtimes;
     vector<double> v_parasitedensity_in_blood;
     int num_hours_logged;
-    double total_mg_dose_per_occassion;
+    
+    
+
     
     gsl_rng *rng;		
     
