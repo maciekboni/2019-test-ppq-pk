@@ -362,6 +362,29 @@ void pkpd_lum::generate_recommended_dosing_schedule()
     // NOTE - do not confuse this with daily dosing - AL is taken twice daily, two occassions per day
     total_mg_dose_per_occassion = num_tablets_per_dose * 120.0;
     
+    if (weight <= 34) 
+    {
+
+    v_dosing_times.insert( v_dosing_times.begin(), 10, 0.0 );
+    v_dosing_times[0] = 0.0;
+    v_dosing_times[1] = 12.0;
+    v_dosing_times[2] = 24.0; 
+    v_dosing_times[3] = 36.0;
+    v_dosing_times[4] = 48.0;
+    v_dosing_times[5] = 60.0;
+    v_dosing_times[6] = 72.0;
+    v_dosing_times[7] = 84.0;
+    v_dosing_times[8] = 96.0;
+    v_dosing_times[9] = 108.0;
+
+    v_dosing_amounts.insert( v_dosing_amounts.begin(), 10, total_mg_dose_per_occassion );
+
+    }
+
+    else 
+    
+    {
+
     v_dosing_times.insert( v_dosing_times.begin(), 6, 0.0 );
     v_dosing_times[0] = 0.0;
     v_dosing_times[1] = 12.0;
@@ -369,9 +392,15 @@ void pkpd_lum::generate_recommended_dosing_schedule()
     v_dosing_times[3] = 36.0;
     v_dosing_times[4] = 48.0;
     v_dosing_times[5] = 60.0;
-
+    
     v_dosing_amounts.insert( v_dosing_amounts.begin(), 6, total_mg_dose_per_occassion );
-
+    }
+    
+    // printf("\n\nLUMEFANTRINE: The weight is %f and the dose per occassion is %f and the dosing schedule is: ", weight, total_mg_dose_per_occassion);
+    // for (int i = 0; i < v_dosing_times.size(); i++)
+    // {
+    //     printf("%f ", v_dosing_times[i]);
+    // }
 }
 
 
