@@ -1,3 +1,6 @@
+#include <string>
+#include <fstream>
+#include <iostream>
 #include "assert.h"
 #include "pkpd_artemether.h"
 
@@ -134,6 +137,8 @@ void pkpd_artemether::predict( double t0, double t1 )
     double t = t0;    
     double h = 1e-6;
 
+    
+
     while (t < t1)
     {
         // check if there are still doses to give
@@ -170,7 +175,7 @@ void pkpd_artemether::predict( double t0, double t1 )
 
             v_parasitedensity_in_blood.push_back( y0[dim-1] );
             v_concentration_in_blood_hourtimes.push_back( t );
-            
+  
             num_hours_logged++;
         }
 
@@ -222,7 +227,6 @@ void pkpd_artemether::initialize_params( void )
     vprms[i_artemether_F1_indiv] = F1;
  
     
-    
     // ### ### KTR is the transition rate to, between, and from the seven transit compartments
     double TVMT_pe = 0.982; // this is the point estimate (_pe) for TVMT; there is no need to draw a random variate here
     //double ETA3_rv = gsl_ran_gaussian( rng, sqrt(0.0) );  // _rv means random variate
@@ -234,34 +238,32 @@ void pkpd_artemether::initialize_params( void )
 
     // NOTE at this point you have an MT value without any effect of dose order (i.e. whether it's dose 1, dose 2, etc.
     //      later, you must/may draw another mean-zero normal rv, and multiply by the value above
-    vprms[i_artemether_KTR] = 8.0/MT;
+    vprms[i_artemether_KTR] = 8.0/MT; // represents IOV; modified later in redraw_params_before_newdose function - Venitha APril 2025
 
 
     // ### ### this is the exit rate from the central compartment (the final exit rate in the model
     double THETA1_pe = 78.0;
     double THETA2_pe = 129.0;
     double TVCL = THETA1_pe * pow( weight/mw, 0.75 );  
+    vprms[i_artemether_typical_CL] = TVCL;
     
     //double ETA1_rv = 0.0; // this is fixed in this model
     //double CL = TVCL * exp(ETA1_rv);
-    double CL = TVCL; // just execute this line since ETA1 is fixed at zero above
+    double CL = vprms[TVCL]; // just execute this line since ETA1 is fixed at zero above
+    vprms[i_artemether_CL_indiv] = CL;
 
     double TVV2 = THETA2_pe * (weight/mw);  
+    vprms[i_artemether_typical_V2] = TVV2;
+    
     double V2 = TVV2;
     if(pkpd_artemether::stochastic) 
     {
         double ETA2_rv = gsl_ran_gaussian( rng, sqrt(0.0162) );
         V2 *= exp(ETA2_rv);
+        vprms[i_artemether_V2_indiv] = V2;
     }
     
     vprms[i_artemether_k20] = CL/V2;
-
-    // Added for debugging by Venitha
-    vprms[i_artemether_typical_CL] = TVCL;
-    vprms[i_artemether_CL_indiv] = CL;
-    vprms[i_artemether_typical_V2] = TVV2;
-    vprms[i_artemether_V2_indiv] = V2;
-    
     
 }
 
@@ -270,6 +272,7 @@ void pkpd_artemether::initialize() {
     initialize_params();
             
 }
+
 
 // TODO the function below is a copy-and-paste from the PPQ function; must be modified
 void pkpd_artemether::redraw_params_before_newdose()
@@ -356,7 +359,14 @@ void pkpd_artemether::generate_recommended_dosing_schedule()
     v_dosing_times[3] = 36.0;
     v_dosing_times[4] = 48.0;
     v_dosing_times[5] = 60.0;
-
+    
     v_dosing_amounts.insert( v_dosing_amounts.begin(), 6, total_mg_dose_per_occassion );
+    
+    
+    // printf("\n\nARTEMETHER: The weight is %f and the dose per occassion is %f and the dosing schedule is: ", weight, total_mg_dose_per_occassion);
+    // for (int i = 0; i < v_dosing_times.size(); i++)
+    // {
+    //     printf("%f ", v_dosing_times[i]);
+    // }
 
 }

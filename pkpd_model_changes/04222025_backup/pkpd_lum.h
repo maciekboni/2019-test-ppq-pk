@@ -15,9 +15,6 @@ using namespace std;
 
 
 // these are the flow or rate parameters in the ODEs, and some additional dose and scaling parameters
-// enum parameter_index_lum { i_lum_k12, i_lum_k23, i_lum_k32,  i_lum_k20, i_lum_F1_indiv, i_lum_F1_thisdose, i_lum_pmf, lum_num_params }; 
-
-// Editing to add PKPD parameters
 enum parameter_index_lum { i_lum_k12, i_lum_k23, i_lum_k32,  i_lum_k20, i_lum_F1_indiv, i_lum_F1_thisdose, i_lum_pmf, i_lum_DS, i_lum_Q, i_lum_V_indiv, i_lum_CL, i_lum_VP, lum_num_params }; 
 
 
@@ -112,6 +109,8 @@ public:
     double age;                     // in years
     double patient_blood_volume;    // in microliters, so should be between 250,000 (infant) to 6,000,000 (large adult)
     bool pregnant;                  // usually means just 2nd or 3rd trimester
+
+    void set_age_and_weight(double a, double w);
 
     //
     // ----  6  ----  STORAGE VARIABLES FOR DYNAMICS OF PK AND PD CURVES

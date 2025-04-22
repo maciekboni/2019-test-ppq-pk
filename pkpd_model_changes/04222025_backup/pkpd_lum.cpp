@@ -1,7 +1,6 @@
-//#include <iostream>
-//#include <string>
-//#include <cstdlib>
-
+#include <string>
+#include <fstream>
+#include <iostream>
 #include "assert.h"
 #include "pkpd_lum.h"
 
@@ -255,7 +254,7 @@ void pkpd_lum::initialize_params( void )
     double PHI = exp( ETA6_rv );
     double ETATR = ( pow(PHI, BXPAR) - 1.0  ) / BXPAR ; 
 
-    double D50 = THETA7; // 
+    double D50 = THETA7; 
 
     //fprintf(stderr, "\n\tinside initialize_params function -- about to set DS param"); fflush(stderr);
     
@@ -301,15 +300,15 @@ void pkpd_lum::initialize_params( void )
     vprms[i_lum_k32] = Q/VP;
     vprms[i_lum_k20] = CL/V;
     vprms[i_lum_F1_indiv] = F1;
-    //vprms[i_lum_pmf] = 10.0; // this will get assigned in the main file; the reason is that we don't know what it is and we need to experiment with it a bit
 
-    // Added for debugging by Venitha
-    
     vprms[i_lum_DS] = DS;
     vprms[i_lum_Q] = Q;
     vprms[i_lum_V_indiv] = V;   
     vprms[i_lum_CL] = CL;
     vprms[i_lum_VP] = VP;
+
+    //vprms[i_lum_pmf] = 10.0; // this will get assigned in the main file; the reason is that we don't know what it is and we need to experiment with it a bit
+
 
 }
 
@@ -345,8 +344,6 @@ void pkpd_lum::generate_recommended_dosing_schedule()
 
     // DOSING GUIDELINES SAY    0,  8, 24, 36, 48, 60
     // BUT WE CAN JUST DO       0, 12, 24, 36, 48, 60
-
-    //printf("The age and weight is %f and %f\n", age, weight);
     
     double num_tablets_per_dose;
     
@@ -370,6 +367,7 @@ void pkpd_lum::generate_recommended_dosing_schedule()
     // NOTE - do not confuse this with daily dosing - AL is taken twice daily, two occassions per day
     total_mg_dose_per_occassion = num_tablets_per_dose * 120.0;
     
+
     v_dosing_times.insert( v_dosing_times.begin(), 6, 0.0 );
     v_dosing_times[0] = 0.0;
     v_dosing_times[1] = 12.0;
@@ -377,9 +375,8 @@ void pkpd_lum::generate_recommended_dosing_schedule()
     v_dosing_times[3] = 36.0;
     v_dosing_times[4] = 48.0;
     v_dosing_times[5] = 60.0;
-
+    
     v_dosing_amounts.insert( v_dosing_amounts.begin(), 6, total_mg_dose_per_occassion );
-
 }
 
 
