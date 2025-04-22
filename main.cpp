@@ -449,10 +449,10 @@ int main(int argc, char* argv[])
     if( G_CLO_THERAPY == therapy_AL )
     {
         //fp3 = fopen("out.lum.allpatients.20240401.csv","w");
-        fprintf(stdout, "PID,HOUR,COMP2CONC_ART,COMP2CONC_LUM,PARASITEDENSITY\n" );
+        fprintf(stdout, "PID,HOUR,COMP2CONC_ARTEMETHER,COMP2CONC_LUM,PARASITEDENSITY\n" );
         fprintf(stderr, "\n");
 
-        std::string filename_artemether = "PKPD_parameters_" + std::to_string(static_cast<int>(G_CLO_WEIGHT)) + "kg_artemether.txt";
+        std::string filename_artemether = "PK_parameters_" + std::to_string(static_cast<int>(G_CLO_WEIGHT)) + "kg_artemether.txt";
         std::ofstream outputFile_artemether;
         // Open the file in append mode
         outputFile_artemether.open(filename_artemether, std::ios::app);
@@ -465,7 +465,7 @@ int main(int argc, char* argv[])
         std::cerr << "Error opening file for writing." << std::endl;
         }
  
-        std::string filename_lum = "PKPD_parameters_" + std::to_string(static_cast<int>(G_CLO_WEIGHT)) + "kg_lumefantrine.txt";
+        std::string filename_lum = "PK_parameters_" + std::to_string(static_cast<int>(G_CLO_WEIGHT)) + "kg_lumefantrine.txt";
         std::ofstream outputFile_lum;
         // Open the file in append mode
         outputFile_lum.open(filename_lum, std::ios::app);
@@ -525,6 +525,17 @@ int main(int argc, char* argv[])
             dyn2->pdparam_EC50 = G_CLO_EC50_LUM;
             dyn2->pdparam_Pmax = G_CLO_PMAX_LUM;
             dyn2->initialize();                             // NB: parasitaemia must be set before initializing parameters
+
+            // Open the file in append mode
+            outputFile_lum.open(filename_lum, std::ios::app);
+           if (outputFile_lum.is_open()) {
+            // Append data to the file
+            outputFile_lum<< pi << "," << dyn2->vprms[i_lum_F1_indiv] << "," << dyn2->vprms[i_lum_k12] << "," << dyn2-> vprms[i_lum_k23] << "," << dyn2->vprms[i_lum_k32] << "," << dyn2->vprms[i_lum_k20] << "," << dyn2->total_mg_dose_per_occassion << "," << dyn2->vprms[i_lum_DS] << "," << dyn2->vprms[i_lum_Q] << "," << "," << dyn2->vprms[i_lum_V_indiv] << "," << dyn2->vprms[i_lum_CL] << "," << dyn2->vprms[i_lum_VP] << std::endl;  
+            outputFile_lum.close();
+            } 
+            else {
+            std::cerr << "Error opening file for writing." << std::endl;
+            }
             
         
             t0=0.0;
