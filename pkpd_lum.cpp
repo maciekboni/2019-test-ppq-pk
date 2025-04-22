@@ -1,7 +1,6 @@
-//#include <iostream>
-//#include <string>
-//#include <cstdlib>
-
+#include <string>
+#include <fstream>
+#include <iostream>
 #include "assert.h"
 #include "pkpd_lum.h"
 
@@ -301,7 +300,15 @@ void pkpd_lum::initialize_params( void )
     vprms[i_lum_k32] = Q/VP;
     vprms[i_lum_k20] = CL/V;
     vprms[i_lum_F1_indiv] = F1;
+
+    vprms[i_lum_DS] = DS;
+    vprms[i_lum_Q] = Q;
+    vprms[i_lum_V_indiv] = V;   
+    vprms[i_lum_CL] = CL;
+    vprms[i_lum_VP] = VP;
+
     //vprms[i_lum_pmf] = 10.0; // this will get assigned in the main file; the reason is that we don't know what it is and we need to experiment with it a bit
+
 
 }
 

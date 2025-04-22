@@ -15,7 +15,7 @@ using namespace std;
 
 
 // these are the parameters
-enum parameter_index_artemether { i_artemether_KTR, i_artemether_k20, i_artemether_F1_indiv, i_artemether_F1_thisdose, artemether_num_params }; 
+enum parameter_index_artemether { i_artemether_KTR, i_artemether_k20, i_artemether_F1_indiv, i_artemether_F1_thisdose, i_artemether_typical_CL, i_artemether_CL_indiv, i_artemether_typical_V2, i_artemether_V2_indiv, artemether_num_params }; 
 
 //typedef enum parameter_index_artemether i_artemether;
 
@@ -61,12 +61,13 @@ public:
     // ----  2  ----  PK PARAMETERS
     //
 
-    void initialize();  // TODO: this function needs to be created and set up
+    void initialize();  
     //void initialize_params_w_population_means();
     void initialize_params();
 
     // TODO: implement this function; we should remove the dosing from the predict function
     void redraw_params_before_newdose();
+
     
 
     //
