@@ -5,6 +5,9 @@
 #include "pkpd_artemether.h"
 
 
+#include <string>
+#include <fstream>
+#include <iostream>
 #include <gsl/gsl_rng.h> // random number generators from Gnu Scientific Library
 #include <gsl/gsl_cdf.h>
 #include <gsl/gsl_randist.h>
@@ -449,6 +452,32 @@ int main(int argc, char* argv[])
         fprintf(stdout, "PID,HOUR,COMP2CONC_ART,COMP2CONC_LUM,PARASITEDENSITY\n" );
         fprintf(stderr, "\n");
 
+        std::string filename_artemether = "PKPD_parameters_" + std::to_string(static_cast<int>(G_CLO_WEIGHT)) + "kg_artemether.txt";
+        std::ofstream outputFile_artemether;
+        // Open the file in append mode
+        outputFile_artemether.open(filename_artemether, std::ios::app);
+        if (outputFile_artemether.is_open()) {
+        // Append data to the file            
+        outputFile_artemether << "PID,i_artemether_F1_indiv,i_artemether_KTR,total_mg_dose_per_occassion,TVCL,CL,TVV2,V2, i_artemether_k20 (CL/V2)" << std::endl;
+        outputFile_artemether.close();
+        } 
+        else {
+        std::cerr << "Error opening file for writing." << std::endl;
+        }
+ 
+        std::string filename_lum = "PKPD_parameters_" + std::to_string(static_cast<int>(G_CLO_WEIGHT)) + "kg_lumefantrine.txt";
+        std::ofstream outputFile_lum;
+        // Open the file in append mode
+        outputFile_lum.open(filename_lum, std::ios::app);
+        if (outputFile_lum.is_open()) {
+        // Append data to the file            
+        outputFile_lum << "PID,i_lum_F1_indiv,i_lum_k12(KA),i_lum_k23(Q/V),i_lum_k32(Q/VP),i_lum_k20(CL/V),total_mg_dose_per_occassion,DS,Q,V,CL,VP" << std::endl;
+        outputFile_lum.close();
+        } 
+        else {
+        std::cerr << "Error opening file for writing." << std::endl;
+        }
+
         // pi is patient index
         for(int pi=0; pi < G_CLO_N; pi++)
         {
@@ -473,6 +502,16 @@ int main(int argc, char* argv[])
             dyn1->pdparam_EC50 = G_CLO_EC50_ARTEMETHER;
             dyn1->pdparam_Pmax = G_CLO_PMAX_ARTEMETHER;
             dyn1->initialize();
+
+            outputFile_artemether.open(filename_artemether, std::ios::app);
+            if (outputFile_artemether.is_open()) {
+            // Append data to the file            
+            outputFile_artemether << pi << "," << dyn1->vprms[i_artemether_F1_indiv] << "," << dyn1->vprms[i_artemether_KTR] << "," << dyn1->total_mg_dose_per_occassion << "," << dyn1->vprms[i_artemether_typical_CL] << "," << dyn1-> vprms[i_artemether_CL_indiv] << "," << dyn1->vprms[i_artemether_typical_V2] << "," <<  dyn1->vprms[i_artemether_V2_indiv]  << "," << dyn1->vprms[i_artemether_k20] << std::endl;
+            outputFile_artemether.close();
+            } 
+            else {
+            std::cerr << "Error opening file " << filename_artemether << " for writing." << std::endl;
+            }
             
             dyn2->rng = G_RNG;    
             dyn2->age = G_CLO_AGE;
@@ -551,10 +590,10 @@ int main(int argc, char* argv[])
             
             output_results_combination_AL(pi, dyn1, dyn2);
             
+            
             delete dyn1;
             delete dyn2;
         }
-
         
         //fclose(fp3);
     }
