@@ -164,10 +164,10 @@ void pkpd_lum::predict( double t0, double t1 )
         
             //v_concentration_in_blood.push_back( y0[1] * 1000.0 / central_volume_of_distribution  ); 
             
-            //v_concentration_in_blood.push_back( (y0[1]) / central_volume_of_distribution );  // The central volume of distribution is in liters - Venitha, March/April 2025
+            v_concentration_in_blood.push_back( (y0[1]) / central_volume_of_distribution );     // The central volume of distribution is in liters - Venitha, March/April 2025
                                                                                                // The concentration is in mg/L           
 
-            v_concentration_in_blood.push_back( (y0[1]));   // Total lumefantrine in the blood, not concentration                                                                          
+            //v_concentration_in_blood.push_back( (y0[1]));   // Total lumefantrine in the blood, not concentration                                                                          
 
             //v_peripheral_concentration.push_back( y0[2] * 1000.0 / central_volume_of_distribution  );
 

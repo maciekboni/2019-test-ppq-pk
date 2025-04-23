@@ -163,8 +163,10 @@ void pkpd_artemether::predict( double t0, double t1 )
             // v_transit_compartment6.push_back( y0[6] );
             // v_transit_compartment7.push_back( y0[7] );
 
+            //v_concentration_in_blood.push_back( y0[8]); // Not the concentration in the blood, but the total mg of artemether in the blood
+            patient_blood_volume_litres = patient_blood_volume/pow(10,6); // in litres
+            v_concentration_in_blood.push_back( y0[8]/ (patient_blood_volume_litres)); // Not the concentration in the blood, but the total mg of artemether in the blood
 
-            v_concentration_in_blood.push_back( y0[8]); // Not the concentration in the blood, but the total mg of artemether in the blood
 
             //v_killing_rate.push_back( y0[9] );
 
@@ -182,8 +184,6 @@ void pkpd_artemether::predict( double t0, double t1 )
     }
     
 }
-
-
 
 
 
