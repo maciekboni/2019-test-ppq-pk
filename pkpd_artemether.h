@@ -122,16 +122,16 @@ public:
     //
 
 
-    // vector<double> v_dosing_compartment;                // an hourly time series of drug concentrations in the dosing compartment
-    // vector<double> v_transit_compartment1;              // an hourly time series of drug concentrations in the transit compartment 1
-    // vector<double> v_transit_compartment2;              // an hourly time series of drug concentrations in the transit compartment 2
-    // vector<double> v_transit_compartment3;              // an hourly time series of drug concentrations in the transit compartment 3
-    // vector<double> v_transit_compartment4;              // an hourly time series of drug concentrations in the transit compartment 4
-    // vector<double> v_transit_compartment5;              // an hourly time series of drug concentrations in the transit compartment 5
-    // vector<double> v_transit_compartment6;              // an hourly time series of drug concentrations in the transit compartment 6
-    // vector<double> v_transit_compartment7;              // an hourly time series of drug concentrations in the transit compartment 7
+    vector<double> v_dosing_compartment;                // an hourly time series of drug concentrations in the dosing compartment
+    vector<double> v_transit_compartment1;              // an hourly time series of drug concentrations in the transit compartment 1
+    vector<double> v_transit_compartment2;              // an hourly time series of drug concentrations in the transit compartment 2
+    vector<double> v_transit_compartment3;              // an hourly time series of drug concentrations in the transit compartment 3
+    vector<double> v_transit_compartment4;              // an hourly time series of drug concentrations in the transit compartment 4
+    vector<double> v_transit_compartment5;              // an hourly time series of drug concentrations in the transit compartment 5
+    vector<double> v_transit_compartment6;              // an hourly time series of drug concentrations in the transit compartment 6
+    vector<double> v_transit_compartment7;              // an hourly time series of drug concentrations in the transit compartment 7
 
-    // vector<double> v_killing_rate;                            // an hourly time series of the killing rate
+    vector<double> v_killing_rate;                    // an hourly time series of the killing rate
     
     // an hourly time series of drug concentrations in the blood compartment only
     vector<double> v_concentration_in_blood;                // an hourly time series of drug concentrations in the blood compartment only

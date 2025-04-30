@@ -1,6 +1,10 @@
 #include "assert.h"
 #include "pkpd_artemether.h"
 
+#include <string>
+#include <fstream>
+#include <iostream>
+
 bool pkpd_artemether::stochastic = true;
 
 // constructor
@@ -102,6 +106,24 @@ int pkpd_artemether::rhs_ode(double t, const double y[], double f[], void *pkd_o
     // Testing: adjusting the concentration in the central compartment/EC50 by the PATIENT BLOOD VOLUME
     double a = (-1.0/24.0) * log( 1.0 - p->pdparam_Pmax * pow((y[8]/p -> patient_blood_volume),p->pdparam_n) / (pow((y[8]/p -> patient_blood_volume),p->pdparam_n) + pow((p->pdparam_EC50/p -> patient_blood_volume),p->pdparam_n)));
 
+    static double last_logged_hour = -1.0;  //Just a placeholder, will be updated when the first log is written
+    double current_hour = floor(t);
+
+    if (current_hour > last_logged_hour) {
+        std::string filename_kill_art = "parasite_killing_constant_" + std::to_string(static_cast<int>(p->patient_weight)) + "kg_artemether.txt";
+        std::ofstream outputFile_kill_art;
+        outputFile_kill_art.open(filename_kill_art, std::ios::app);
+        if (outputFile_kill_art.is_open()) {
+        // Append data to the file            
+        outputFile_kill_art << a << "," << t << std::endl;
+        outputFile_kill_art.close(); 
+        last_logged_hour = current_hour;  
+        } 
+        else {
+        std::cerr << "Error opening" << filename_kill_art <<" for writing." << std::endl;
+        }
+    }
+
     f[9] = -a * y[9];
     
     
@@ -154,8 +176,8 @@ void pkpd_artemether::predict( double t0, double t1 )
         // check if time t is equal to or larger than the next scheduled hour to log
         if( t >= ((double)num_hours_logged)  )
         {
-            //v_dosing_compartment.push_back( y0[0] );
-            //v_transit_compartment1.push_back( y0[1] );
+            // v_dosing_compartment.push_back( y0[0] );
+            // v_transit_compartment1.push_back( y0[1] );
             // v_transit_compartment2.push_back( y0[2] );
             // v_transit_compartment3.push_back( y0[3] );
             // v_transit_compartment4.push_back( y0[4] );
@@ -165,10 +187,10 @@ void pkpd_artemether::predict( double t0, double t1 )
 
             //v_concentration_in_blood.push_back( y0[8]); // Not the concentration in the blood, but the total mg of artemether in the blood
             patient_blood_volume_litres = patient_blood_volume/pow(10,6); // in litres
-            v_concentration_in_blood.push_back( y0[8]/ (patient_blood_volume_litres)); // Not the concentration in the blood, but the total mg of artemether in the blood
+            v_concentration_in_blood.push_back( y0[8]/ (patient_blood_volume_litres)); // The concentration in the blood, mg/L
 
 
-            //v_killing_rate.push_back( y0[9] );
+            v_killing_rate.push_back( y0[9] );
 
             v_parasitedensity_in_blood.push_back( y0[dim-1] );
             v_concentration_in_blood_hourtimes.push_back( t );
@@ -220,6 +242,8 @@ void pkpd_artemether::initialize_params( void )
     }
  
     vprms[i_artemether_F1_indiv] = F1;
+    
+    //vprms[i_artemether_F1_thisdose] = vprms[i_artemether_F1_indiv]; // Just for testing - Venitha, April 2025
  
     
     
@@ -237,10 +261,11 @@ void pkpd_artemether::initialize_params( void )
     vprms[i_artemether_KTR] = 8.0/MT;
 
 
-    // ### ### this is the exit rate from the central compartment (the final exit rate in the model
+    // ### ### this is the exit rate from the central compartment (the final exit rate in the model)
     double THETA1_pe = 78.0;
     double THETA2_pe = 129.0;
     double TVCL = THETA1_pe * pow( weight/mw, 0.75 );  
+    //double TVCL = THETA1_pe * (weight/mw);  
     
     //double ETA1_rv = 0.0; // this is fixed in this model
     //double CL = TVCL * exp(ETA1_rv);
@@ -248,13 +273,17 @@ void pkpd_artemether::initialize_params( void )
 
     double TVV2 = THETA2_pe * (weight/mw);  
     double V2 = TVV2;
+
     if(pkpd_artemether::stochastic) 
     {
         double ETA2_rv = gsl_ran_gaussian( rng, sqrt(0.0162) );
         V2 *= exp(ETA2_rv);
     }
     
-    vprms[i_artemether_k20] = CL/V2;
+    //vprms[i_artemether_k20] = CL/V2;
+    vprms[i_artemether_k20] = 0.45;
+    //vprms[i_artemether_k20] = 0.5973735; // Median value of k20 for 50kg patient using this model
+    //vprms[i_artemether_k20] = 0.9042795; // Median value of k20 for 10kg patient using this model
 
     // Added for debugging by Venitha
     vprms[i_artemether_typical_CL] = TVCL;

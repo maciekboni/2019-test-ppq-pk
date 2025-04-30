@@ -450,6 +450,7 @@ int main(int argc, char* argv[])
     {
         //fp3 = fopen("out.lum.allpatients.20240401.csv","w");
         fprintf(stdout, "PID,HOUR,COMP2CONC_ARTEMETHER,COMP2CONC_LUM,PARASITEDENSITY\n" );
+        // fprintf(stdout, "PID HOUR,DOSINGCOMP_ARTEMETHER,TR1_ARTEMETHER,TR2_ARTEMETHER,TR3_ARTEMETHER,TR4_ARTEMETHER,TR5_ARTEMETHER,TR6_ARTEMETHER,TR7_ARTEMETHER,CENTRALCONC_ARTEMETHER,KILLINGCOMP_ARTEMETHER,DOSINGCOMP_LUM,CENTRALCONC_LUM,PERIPHERALCONC_LUM,KILLINGCOMP_LUM,PARASITEDENSITY \n" );
         fprintf(stderr, "\n");
 
         std::string filename_artemether = "PK_parameters_" + std::to_string(static_cast<int>(G_CLO_WEIGHT)) + "kg_artemether.txt";
@@ -530,7 +531,7 @@ int main(int argc, char* argv[])
             outputFile_lum.open(filename_lum, std::ios::app);
            if (outputFile_lum.is_open()) {
             // Append data to the file
-            outputFile_lum<< pi << "," << dyn2->vprms[i_lum_F1_indiv] << "," << dyn2->vprms[i_lum_k12] << "," << dyn2-> vprms[i_lum_k23] << "," << dyn2->vprms[i_lum_k32] << "," << dyn2->vprms[i_lum_k20] << "," << dyn2->total_mg_dose_per_occassion << "," << dyn2->vprms[i_lum_DS] << "," << dyn2->vprms[i_lum_Q] << "," << "," << dyn2->vprms[i_lum_V_indiv] << "," << dyn2->vprms[i_lum_CL] << "," << dyn2->vprms[i_lum_VP] << std::endl;  
+            outputFile_lum<< pi << "," << dyn2->vprms[i_lum_F1_indiv] << "," << dyn2->vprms[i_lum_k12] << "," << dyn2-> vprms[i_lum_k23] << "," << dyn2->vprms[i_lum_k32] << "," << dyn2->vprms[i_lum_k20] << "," << dyn2->total_mg_dose_per_occassion << "," << dyn2->vprms[i_lum_DS] << "," << dyn2->vprms[i_lum_Q] << "," << dyn2->vprms[i_lum_V_indiv] << "," << dyn2->vprms[i_lum_CL] << "," << dyn2->vprms[i_lum_VP] << std::endl;  
             outputFile_lum.close();
             } 
             else {

@@ -121,6 +121,7 @@ public:
     vector<double> v_dosing_compartment;
     vector<double> v_peripheral_concentration;
     vector<double> v_killing_rate;
+    double patient_blood_volume_litres; // in litres
 
     vector<double> v_concentration_in_blood;                // an hourly time series of drug concentrations in the blood compartment only
                                                             // should be in nanograms per milliliter (ng/ml)
