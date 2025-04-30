@@ -38,9 +38,9 @@ pkpd_lum::pkpd_lum(  )
     oc 	= gsl_odeiv_control_y_new (1e-6, 0.0);
     oe 	= gsl_odeiv_evolve_alloc(dim);
     
-    patient_weight = -1.0;
-    median_weight  =  54.0;     // in kilograms 
-    weight = patient_weight;     // this is the weight that is actually used in the calculations
+    patient_weight = 54.0;     // default weight of the patient in kg, can be overwritten via command line input
+    median_weight  = 54.0;     // in kilograms 
+    weight = patient_weight;   // this is the weight that is actually used in the calculations
     pregnant = false;
 
     num_doses_given = 0;
@@ -280,7 +280,6 @@ void pkpd_lum::initialize_params( void )
 
 
     
-    
     // PARASITE = ((LNPC /4.20)**THETA(9)) -- TODO: -- check the log type on the parasitaemia (CONFIRMED on 3/31/2024 that it is log-10)
     //      check if it's parasites/microliter (CONFIRMED also on 3/31/2024)
     //      
@@ -289,25 +288,19 @@ void pkpd_lum::initialize_params( void )
     //fprintf(stderr, "\n\tinside initialize_params function -- PARASITE param set"); fflush(stderr);
 
     double TVF1 = THETA6 * DS * PARASITE;
-    //double TVF1 = THETA6 * PARASITE;
-    //double TVF1 = THETA6;
     double F1 = TVF1 * exp(ETATR); // TVF1 * exp(ETATR) => TVF1 * exp(0) => TVF1 * 1 => 1.0
 
     double TVQ = THETA3 * pow( weight/42.0 , 0.75 );  // allometric scaling for weight on the Q parameter
-    //double TVQ = THETA3 * (weight/42.0);
     double Q = TVQ * exp( ETA3_rv );
 
     double TVV = THETA2 * pow( weight/42.0 , 1.0 ); 
-    //double TVV = THETA2 * (weight/42.0); 
     double V = TVV * exp( ETA2_rv );  
     central_volume_of_distribution = V;
 
     double TVCL = THETA1 * pow( weight/42.0 , 0.75 );  // allometric scaling for weight on the clearance parameter
-    //double TVCL = THETA1 * (weight/42.0);
     double CL = TVCL * exp( ETA1_rv );
 
     double TVVP = THETA4 * pow( weight/42.0 , 1.0 );
-    //double TVVP = THETA4 * (weight/42.0);
     double VP = TVVP * exp( ETA4_rv );
 
     double PREGNANCY = pregnant ? (1.0 + THETA8) : 1.0;
@@ -316,7 +309,6 @@ void pkpd_lum::initialize_params( void )
 
     //fprintf(stderr, "\n\tinside initialize_params function -- calculations finished"); fflush(stderr);
 
-    
     vprms[i_lum_k12] = KA;
     vprms[i_lum_k23] = Q/V;
     vprms[i_lum_k32] = Q/VP;

@@ -29,7 +29,6 @@ pkpd_artemether::pkpd_artemether( )
     oe 	= gsl_odeiv_evolve_alloc(dim);
     
     patient_weight = 54.0;      // default weight of the patient in kg, can be overwritten via command line input
-    //median_weight  =  48.5;
     median_weight  =  54.0;     // in kilograms
     weight = patient_weight;    // this is the weight that is actually used in the calculations
 
@@ -265,7 +264,7 @@ void pkpd_artemether::initialize_params( void )
     double THETA1_pe = 78.0;
     double THETA2_pe = 129.0;
     double TVCL = THETA1_pe * pow( weight/mw, 0.75 );  
-    //double TVCL = THETA1_pe * (weight/mw);  
+    
     
     //double ETA1_rv = 0.0; // this is fixed in this model
     //double CL = TVCL * exp(ETA1_rv);
@@ -280,8 +279,8 @@ void pkpd_artemether::initialize_params( void )
         V2 *= exp(ETA2_rv);
     }
     
-    //vprms[i_artemether_k20] = CL/V2;
-    vprms[i_artemether_k20] = 0.45;
+    vprms[i_artemether_k20] = CL/V2;
+    
     //vprms[i_artemether_k20] = 0.5973735; // Median value of k20 for 50kg patient using this model
     //vprms[i_artemether_k20] = 0.9042795; // Median value of k20 for 10kg patient using this model
 
