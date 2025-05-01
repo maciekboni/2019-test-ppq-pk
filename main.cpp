@@ -221,12 +221,12 @@ void output_results_combination_AL(int pi, pkpd_artemether *dyn1, pkpd_lum *dyn2
 {
     if (G_CLO_OUTPUT_TYPE == 1) {
         int j = dyn1->v_concentration_in_blood.size()-1;
-        fprintf(stdout, "%d %10.3f %10.3f %10.3f %10.3f \n", pi, dyn1->v_concentration_in_blood_hourtimes[j], dyn1->v_concentration_in_blood[j], dyn2->v_concentration_in_blood[j], dyn1->v_parasitedensity_in_blood[j] );        
+        fprintf(stdout, "%d %10.3f %10.3f %10.3f %10.10f \n", pi, dyn1->v_concentration_in_blood_hourtimes[j], dyn1->v_concentration_in_blood[j], dyn2->v_concentration_in_blood[j], dyn1->v_parasitedensity_in_blood[j] );        
     }
     else {
         for(int j=0; j<dyn1->v_concentration_in_blood.size(); j++ )
         {
-            fprintf(stdout, "%d %10.3f %10.3f %10.3f %10.3f \n", pi, dyn1->v_concentration_in_blood_hourtimes[j], dyn1->v_concentration_in_blood[j], dyn2->v_concentration_in_blood[j], dyn1->v_parasitedensity_in_blood[j] );
+            fprintf(stdout, "%d %10.3f %10.3f %10.3f %10.10f \n", pi, dyn1->v_concentration_in_blood_hourtimes[j], dyn1->v_concentration_in_blood[j], dyn2->v_concentration_in_blood[j], dyn1->v_parasitedensity_in_blood[j] );
         }
     }
 }
@@ -580,6 +580,24 @@ int main(int argc, char* argv[])
                 // in the lum object (dyn2)
                 dyn1->y0[ dyn1->dim - 1 ] = dyn2->y0[ dyn2->dim - 1 ];
 
+                // printf("The artemether parasite density before setting to 0 is %10.10f \n", dyn1->y0[ dyn1->dim - 1 ]);
+                // printf("The lumefantrine parasite density before setting to 0 is %10.10f \n\n\n\n", dyn2->y0[ dyn2->dim - 1 ]);
+
+                // setting parasite density <= 10 ^ -5 = 0
+                if (dyn1->y0[dyn1 -> dim -1] <= pow(10.0, -5.0))
+                {
+                    dyn1->y0[dyn1 -> dim -1] = 0.0;
+                }
+                
+                if (dyn2->y0[dyn2 -> dim -1] <= pow(10.0, -5.0))
+                {
+                    dyn2->y0[dyn2 -> dim -1] = 0.0;
+                }
+
+                // printf("The artemether parasite density after setting to 0 is %10.10f \n", dyn1->y0[ dyn1->dim - 1 ]);
+                // printf("The lumefantrine parasite density after setting to 0 is %10.10f \n\n\n", dyn2->y0[ dyn2->dim - 1 ]);
+
+
                 // after integrating the differential equations in the predict functions above,
                 // we need to ---- GROW THE PARASITES ---- for half-an-hour (i.e the maximum_enforced_stepsize)   
                 
@@ -593,9 +611,12 @@ int main(int argc, char* argv[])
                     dyn1->y0[ dyn1->dim - 1 ] *= dd_stepsize_PMF;
                     dyn2->y0[ dyn2->dim - 1 ] *= dd_stepsize_PMF; 
                     
+                    // printf("The artemether parasite density after PMF adjustment is %10.10f \n", dyn1->y0[ dyn1->dim - 1 ]);
+                    // printf("The lumefantrine parasite density after PMF adjustment is %10.10f \n\n\n", dyn2->y0[ dyn2->dim - 1 ]);
                 }
 
                 t0 += maximum_enforced_stepsize; t1 += maximum_enforced_stepsize;
+                //printf("Moving to next step %10.3f",t0);
 
             }
             //END - INTEGRATION 
