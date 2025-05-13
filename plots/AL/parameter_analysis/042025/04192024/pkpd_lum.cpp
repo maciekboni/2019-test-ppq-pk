@@ -1,9 +1,9 @@
+//#include <iostream>
+//#include <string>
+//#include <cstdlib>
+
 #include "assert.h"
 #include "pkpd_lum.h"
-
-#include <string>
-#include <fstream>
-#include <iostream>
 
 bool pkpd_lum::stochastic = true;
 
@@ -27,7 +27,7 @@ pkpd_lum::pkpd_lum(  )
     // this should be obtained from the person class
     // the last differential equation is for the parasitaemia; it is a per/ul measure
     // y0[dim-1] = 10000.0;
-    set_parasitaemia(10000.0); // simply a wrapper for the statement above
+    set_parasitaemia( 10000.0 ); // simply a wrapper for the statement above
 
     parasites_per_ul_at_first_lum_dose = 10000.0;   // YOU MUST DO THIS SEPARATELY because the parasitaemia level "at first
                                                     // lum dose" is a special quantity that affects the lum absorption
@@ -38,9 +38,9 @@ pkpd_lum::pkpd_lum(  )
     oc 	= gsl_odeiv_control_y_new (1e-6, 0.0);
     oe 	= gsl_odeiv_evolve_alloc(dim);
     
-    patient_weight = 54.0;     // default weight of the patient in kg, can be overwritten via command line input
-    median_weight  = 54.0;     // in kilograms 
-    weight = patient_weight;   // this is the weight that is actually used in the calculations
+    patient_weight = -1.0;
+    median_weight  =  54.0;     // in kilograms 
+    weight = patient_weight;     // this is the weight that is actually used in the calculations
     pregnant = false;
 
     num_doses_given = 0;
@@ -60,7 +60,8 @@ pkpd_lum::pkpd_lum(  )
                            // default parameter if CLO is not specified
 
     rng=NULL;
-    
+
+    //printf("\n\nFinished constructing pkpd_lum, the lumefantrine PKPD object that manages drug clearance and parasite clearance.\n");
 }
 
 // destructor
@@ -103,30 +104,18 @@ int pkpd_lum::rhs_ode(double t, const double y[], double f[], void *pkd_object )
     //double a = (-1.0/24.0) * log( 1.0 - p->pdparam_Pmax * pow(y[1],p->pdparam_n) / (pow(y[1],p->pdparam_n) + pow(p->pdparam_EC50,p->pdparam_n)) );
 
     // Testing: adjusting the concentration in the central compartment/EC50 by the PATIENT BLOOD VOLUME
-    double a = (-1.0/24.0) * log( 1.0 - p->pdparam_Pmax * pow((y[1]/p -> patient_blood_volume),p->pdparam_n) / (pow((y[1]/p -> patient_blood_volume),p->pdparam_n) + pow((p->pdparam_EC50/p -> patient_blood_volume),p->pdparam_n)) );
-     
+     double a = (-1.0/24.0) * log( 1.0 - p->pdparam_Pmax * pow((y[1]/p -> patient_blood_volume),p->pdparam_n) / (pow((y[1]/p -> patient_blood_volume),p->pdparam_n) + pow((p->pdparam_EC50/p -> patient_blood_volume),p->pdparam_n)) );
+
+
     // Testing: adjusting the concentration in the central compartment/EC50 by the CENTRAL VOLUME OF DISTRIBUTION
     // double a = (-1.0/24.0) * log( 1.0 - p->pdparam_Pmax * pow((y[1]/p -> central_volume_of_distribution),p->pdparam_n) / (pow((y[1]/p -> central_volume_of_distribution),p->pdparam_n) + pow((p->pdparam_EC50/p -> central_volume_of_distribution),p->pdparam_n)) );
     
-    static double last_logged_hour = -1.0;  //Just a placeholder, will be updated when the first log is written
-    double current_hour = floor(t);
 
-    if (current_hour > last_logged_hour) {
-        std::string filename_kill_lum = "parasite_killing_constant_" + std::to_string(static_cast<int>(p->patient_weight)) + "kg_lumefantrine.txt";
-        std::ofstream outputFile_kill_lum;
-        outputFile_kill_lum.open(filename_kill_lum, std::ios::app);
-        if (outputFile_kill_lum.is_open()) {
-            outputFile_kill_lum << a << "," << current_hour << std::endl;
-            outputFile_kill_lum.close();
-            last_logged_hour = current_hour;  
-        } else {
-            std::cerr << "Error opening " << filename_kill_lum << " for writing." << std::endl;
-        }
-    }
 
     f[3] = - a * y[3];          // NOTE there is no parasite growth here because the PMF factor for parasite growth is done
                                 // manually in the main diff-eq loop
-    //f[3] = 0.02 * y[3]  -  a * y[3];    
+    //f[3] = 0.02 * y[3]  -  a * y[3];
+    
     
     return GSL_SUCCESS;
 }
@@ -136,14 +125,13 @@ void pkpd_lum::give_next_dose_to_patient( double fractional_dose_taken )
 {
     if( doses_still_remain_to_be_taken )
     {
-        // redraw_params_before_newdose(); // these are the dose-specific parameters that you're drawing here 
-                                           // Currently not implemented
+        // redraw_params_before_newdose(); // these are the dose-specific parameters that you're drawing here
         
         // basically, for LUM, we do not redraw, bc there is no inter-occassion variability
         // so this whole function just adds a dose or fractional dose
 
         // for LUM there is no need to get a new F1 param for each dose
-        //y0[0] +=  v_dosing_amounts[num_doses_given] * vprms[i_lum_F1_thisdose] * fractional_dose_taken;
+        // y0[0] +=  v_dosing_amounts[num_doses_given] * vprms[i_lum_F1_thisdose] * fractional_dose_taken;
 
         y0[0] +=  v_dosing_amounts[num_doses_given] * fractional_dose_taken;
         
@@ -172,21 +160,17 @@ void pkpd_lum::predict( double t0, double t1 )
         if( t >= ((double)num_hours_logged)  )
         {
             
-            v_dosing_compartment.push_back( y0[0] );
-        
-            //v_concentration_in_blood.push_back( y0[1] * 1000.0 / central_volume_of_distribution  ); ng/L
             
-            v_concentration_in_blood.push_back( (y0[1]) / central_volume_of_distribution );     // The central volume of distribution is in liters - Venitha, April 2025
-                                                                                                // The concentration is in mg/L           
+            //v_dosing_compartment.push_back( y0[0] );
+        
+            //v_concentration_in_blood.push_back( y0[1] * 1000.0 / central_volume_of_distribution  );
+            //v_concentration_in_blood.push_back( y0[1] / central_volume_of_distribution);  
+            //v_concentration_in_blood.push_back( y0[1] / (central_volume_of_distribution * pow(10,6))); 
+            v_concentration_in_blood.push_back( y0[1]);                                                      
+            
+            //v_peripheral_concentration.push_back( y0[2] * 1000.0 / central_volume_of_distribution  );
 
-            // patient_blood_volume_litres = patient_blood_volume/pow(10,6); // in litres 
-            // v_concentration_in_blood.push_back( (y0[1]) / patient_blood_volume_litres );    // Concentration in the blood, mg/L
-
-            //v_concentration_in_blood.push_back( (y0[1]));   // Total lumefantrine in the blood, not concentration                                                                          
-
-            // v_peripheral_concentration.push_back( y0[2] / patient_blood_volume_litres  );
-
-            // v_killing_rate.push_back( y0[3] ); // Same as y0[dim-1]
+            //v_killing_rate.push_back( y0[3] ); // Same as y0[dim-1]
 
             v_parasitedensity_in_blood.push_back( y0[dim-1] );
             v_concentration_in_blood_hourtimes.push_back( t );
@@ -209,9 +193,11 @@ void pkpd_lum::initialize( void )
     
     //-- WARNING -- the age member variable must be set before you call this function -- add this check
     
+
     // NOTE must call the two functions below in this order -- dosing schedule needs to be set first
     generate_recommended_dosing_schedule();
-    initialize_params();       
+    initialize_params();
+    
     
 }
 
@@ -220,14 +206,13 @@ void pkpd_lum::initialize( void )
 
 void pkpd_lum::initialize_params( void )
 {
-
+    
      // all 10 below are point estimates
     double THETA1 = 1.35;
     double THETA2 = 11.2;           // NOTE: this is the "central volume of distribution" in liters in a 42kg adult which in non-PKPD language
                                     // is the volume of the blood plus the volume of everything else that is in 
                                     // instantaneous equilibrium with the blood ... you will need this when reporting
                                     // concentration, bc concentration = mg / this volume
-                                    // Random value to for testing - Venitha, April 2025
     double THETA3 = 0.344;
     double THETA4 = 59.0;
     double THETA5 = 0.0386;
@@ -256,8 +241,15 @@ void pkpd_lum::initialize_params( void )
                                                             //  between-patient variability in bioavailability
     }
 
+
+
+
+
+
     // in the parameter calculations below
     // "TV" means typical value or population mean for some parameter
+
+
 
     // F1_indiv is the relative absorbtion level for this individual
     
@@ -269,16 +261,18 @@ void pkpd_lum::initialize_params( void )
 
     double BXPAR = -0.343; // parameter from box-cox transformation
     double PHI = exp( ETA6_rv );
-    double ETATR = ( pow(PHI, BXPAR) - 1.0  ) / BXPAR ; // Becomes 0
+    double ETATR = ( pow(PHI, BXPAR) - 1.0  ) / BXPAR ; 
 
     double D50 = THETA7; // 
 
     //fprintf(stderr, "\n\tinside initialize_params function -- about to set DS param"); fflush(stderr);
     
+
     // this you keep fixed, and you use the total mg dose per occassion, and NOT any randomly drawn number
     double DS = 1.0 - ( total_mg_dose_per_occassion/weight ) / ( ( total_mg_dose_per_occassion/weight ) + D50  );
 
 
+    
     
     // PARASITE = ((LNPC /4.20)**THETA(9)) -- TODO: -- check the log type on the parasitaemia (CONFIRMED on 3/31/2024 that it is log-10)
     //      check if it's parasites/microliter (CONFIRMED also on 3/31/2024)
@@ -288,10 +282,9 @@ void pkpd_lum::initialize_params( void )
     //fprintf(stderr, "\n\tinside initialize_params function -- PARASITE param set"); fflush(stderr);
 
     double TVF1 = THETA6 * DS * PARASITE;
-    double F1 = TVF1 * exp(ETATR); // TVF1 * exp(ETATR) => TVF1 * exp(0) => TVF1 * 1 => 1.0
+    double F1 = TVF1 * exp(ETATR);
 
     double TVQ = THETA3 * pow( weight/42.0 , 0.75 );  // allometric scaling for weight on the Q parameter
-    //double TVQ = THETA3 * (weight/42.0);
     double Q = TVQ * exp( ETA3_rv );
 
     double TVV = THETA2 * pow( weight/42.0 , 1.0 ); 
@@ -299,7 +292,6 @@ void pkpd_lum::initialize_params( void )
     central_volume_of_distribution = V;
 
     double TVCL = THETA1 * pow( weight/42.0 , 0.75 );  // allometric scaling for weight on the clearance parameter
-    //double TVCL = THETA1 * (weight/42.0);
     double CL = TVCL * exp( ETA1_rv );
 
     double TVVP = THETA4 * pow( weight/42.0 , 1.0 );
@@ -311,23 +303,13 @@ void pkpd_lum::initialize_params( void )
 
     //fprintf(stderr, "\n\tinside initialize_params function -- calculations finished"); fflush(stderr);
 
+    
     vprms[i_lum_k12] = KA;
     vprms[i_lum_k23] = Q/V;
     vprms[i_lum_k32] = Q/VP;
     vprms[i_lum_k20] = CL/V;
     vprms[i_lum_F1_indiv] = F1;
-
-    //vprms[i_lum_F1_thisdose] = vprms[i_lum_F1_indiv]; // Just for testing - Venitha, April 2025
     //vprms[i_lum_pmf] = 10.0; // this will get assigned in the main file; the reason is that we don't know what it is and we need to experiment with it a bit
-
-    // Added for debugging by Venitha
-    
-    vprms[i_lum_DS] = DS;
-    vprms[i_lum_Q] = Q;
-    vprms[i_lum_V_indiv] = V;   
-    vprms[i_lum_CL] = CL;
-    vprms[i_lum_VP] = VP;
-
 }
 
 
@@ -339,7 +321,6 @@ void pkpd_lum::redraw_params_before_newdose()
     // between your teeth; below, we set the parameter F1 (with some random draws) to adjust this initial dose
     
     // NO INTER-OCCASSION VARIABILITY SO NOTHING FOR THIS FUNCTION TO DO
-    // Maybe it will be implemented in the future...? - Venitha, April 2025
     
 }
 
@@ -397,6 +378,8 @@ void pkpd_lum::generate_recommended_dosing_schedule()
 
     v_dosing_amounts.insert( v_dosing_amounts.begin(), 6, total_mg_dose_per_occassion );
 
+    //printf("For weight %f with patient blood volume %f, the lum amount is %f\n", weight, patient_blood_volume, total_mg_dose_per_occassion);
+    
 }
 
 
