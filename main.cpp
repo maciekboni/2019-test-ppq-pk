@@ -14,9 +14,11 @@
 #include <chrono>
 #include <string>
 #include <cstdlib>
+#include <random>
 
 // GLOBAL RANDOM NUMBER GENERATOR
-gsl_rng *G_RNG;		
+gsl_rng *G_RNG;	
+std::mt19937 G_RNG_CPP;	// Change to pointer if required
 
 // GLOBAL VARIABLES
 bool G_CLO_LUM = false;
@@ -210,7 +212,7 @@ void output_results_monotherapy_dha(int pi, pkpd_dha *dyn)
 //                 dyn2-> v_dosing_compartment[j], 
 //                 dyn2->v_concentration_in_blood[j], 
 //                 dyn2->v_peripheral_concentration[j],
-//                 dyn2->v_killing_rate[j], // y0[3], same as y0[dim-1] in pkpd_lum
+//                 dyn2->v_killing_rate[j], // y0[3], same as y0[distd::mt19937 *G_RNG_CPP;	m-1] in pkpd_lum
 
 //                 dyn1->v_parasitedensity_in_blood[j] );
 //         }
@@ -245,7 +247,10 @@ int main(int argc, char* argv[])
     // make random number generator (RNG) the Mersenne Twister which has period 2^19937 - 1
     const gsl_rng_type *TT_RAND = gsl_rng_mt19937;
     G_RNG = gsl_rng_alloc(TT_RAND);
-    gsl_rng_set( G_RNG, seed ); // seed the RNG    
+    gsl_rng_set( G_RNG, seed ); // seed the RNG   
+    
+    // Seeding the GLOBAL RNG using a C++ friendly version from <random>
+    G_RNG_CPP.seed(seed);
 
     // these will always be stochastic unless we are debugging something    
     pkpd_dha::stochastic = true;
@@ -485,12 +490,33 @@ int main(int argc, char* argv[])
             auto dyn1 = new pkpd_artemether();
             auto dyn2 = new pkpd_lum();
             //fprintf(stderr, "\tlum object created pi = %d \r", pi); fflush(stderr);
-            dyn1->set_parasitaemia( 20000.0 ); // NOTE: you must set both of these to the same thing    
-            dyn2->set_parasitaemia( 20000.0 );    
+
+            //Drawing parasitaemia from a uniform distribution
+
+            double min_patient_parasitaemia_log10 = log10(6000); // Minimum parasitaemia
+            double max_patient_parasitaemia_log10 = log10(70000); // Maximum parasitaemia
+            std::uniform_real_distribution<> patient_parasitaemia_distribution_log10(min_patient_parasitaemia_log10, max_patient_parasitaemia_log10);   
+            double random_patient_parasitaemia_log10 = patient_parasitaemia_distribution_log10(G_RNG_CPP);
+            double scaled_patient_parasitaemia = pow(10.0, random_patient_parasitaemia_log10); // Convert back to original scale
+            double final_random_patient_parasitaemia = floor(scaled_patient_parasitaemia);   // Round to the lowest integer
+
+            std::cout << "Random Patient Parasitaemia (log10): " << random_patient_parasitaemia_log10 << std::endl;
+            std::cout << "Random Patient Parasitaemia (scaled): " << scaled_patient_parasitaemia << std::endl;
+            std::cout << "Random Patient Parasitaemia: " << final_random_patient_parasitaemia << std::endl;
+
+
+            // dyn1->set_parasitaemia(20000.0); // NOTE: you must set both of these to the same thing    
+            // dyn2->set_parasitaemia(20000.0);   
             
-            dyn2->parasites_per_ul_at_first_lum_dose = 20000.0;      // NOTE YOU MUST DO THIS SEPARATELY because the parasitaemia level "at first
+            dyn1->set_parasitaemia(final_random_patient_parasitaemia); // NOTE: you must set both of these to the same thing
+            dyn2->set_parasitaemia(final_random_patient_parasitaemia);   
+            
+            //dyn2->parasites_per_ul_at_first_lum_dose = 20000.0;      // NOTE YOU MUST DO THIS SEPARATELY because the parasitaemia level "at first
                                                                     // lum dose" is a special quantity that affects the lum absorption
 
+            dyn2->parasites_per_ul_at_first_lum_dose = final_random_patient_parasitaemia;    
+            
+            
             dyn1->rng = G_RNG;    
             dyn1->age = G_CLO_AGE;
             dyn1->patient_weight = G_CLO_WEIGHT;
