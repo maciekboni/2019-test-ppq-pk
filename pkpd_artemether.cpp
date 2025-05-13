@@ -264,7 +264,9 @@ void pkpd_artemether::initialize_params( void )
     double THETA1_pe = 78.0;
     double THETA2_pe = 129.0;
     double TVCL = THETA1_pe * pow( weight/mw, 0.75 );  
-    //double TVCL = THETA1_pe * (weight/mw);  
+    //double TVCL = THETA1_pe; // For debugging
+    //double TVCL = THETA1_pe * (weight/mw); 
+    //double TVCL = THETA1_pe * (15.0/mw);  
     
     
     //double ETA1_rv = 0.0; // this is fixed in this model
@@ -272,6 +274,7 @@ void pkpd_artemether::initialize_params( void )
     double CL = TVCL; // just execute this line since ETA1 is fixed at zero above
 
     double TVV2 = THETA2_pe * (weight/mw);  
+    //double TVV2 = THETA2_pe * (15.0/mw); 
     double V2 = TVV2;
 
     if(pkpd_artemether::stochastic) 

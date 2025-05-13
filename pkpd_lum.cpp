@@ -292,17 +292,21 @@ void pkpd_lum::initialize_params( void )
 
     double TVQ = THETA3 * pow( weight/42.0 , 0.75 );  // allometric scaling for weight on the Q parameter
     //double TVQ = THETA3 * (weight/42.0);
+    //double TVQ = THETA3 * (15.0/42.0);
     double Q = TVQ * exp( ETA3_rv );
 
     double TVV = THETA2 * pow( weight/42.0 , 1.0 ); 
+    //double TVV = THETA2 * (15.0/42.0);
     double V = TVV * exp( ETA2_rv );  
     central_volume_of_distribution = V;
 
     double TVCL = THETA1 * pow( weight/42.0 , 0.75 );  // allometric scaling for weight on the clearance parameter
     //double TVCL = THETA1 * (weight/42.0);
+    //double TVCL = THETA1 * (15.0/42.0);
     double CL = TVCL * exp( ETA1_rv );
 
     double TVVP = THETA4 * pow( weight/42.0 , 1.0 );
+    //double TVVP = THETA4 * (15.0/42.0);
     double VP = TVVP * exp( ETA4_rv );
 
     double PREGNANCY = pregnant ? (1.0 + THETA8) : 1.0;

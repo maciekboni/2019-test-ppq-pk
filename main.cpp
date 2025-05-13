@@ -493,17 +493,18 @@ int main(int argc, char* argv[])
 
             //Drawing parasitaemia from a uniform distribution
 
-            double min_patient_parasitaemia_log10 = log10(6000); // Minimum parasitaemia
-            double max_patient_parasitaemia_log10 = log10(70000); // Maximum parasitaemia
+            // double min_patient_parasitaemia_log10 = log10(6000); // Minimum parasitaemia
+            // double max_patient_parasitaemia_log10 = log10(70000); // Maximum parasitaemia
+            double min_patient_parasitaemia_log10 = log10(2000); // Minimum parasitaemia
+            double max_patient_parasitaemia_log10 = log10(200000); // Maximum parasitaemia
             std::uniform_real_distribution<> patient_parasitaemia_distribution_log10(min_patient_parasitaemia_log10, max_patient_parasitaemia_log10);   
             double random_patient_parasitaemia_log10 = patient_parasitaemia_distribution_log10(G_RNG_CPP);
             double scaled_patient_parasitaemia = pow(10.0, random_patient_parasitaemia_log10); // Convert back to original scale
             double final_random_patient_parasitaemia = floor(scaled_patient_parasitaemia);   // Round to the lowest integer
 
-            std::cout << "Random Patient Parasitaemia (log10): " << random_patient_parasitaemia_log10 << std::endl;
-            std::cout << "Random Patient Parasitaemia (scaled): " << scaled_patient_parasitaemia << std::endl;
-            std::cout << "Random Patient Parasitaemia: " << final_random_patient_parasitaemia << std::endl;
-
+            // std::cout << "Random Patient Parasitaemia (log10): " << random_patient_parasitaemia_log10 << std::endl;
+            // std::cout << "Random Patient Parasitaemia (scaled): " << scaled_patient_parasitaemia << std::endl;
+            // std::cout << "Random Patient Parasitaemia: " << final_random_patient_parasitaemia << std::endl;
 
             // dyn1->set_parasitaemia(20000.0); // NOTE: you must set both of these to the same thing    
             // dyn2->set_parasitaemia(20000.0);   
@@ -512,7 +513,7 @@ int main(int argc, char* argv[])
             dyn2->set_parasitaemia(final_random_patient_parasitaemia);   
             
             //dyn2->parasites_per_ul_at_first_lum_dose = 20000.0;      // NOTE YOU MUST DO THIS SEPARATELY because the parasitaemia level "at first
-                                                                    // lum dose" is a special quantity that affects the lum absorption
+                                                                       // lum dose" is a special quantity that affects the lum absorption
 
             dyn2->parasites_per_ul_at_first_lum_dose = final_random_patient_parasitaemia;    
             
@@ -612,12 +613,13 @@ int main(int argc, char* argv[])
     
                 // setting parasite density <= 10 ^ -3 = 0
                 // Decided to go with value after testing with 10^-4, 10^-5, 10^-7 // May 09 2025
-                if (dyn1->y0[dyn1 -> dim -1] <= pow(10.0, -3.0))
+                // Just testing with 10^-5 for now
+                if (dyn1->y0[dyn1 -> dim -1] <= pow(10.0, -5.0))
                 {
                     dyn1->y0[dyn1 -> dim -1] = 0.0;
                 }
                 
-                if (dyn2->y0[dyn2 -> dim -1] <= pow(10.0, -3.0))
+                if (dyn2->y0[dyn2 -> dim -1] <= pow(10.0, -5.0))
                 {
                     dyn2->y0[dyn2 -> dim -1] = 0.0;
                 }
