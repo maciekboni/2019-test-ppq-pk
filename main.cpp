@@ -34,7 +34,7 @@ double G_CLO_WEIGHT = 54.0;
 // The default value is 10.0 for a 48h cycle. Change this in the differential equations to make sure it is scaled correctly
 double G_CLO_PMF = 10.0;
 
-int G_CLO_N = 1; // this is the number of patients
+int G_CLO_N = 1; // this is the default number of patients
 
 // from correspondence with Aubrey Cunnington, the parasite density level at which growth is inhibited 
 // to 50% of its max value occurs at ln(10.82) (10.49), 11.54) parasites per microliter for 
@@ -223,12 +223,12 @@ void output_results_combination_AL(int pi, pkpd_artemether *dyn1, pkpd_lum *dyn2
 {
     if (G_CLO_OUTPUT_TYPE == 1) {
         int j = dyn1->v_concentration_in_blood.size()-1;
-        fprintf(stdout, "%d %10.3f %10.3f %10.3f %10.10f \n", pi, dyn1->v_concentration_in_blood_hourtimes[j], dyn1->v_concentration_in_blood[j], dyn2->v_concentration_in_blood[j], dyn1->v_parasitedensity_in_blood[j] );        
+        fprintf(stdout, "%d %10.3f %10.3f %10.3f %10.3f \n", pi, dyn1->v_concentration_in_blood_hourtimes[j], dyn1->v_concentration_in_blood[j], dyn2->v_concentration_in_blood[j], dyn1->v_parasitedensity_in_blood[j] );        
     }
     else {
         for(int j=0; j<dyn1->v_concentration_in_blood.size(); j++ )
         {
-            fprintf(stdout, "%d %10.3f %10.3f %10.3f %10.10f \n", pi, dyn1->v_concentration_in_blood_hourtimes[j], dyn1->v_concentration_in_blood[j], dyn2->v_concentration_in_blood[j], dyn1->v_parasitedensity_in_blood[j] );
+            fprintf(stdout, "%d %10.3f %10.3f %10.3f %10.3f \n", pi, dyn1->v_concentration_in_blood_hourtimes[j], dyn1->v_concentration_in_blood[j], dyn2->v_concentration_in_blood[j], dyn1->v_parasitedensity_in_blood[j] );
         }
     }
 }
@@ -458,31 +458,31 @@ int main(int argc, char* argv[])
         // fprintf(stdout, "PID HOUR,DOSINGCOMP_ARTEMETHER,TR1_ARTEMETHER,TR2_ARTEMETHER,TR3_ARTEMETHER,TR4_ARTEMETHER,TR5_ARTEMETHER,TR6_ARTEMETHER,TR7_ARTEMETHER,CENTRALCONC_ARTEMETHER,KILLINGCOMP_ARTEMETHER,DOSINGCOMP_LUM,CENTRALCONC_LUM,PERIPHERALCONC_LUM,KILLINGCOMP_LUM,PARASITEDENSITY \n" );
         fprintf(stderr, "\n");
 
-        std::string filename_artemether = "PK_parameters_" + std::to_string(static_cast<int>(G_CLO_WEIGHT)) + "kg_artemether.txt";
-        std::ofstream outputFile_artemether;
-        // Open the file in append mode
-        outputFile_artemether.open(filename_artemether, std::ios::app);
-        if (outputFile_artemether.is_open()) {
-        // Append data to the file            
-        outputFile_artemether << "PID,i_artemether_F1_indiv,i_artemether_KTR,total_mg_dose_per_occassion,TVCL,CL,TVV2,V2, i_artemether_k20 (CL/V2)" << std::endl;
-        outputFile_artemether.close();
-        } 
-        else {
-        std::cerr << "Error opening file for writing." << std::endl;
-        }
+        // std::string filename_artemether = "PK_parameters_" + std::to_string(static_cast<int>(G_CLO_WEIGHT)) + "kg_artemether.txt";
+        // std::ofstream outputFile_artemether;
+        // // Open the file in append mode
+        // outputFile_artemether.open(filename_artemether, std::ios::app);
+        // if (outputFile_artemether.is_open()) {
+        // // Append data to the file            
+        // outputFile_artemether << "PID,i_artemether_F1_indiv,i_artemether_KTR,total_mg_dose_per_occassion,TVCL,CL,TVV2,V2, i_artemether_k20 (CL/V2)" << std::endl;
+        // outputFile_artemether.close();
+        // } 
+        // else {
+        // std::cerr << "Error opening file for writing." << std::endl;
+        // }
  
-        std::string filename_lum = "PK_parameters_" + std::to_string(static_cast<int>(G_CLO_WEIGHT)) + "kg_lumefantrine.txt";
-        std::ofstream outputFile_lum;
-        // Open the file in append mode
-        outputFile_lum.open(filename_lum, std::ios::app);
-        if (outputFile_lum.is_open()) {
-        // Append data to the file            
-        outputFile_lum << "PID,i_lum_F1_indiv,i_lum_k12(KA),i_lum_k23(Q/V),i_lum_k32(Q/VP),i_lum_k20(CL/V),total_mg_dose_per_occassion,DS,Q,V,CL,VP" << std::endl;
-        outputFile_lum.close();
-        } 
-        else {
-        std::cerr << "Error opening file for writing." << std::endl;
-        }
+        // std::string filename_lum = "PK_parameters_" + std::to_string(static_cast<int>(G_CLO_WEIGHT)) + "kg_lumefantrine.txt";
+        // std::ofstream outputFile_lum;
+        // // Open the file in append mode
+        // outputFile_lum.open(filename_lum, std::ios::app);
+        // if (outputFile_lum.is_open()) {
+        // // Append data to the file            
+        // outputFile_lum << "PID,i_lum_F1_indiv,i_lum_k12(KA),i_lum_k23(Q/V),i_lum_k32(Q/VP),i_lum_k20(CL/V),total_mg_dose_per_occassion,DS,Q,V,CL,VP" << std::endl;
+        // outputFile_lum.close();
+        // } 
+        // else {
+        // std::cerr << "Error opening file for writing." << std::endl;
+        // }
 
         // pi is patient index
         for(int pi=0; pi < G_CLO_N; pi++)
@@ -493,8 +493,6 @@ int main(int argc, char* argv[])
 
             //Drawing parasitaemia from a uniform distribution
 
-            // double min_patient_parasitaemia_log10 = log10(6000); // Minimum parasitaemia
-            // double max_patient_parasitaemia_log10 = log10(70000); // Maximum parasitaemia
             double min_patient_parasitaemia_log10 = log10(2000); // Minimum parasitaemia
             double max_patient_parasitaemia_log10 = log10(200000); // Maximum parasitaemia
             std::uniform_real_distribution<> patient_parasitaemia_distribution_log10(min_patient_parasitaemia_log10, max_patient_parasitaemia_log10);   
@@ -523,48 +521,47 @@ int main(int argc, char* argv[])
             dyn1->patient_weight = G_CLO_WEIGHT;
             dyn1->weight = dyn1->patient_weight; 
 
-            dyn1-> patient_blood_volume = 5500000.0 * (dyn1-> weight/dyn1-> median_weight);       // 5.5L of blood for an adult individual
-            //dyn1-> patient_blood_volume = dyn1-> weight * (70.0 * 1000);                        // Scaling patient blood volume to 70ml/kg
+            //dyn1-> patient_blood_volume = 5500000.0 * (dyn1-> weight/dyn1-> median_weight);       // 5.5L of blood for an adult individual
+            dyn1-> patient_blood_volume = dyn1-> weight * (70.0 * 1000);                        // Scaling patient blood volume to 70ml/kg
 
             dyn1->pdparam_n = G_CLO_HILL_COEFF_ARTEMETHER;
             dyn1->pdparam_EC50 = G_CLO_EC50_ARTEMETHER;
             dyn1->pdparam_Pmax = G_CLO_PMAX_ARTEMETHER;
             dyn1->initialize();
 
-            outputFile_artemether.open(filename_artemether, std::ios::app);
-            if (outputFile_artemether.is_open()) {
-            // Append data to the file            
-            outputFile_artemether << pi << "," << dyn1->vprms[i_artemether_F1_indiv] << "," << dyn1->vprms[i_artemether_KTR] << "," << dyn1->total_mg_dose_per_occassion << "," << dyn1->vprms[i_artemether_typical_CL] << "," << dyn1-> vprms[i_artemether_CL_indiv] << "," << dyn1->vprms[i_artemether_typical_V2] << "," <<  dyn1->vprms[i_artemether_V2_indiv]  << "," << dyn1->vprms[i_artemether_k20] << std::endl;
-            outputFile_artemether.close();
-            } 
-            else {
-            std::cerr << "Error opening file " << filename_artemether << " for writing." << std::endl;
-            }
+            // outputFile_artemether.open(filename_artemether, std::ios::app);
+            // if (outputFile_artemether.is_open()) {
+            // // Append data to the file            
+            // outputFile_artemether << pi << "," << dyn1->vprms[i_artemether_F1_indiv] << "," << dyn1->vprms[i_artemether_KTR] << "," << dyn1->total_mg_dose_per_occassion << "," << dyn1->vprms[i_artemether_typical_CL] << "," << dyn1-> vprms[i_artemether_CL_indiv] << "," << dyn1->vprms[i_artemether_typical_V2] << "," <<  dyn1->vprms[i_artemether_V2_indiv]  << "," << dyn1->vprms[i_artemether_k20] << std::endl;
+            // outputFile_artemether.close();
+            // } 
+            // else {
+            // std::cerr << "Error opening file " << filename_artemether << " for writing." << std::endl;
+            // }
             
             dyn2->rng = G_RNG;    
             dyn2->age = G_CLO_AGE;
             dyn2->patient_weight = G_CLO_WEIGHT;
             dyn2->weight = dyn2->patient_weight;
 
-            dyn2-> patient_blood_volume = 5500000.0 * (dyn2-> weight/dyn2-> median_weight);       // 5.5L of blood for an adult individual
+            //dyn2-> patient_blood_volume = 5500000.0 * (dyn2-> weight/dyn2-> median_weight);       // 5.5L of blood for an adult individual
             
-            //dyn2-> patient_blood_volume = dyn2-> weight * (70.0 * 1000);     // Scaling patient blood volume to 70ml/kg
+            dyn2-> patient_blood_volume = dyn2-> weight * (70.0 * 1000);     // Scaling patient blood volume to 70ml/kg
             dyn2->pdparam_n = G_CLO_HILL_COEFF_LUM;
             dyn2->pdparam_EC50 = G_CLO_EC50_LUM;
             dyn2->pdparam_Pmax = G_CLO_PMAX_LUM;
             dyn2->initialize();                             // NB: parasitaemia must be set before initializing parameters
 
-            // Open the file in append mode
-            outputFile_lum.open(filename_lum, std::ios::app);
-           if (outputFile_lum.is_open()) {
-            // Append data to the file
-            outputFile_lum<< pi << "," << dyn2->vprms[i_lum_F1_indiv] << "," << dyn2->vprms[i_lum_k12] << "," << dyn2-> vprms[i_lum_k23] << "," << dyn2->vprms[i_lum_k32] << "," << dyn2->vprms[i_lum_k20] << "," << dyn2->total_mg_dose_per_occassion << "," << dyn2->vprms[i_lum_DS] << "," << dyn2->vprms[i_lum_Q] << "," << dyn2->vprms[i_lum_V_indiv] << "," << dyn2->vprms[i_lum_CL] << "," << dyn2->vprms[i_lum_VP] << std::endl;  
-            outputFile_lum.close();
-            } 
-            else {
-            std::cerr << "Error opening file for writing." << std::endl;
-            }
-            
+        //     // Open the file in append mode
+        //     outputFile_lum.open(filename_lum, std::ios::app);
+        //    if (outputFile_lum.is_open()) {
+        //     // Append data to the file
+        //     outputFile_lum<< pi << "," << dyn2->vprms[i_lum_F1_indiv] << "," << dyn2->vprms[i_lum_k12] << "," << dyn2-> vprms[i_lum_k23] << "," << dyn2->vprms[i_lum_k32] << "," << dyn2->vprms[i_lum_k20] << "," << dyn2->total_mg_dose_per_occassion << "," << dyn2->vprms[i_lum_DS] << "," << dyn2->vprms[i_lum_Q] << "," << dyn2->vprms[i_lum_V_indiv] << "," << dyn2->vprms[i_lum_CL] << "," << dyn2->vprms[i_lum_VP] << std::endl;  
+        //     outputFile_lum.close();
+        //     } 
+        //     else {
+        //     std::cerr << "Error opening file for writing." << std::endl;
+        //     }
         
             t0=0.0;
             t1=maximum_enforced_stepsize;           // normally set to 0.5 hours
@@ -611,9 +608,9 @@ int main(int argc, char* argv[])
                 // printf("The lumefantrine parasite density before setting to 0 is %10.10f \n\n\n\n", dyn2->y0[ dyn2->dim - 1 ]);
 
     
-                // setting parasite density <= 10 ^ -3 = 0
+                // setting parasite density <= 10 ^ -5 = 0
                 // Decided to go with value after testing with 10^-4, 10^-5, 10^-7 // May 09 2025
-                // Just testing with 10^-5 for now
+        
                 if (dyn1->y0[dyn1 -> dim -1] <= pow(10.0, -5.0))
                 {
                     dyn1->y0[dyn1 -> dim -1] = 0.0;

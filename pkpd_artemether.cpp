@@ -105,23 +105,23 @@ int pkpd_artemether::rhs_ode(double t, const double y[], double f[], void *pkd_o
     // Testing: adjusting the concentration in the central compartment/EC50 by the PATIENT BLOOD VOLUME
     double a = (-1.0/24.0) * log( 1.0 - p->pdparam_Pmax * pow((y[8]/p -> patient_blood_volume),p->pdparam_n) / (pow((y[8]/p -> patient_blood_volume),p->pdparam_n) + pow((p->pdparam_EC50/p -> patient_blood_volume),p->pdparam_n)));
 
-    static double last_logged_hour = -1.0;  //Just a placeholder, will be updated when the first log is written
-    double current_hour = floor(t);
+    // static double last_logged_hour = -1.0;  //Just a placeholder, will be updated when the first log is written
+    // double current_hour = floor(t);
 
-    if (current_hour > last_logged_hour) {
-        std::string filename_kill_art = "parasite_killing_constant_" + std::to_string(static_cast<int>(p->patient_weight)) + "kg_artemether.txt";
-        std::ofstream outputFile_kill_art;
-        outputFile_kill_art.open(filename_kill_art, std::ios::app);
-        if (outputFile_kill_art.is_open()) {
-        // Append data to the file            
-        outputFile_kill_art << a << "," << t << std::endl;
-        outputFile_kill_art.close(); 
-        last_logged_hour = current_hour;  
-        } 
-        else {
-        std::cerr << "Error opening" << filename_kill_art <<" for writing." << std::endl;
-        }
-    }
+    // if (current_hour > last_logged_hour) {
+    //     std::string filename_kill_art = "parasite_killing_constant_" + std::to_string(static_cast<int>(p->patient_weight)) + "kg_artemether.txt";
+    //     std::ofstream outputFile_kill_art;
+    //     outputFile_kill_art.open(filename_kill_art, std::ios::app);
+    //     if (outputFile_kill_art.is_open()) {
+    //     // Append data to the file            
+    //     outputFile_kill_art << a << "," << t << std::endl;
+    //     outputFile_kill_art.close(); 
+    //     last_logged_hour = current_hour;  
+    //     } 
+    //     else {
+    //     std::cerr << "Error opening" << filename_kill_art <<" for writing." << std::endl;
+    //     }
+    // }
 
     f[9] = -a * y[9];
     

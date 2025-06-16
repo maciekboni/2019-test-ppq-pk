@@ -108,21 +108,21 @@ int pkpd_lum::rhs_ode(double t, const double y[], double f[], void *pkd_object )
     // Testing: adjusting the concentration in the central compartment/EC50 by the CENTRAL VOLUME OF DISTRIBUTION
     // double a = (-1.0/24.0) * log( 1.0 - p->pdparam_Pmax * pow((y[1]/p -> central_volume_of_distribution),p->pdparam_n) / (pow((y[1]/p -> central_volume_of_distribution),p->pdparam_n) + pow((p->pdparam_EC50/p -> central_volume_of_distribution),p->pdparam_n)) );
     
-    static double last_logged_hour = -1.0;  //Just a placeholder, will be updated when the first log is written
-    double current_hour = floor(t);
+    // static double last_logged_hour = -1.0;  //Just a placeholder, will be updated when the first log is written
+    // double current_hour = floor(t);
 
-    if (current_hour > last_logged_hour) {
-        std::string filename_kill_lum = "parasite_killing_constant_" + std::to_string(static_cast<int>(p->patient_weight)) + "kg_lumefantrine.txt";
-        std::ofstream outputFile_kill_lum;
-        outputFile_kill_lum.open(filename_kill_lum, std::ios::app);
-        if (outputFile_kill_lum.is_open()) {
-            outputFile_kill_lum << a << "," << current_hour << std::endl;
-            outputFile_kill_lum.close();
-            last_logged_hour = current_hour;  
-        } else {
-            std::cerr << "Error opening " << filename_kill_lum << " for writing." << std::endl;
-        }
-    }
+    // if (current_hour > last_logged_hour) {
+    //     std::string filename_kill_lum = "parasite_killing_constant_" + std::to_string(static_cast<int>(p->patient_weight)) + "kg_lumefantrine.txt";
+    //     std::ofstream outputFile_kill_lum;
+    //     outputFile_kill_lum.open(filename_kill_lum, std::ios::app);
+    //     if (outputFile_kill_lum.is_open()) {
+    //         outputFile_kill_lum << a << "," << current_hour << std::endl;
+    //         outputFile_kill_lum.close();
+    //         last_logged_hour = current_hour;  
+    //     } else {
+    //         std::cerr << "Error opening " << filename_kill_lum << " for writing." << std::endl;
+    //     }
+    // }
 
     f[3] = - a * y[3];          // NOTE there is no parasite growth here because the PMF factor for parasite growth is done
                                 // manually in the main diff-eq loop
@@ -176,11 +176,11 @@ void pkpd_lum::predict( double t0, double t1 )
         
             //v_concentration_in_blood.push_back( y0[1] * 1000.0 / central_volume_of_distribution  ); ng/L
             
-            v_concentration_in_blood.push_back( (y0[1]) / central_volume_of_distribution );     // The central volume of distribution is in liters - Venitha, April 2025
+            //v_concentration_in_blood.push_back( (y0[1]) / central_volume_of_distribution );     // The central volume of distribution is in liters - Venitha, April 2025
                                                                                                 // The concentration is in mg/L           
 
-            // patient_blood_volume_litres = patient_blood_volume/pow(10,6); // in litres 
-            // v_concentration_in_blood.push_back( (y0[1]) / patient_blood_volume_litres );    // Concentration in the blood, mg/L
+            patient_blood_volume_litres = patient_blood_volume/pow(10,6); // in litres 
+            v_concentration_in_blood.push_back( (y0[1]) / patient_blood_volume_litres );    // Concentration in the blood, mg/L
 
             //v_concentration_in_blood.push_back( (y0[1]));   // Total lumefantrine in the blood, not concentration                                                                          
 
@@ -276,7 +276,7 @@ void pkpd_lum::initialize_params( void )
     //fprintf(stderr, "\n\tinside initialize_params function -- about to set DS param"); fflush(stderr);
     
     // this you keep fixed, and you use the total mg dose per occassion, and NOT any randomly drawn number
-    double DS = 1.0 - ( total_mg_dose_per_occassion/weight ) / ( ( total_mg_dose_per_occassion/weight ) + D50  );
+    double DS = 1.0 - ( total_mg_dose_per_occassion/weight ) / ( ( total_mg_dose_per_occassion/weight ) + D50  ); // Not implemented
 
 
     
@@ -288,7 +288,7 @@ void pkpd_lum::initialize_params( void )
     //fprintf(stderr, "\n\tinside initialize_params function -- PARASITE param set"); fflush(stderr);
 
     double TVF1 = THETA6 * DS * PARASITE;
-    double F1 = TVF1 * exp(ETATR); // TVF1 * exp(ETATR) => TVF1 * exp(0) => TVF1 * 1 => 1.0
+    double F1 = TVF1 * exp(ETATR); // TVF1 * exp(ETATR) => TVF1 * exp(0) => TVF1 * 1
 
     double TVQ = THETA3 * pow( weight/42.0 , 0.75 );  // allometric scaling for weight on the Q parameter
     //double TVQ = THETA3 * (weight/42.0);
