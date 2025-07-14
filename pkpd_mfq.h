@@ -1,3 +1,5 @@
+// Model and parameter values from Guidi et al., 2019
+
 #ifndef PKPD_MFQ
 #define PKPD_MFQ
 

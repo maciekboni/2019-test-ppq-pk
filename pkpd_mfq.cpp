@@ -1,3 +1,5 @@
+// Model and parameter values from Guidi et al., 2019
+
 //#include <iostream>
 //#include <string>
 //#include <cstdlib>
@@ -147,7 +149,7 @@ void pkpd_mfq::predict( double t0, double t1 )
             v_concentration_in_blood_hourtimes.push_back( t );
             
             num_hours_logged++;
-            if( num_hours_logged >= 24 ) vprms[i_lum_k12] = vprms[i_lum_k12_late];
+            if( num_hours_logged >= 24 ) vprms[i_mfq_k12] = vprms[i_mfq_k12_late];
         }
 
 
@@ -204,7 +206,7 @@ void pkpd_mfq::initialize_params( void )
     double ETA5_rv = 0.0;   // this is fixed bc there was not enough data to identify/infer variability around this process
     double ETA6_rv = 0.0;
 
-    if( pkpd_lum::stochastic )
+    if( pkpd_mfq::stochastic )
     {
         ETA1_rv = gsl_ran_gaussian( rng, sqrt(0.1521) );      // need to validate this w original authors
 
@@ -251,19 +253,20 @@ void pkpd_mfq::initialize_params( void )
     double KA_EARLY = KA;
 
     double TVKA_LATE = THETA7 * COV;
-    double KA_LATE = TVKA_LATE * exp( ETA7_rv );
+    //double KA_LATE = TVKA_LATE * exp( ETA7_rv );
+    double KA_LATE = TVKA_LATE;
 
 
-    vprms[i_lum_k12] = KA;
-    vprms[i_lum_k12_early] = KA_EARLY;
-    vprms[i_lum_k12_late] = KA_LATE;
+    vprms[i_mfq_k12] = KA;
+    vprms[i_mfq_k12_early] = KA_EARLY;
+    vprms[i_mfq_k12_late] = KA_LATE;
 
-    vprms[i_lum_k23] = Q/V;
-    vprms[i_lum_k32] = Q/VP;
-    vprms[i_lum_k20] = CL/V;
-    vprms[i_lum_F1_indiv] = F1;
+    vprms[i_mfq_k23] = Q/V;
+    vprms[i_mfq_k32] = Q/VP;
+    vprms[i_mfq_k20] = CL/V;
+    vprms[i_mfq_F1_indiv_first_dose] = F1;
+    //vprms[i_mfq_F1_indiv_later_dose] = F1; // Need to figure out if bioavailability changes after the first dose
 
-    
 }
 
 
