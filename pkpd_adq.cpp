@@ -1,3 +1,5 @@
+// Model and parameters adapted from Ali et al., 2018
+
 //#include <iostream>
 //#include <string>
 //#include <cstdlib>
@@ -160,7 +162,7 @@ void pkpd_adq::predict( double t0, double t1 )
         {
             v_concentration_in_blood.push_back( y0[1] );                // TODO: you need to push_back 1000 * y0[1] / V
                                                                         // and the result is microgram per liter = ng/mL
-            v_concentration_in_blood_metabolite.push_back( y0[3] );     // TODO: you need to push_back 1000 * y0[3] / VC
+            v_concentration_in_blood_metabolite.push_back( y0[3] );     // TODO: you need to push_back 1000 * y0[3] / VC_DEAQ
                                                                         // and the result is microgram per liter = ng/mL
             v_parasitedensity_in_blood.push_back( y0[dim-1] );
             v_concentration_in_blood_hourtimes.push_back( t );
@@ -261,14 +263,14 @@ void pkpd_adq::initialize_params( void )
     double TVCL = THETA1 * pow( weight/50.0 , 0.75 ) * ME_AQ;
     double CL   = TVCL * exp(ETA1_rv);
 
-    double TVV = THETA3 * pow( weight/50.0 , 1.0 );
-    double V   = TVV * exp( ETA2_rv );
+    double TVV_AQ = THETA2 * pow( weight/50.0 , 1.0 );
+    double V_AQ   = TVV_AQ * exp( ETA2_rv );
 
     double TVQ = THETA3 * pow( weight/50.0 , 0.75 );
     double Q   = TVQ * exp( ETA3_rv );
 
-    double TVVP = THETA4 * pow( weight/50.0 , 1.0 );
-    double VP   = TVVP * exp( ETA4_rv );
+    double TVVP_AQ = THETA4 * pow( weight/50.0 , 1.0 );
+    double VP_AQ   = TVVP_AQ * exp( ETA4_rv );
 
     double TVKA = THETA5;
     double KA   = TVKA * exp( ETA5_rv );
@@ -283,11 +285,11 @@ void pkpd_adq::initialize_params( void )
     double F1_later_dose = exp( ETA6_rv );
     double F1            = (1.0 - THETA14) * F1_later_dose;
 
-    double TVVC = THETA7 * pow( weight/50.0 , 1.0 );
-    double VC   = TVVC * exp( ETA7_rv );
+    double TVVC_DEAQ = THETA7 * pow( weight/50.0 , 1.0 );
+    double VC_DEAQ   = TVVC_DEAQ * exp( ETA7_rv );
 
-    double TVCLM = THETA8 * pow( weight/50.0 , 0.75 ) * ME_AQ;
-    double CLM   = TVCLM * exp( ETA8_rv );
+    double TVCL_DEAQ = THETA8 * pow( weight/50.0 , 0.75 ) * ME_AQ;
+    double CL_DEAQ   = TVCL_DEAQ * exp( ETA8_rv );
 
     double TVQ2 = THETA9 * pow( weight/50.0 , 0.75 );
     double Q2   = TVQ2 * exp( ETA9_rv );
@@ -305,8 +307,8 @@ void pkpd_adq::initialize_params( void )
     double MT   = TVMT * exp( ETA13_rv );
 
     // simple re-scaling from mg/L to ng/mL (or perhaps the other way around)
-    double S2 = V / 1000.0;
-    double S4 = VC / 1000.0;
+    double S2 = V_AQ / 1000.0;
+    double S4 = VC_DEAQ / 1000.0;
 
     double NN = 2.0;
     double KTR = (NN+1.0)/MT; // this is the transition param btw dosing and central compartments
@@ -326,17 +328,17 @@ void pkpd_adq::initialize_params( void )
     vprms[i_adq_k78] = KTR;
     vprms[i_adq_k82] = KA;
 
-    vprms[i_adq_k23] = Q/V;
-    vprms[i_adq_k32] = Q/VP;
+    vprms[i_adq_k23] = Q/V_AQ;
+    vprms[i_adq_k32] = Q/VP_AQ;
 
-    vprms[i_adq_k24] = CL/V;
+    vprms[i_adq_k24] = CL/V_AQ;
 
-    vprms[i_adq_k45] = Q2/VC;
+    vprms[i_adq_k45] = Q2/VC_DEAQ;
     vprms[i_adq_k54] = Q2/VP2;
-    vprms[i_adq_k46] = Q3/VC;
+    vprms[i_adq_k46] = Q3/VC_DEAQ;
     vprms[i_adq_k64] = Q3/VP3;
 
-    vprms[i_adq_k40] = CLM/VC;
+    vprms[i_adq_k40] = CL_DEAQ/VC_DEAQ;
 
     vprms[i_adq_CF] = 0.921159412; // this is the commented out value from BLOCK2
 

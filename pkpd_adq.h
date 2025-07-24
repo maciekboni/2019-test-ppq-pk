@@ -1,3 +1,5 @@
+// Model and parameters adapted from Ali et al., 2018
+
 #ifndef PKPD_ADQ
 #define PKPD_ADQ
 
