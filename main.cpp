@@ -522,7 +522,7 @@ int main(int argc, char* argv[])
             dyn1->weight = dyn1->patient_weight; 
 
             //dyn1-> patient_blood_volume = 5500000.0 * (dyn1-> weight/dyn1-> median_weight);       // 5.5L of blood for an adult individual
-            dyn1-> patient_blood_volume = dyn1-> weight * (70.0 * 1000);                        // Scaling patient blood volume to 70ml/kg
+            dyn1-> patient_blood_volume = pow(dyn1->patient_weight, 0.25) * (70.0 * 1000);                        // Scaling patient blood volume to 70ml/kg
 
             dyn1->pdparam_n = G_CLO_HILL_COEFF_ARTEMETHER;
             dyn1->pdparam_EC50 = G_CLO_EC50_ARTEMETHER;
@@ -546,7 +546,7 @@ int main(int argc, char* argv[])
 
             //dyn2-> patient_blood_volume = 5500000.0 * (dyn2-> weight/dyn2-> median_weight);       // 5.5L of blood for an adult individual
             
-            dyn2-> patient_blood_volume = dyn2-> weight * (70.0 * 1000);     // Scaling patient blood volume to 70ml/kg
+            dyn2-> patient_blood_volume = pow(dyn2-> weight, 0.25) * (70.0 * 1000);     // Scaling patient blood volume to 70ml/kg
             dyn2->pdparam_n = G_CLO_HILL_COEFF_LUM;
             dyn2->pdparam_EC50 = G_CLO_EC50_LUM;
             dyn2->pdparam_Pmax = G_CLO_PMAX_LUM;
