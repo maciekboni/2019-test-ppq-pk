@@ -4,17 +4,18 @@
 #include "pkpd_adq.h"
 #include "pkpd_artemether.h"
 
-
-#include <string>
+#include <chrono>
+#include <cmath>
+#include <cstdlib>
 #include <fstream>
-#include <iostream>
 #include <gsl/gsl_rng.h> // random number generators from Gnu Scientific Library
 #include <gsl/gsl_cdf.h>
 #include <gsl/gsl_randist.h>
-#include <chrono>
-#include <string>
-#include <cstdlib>
+#include <iostream>
 #include <random>
+#include <string>
+#include <string>
+
 
 // GLOBAL RANDOM NUMBER GENERATOR
 gsl_rng *G_RNG;	
@@ -48,8 +49,8 @@ double G_CLO_HILL_COEFF_ARTEMETHER = 20.0;
 double G_CLO_HILL_COEFF_LUM = 15.0;
 
 double G_CLO_EC50_DHA = 0.1;
-double G_CLO_EC50_ARTEMETHER = 0.1;
-double G_CLO_EC50_LUM = exp( 0.525 * log (2700)); // use natural log, 63.30907617
+double G_CLO_EC50_ARTEMETHER = 0.1; // Assuming this to be mg/ml
+double G_CLO_EC50_LUM = exp( 0.525 * log (2700)); // use natural log, 63.30907617 // Assuming this to be mg/ml
 
 double G_CLO_PMAX_DHA = 0.983; //pmax_dha = 0.983 gives ~68.9% efficacy for DHA monotherapy, calibrated by Venitha in Dec 2024 
                                //Original value = 0.99997
@@ -522,8 +523,10 @@ int main(int argc, char* argv[])
             dyn1->weight = dyn1->patient_weight; 
 
             //dyn1-> patient_blood_volume = 5500000.0 * (dyn1-> weight/dyn1-> median_weight);       // 5.5L of blood for an adult individual
-            dyn1-> patient_blood_volume = pow(dyn1->patient_weight, 0.25) * (70.0 * 1000);                        // Scaling patient blood volume to 70ml/kg
-
+            //dyn1-> patient_blood_volume = dyn1->patient_weight * 70.0 * 1000.0;                    
+            dyn1-> patient_blood_volume = pow((dyn1->patient_weight * 70.0 * 1000.0),0.5);                   // Scaling patient blood volume to 70,000 microlitres/kg
+                                                                                                             // Final drug cocncentration in blood is in mg/ml
+            //dyn1-> patient_blood_volume = pow(dyn1->patient_weight, 0.25) * (70.0/sqrt(24.9/22.0));                        
             dyn1->pdparam_n = G_CLO_HILL_COEFF_ARTEMETHER;
             dyn1->pdparam_EC50 = G_CLO_EC50_ARTEMETHER;
             dyn1->pdparam_Pmax = G_CLO_PMAX_ARTEMETHER;
@@ -546,7 +549,11 @@ int main(int argc, char* argv[])
 
             //dyn2-> patient_blood_volume = 5500000.0 * (dyn2-> weight/dyn2-> median_weight);       // 5.5L of blood for an adult individual
             
-            dyn2-> patient_blood_volume = pow(dyn2-> weight, 0.25) * (70.0 * 1000);     // Scaling patient blood volume to 70ml/kg
+            //dyn2-> patient_blood_volume = dyn2-> weight * 70.0 * 1000.0;                            
+            dyn2-> patient_blood_volume = pow((dyn2->patient_weight * 70.0 * 1000.0), 0.5);                   // Scaling patient blood volume to 70,000 microlitres/kg
+                                                                                                              // Final drug cocncentration in blood is in mg/ml
+            //dyn2-> patient_blood_volume = pow(dyn2->patient_weight, 0.25) * (70.0/sqrt(24.9/22.0));          
+            //dyn2-> patient_blood_volume = pow(dyn2-> patient_weight, 0.25) * (70.0/sqrt(24.9/22.0));     
             dyn2->pdparam_n = G_CLO_HILL_COEFF_LUM;
             dyn2->pdparam_EC50 = G_CLO_EC50_LUM;
             dyn2->pdparam_Pmax = G_CLO_PMAX_LUM;

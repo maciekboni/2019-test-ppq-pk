@@ -103,7 +103,6 @@ int pkpd_artemether::rhs_ode(double t, const double y[], double f[], void *pkd_o
     // double a = (-1.0/24.0) * log( 1.0 - p->pdparam_Pmax * pow(y[8],p->pdparam_n) / (pow(y[8],p->pdparam_n) + pow(p->pdparam_EC50,p->pdparam_n)) );
 
     // Testing: adjusting the concentration in the central compartment/EC50 by the PATIENT BLOOD VOLUME
-    //double a = (-1.0/24.0) * log( 1.0 - p->pdparam_Pmax * pow((y[8]/p -> patient_blood_volume),p->pdparam_n) / (pow((y[8]/p -> patient_blood_volume),p->pdparam_n) + pow((p->pdparam_EC50/p -> patient_blood_volume),p->pdparam_n)));
     double a = (-1.0/24.0) * log( 1.0 - p->pdparam_Pmax * pow((y[8]/p -> patient_blood_volume),p->pdparam_n) / (pow((y[8]/p -> patient_blood_volume),p->pdparam_n) + pow(p->pdparam_EC50,p->pdparam_n)));
 
 
@@ -188,8 +187,8 @@ void pkpd_artemether::predict( double t0, double t1 )
             // v_transit_compartment7.push_back( y0[7] );
 
             //v_concentration_in_blood.push_back( y0[8]); // Not the concentration in the blood, but the total mg of artemether in the blood
-            patient_blood_volume_litres = patient_blood_volume/pow(10,6); // in litres
-            v_concentration_in_blood.push_back( y0[8]/ (patient_blood_volume_litres)); // The concentration in the blood, mg/L
+            patient_blood_volume_millilitres = patient_blood_volume/(1 * pow(10,3)); // in millilitres
+            v_concentration_in_blood.push_back( y0[8]/ (patient_blood_volume_millilitres)); // The concentration in the blood, mg/ml
 
 
             v_killing_rate.push_back( y0[9] );

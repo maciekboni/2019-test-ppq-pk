@@ -103,7 +103,6 @@ int pkpd_lum::rhs_ode(double t, const double y[], double f[], void *pkd_object )
     //double a = (-1.0/24.0) * log( 1.0 - p->pdparam_Pmax * pow(y[1],p->pdparam_n) / (pow(y[1],p->pdparam_n) + pow(p->pdparam_EC50,p->pdparam_n)) );
 
     // Testing: adjusting the concentration in the central compartment/EC50 by the PATIENT BLOOD VOLUME
-    //double a = (-1.0/24.0) * log( 1.0 - p->pdparam_Pmax * pow((y[1]/p -> patient_blood_volume),p->pdparam_n) / (pow((y[1]/p -> patient_blood_volume),p->pdparam_n) + pow((p->pdparam_EC50/p -> patient_blood_volume),p->pdparam_n)) );
     double a = (-1.0/24.0) * log( 1.0 - p->pdparam_Pmax * pow((y[1]/p -> patient_blood_volume),p->pdparam_n) / (pow((y[1]/p -> patient_blood_volume),p->pdparam_n) + pow(p->pdparam_EC50,p->pdparam_n)));
      
 
@@ -180,10 +179,10 @@ void pkpd_lum::predict( double t0, double t1 )
             //v_concentration_in_blood.push_back( y0[1] * 1000.0 / central_volume_of_distribution  ); ng/L
             
             //v_concentration_in_blood.push_back( (y0[1]) / central_volume_of_distribution );     // The central volume of distribution is in liters - Venitha, April 2025
-                                                                                                // The concentration is in mg/L           
+                                                                                                  // The concentration is in mg/L           
 
-            patient_blood_volume_litres = patient_blood_volume/pow(10,6); // in litres 
-            v_concentration_in_blood.push_back( (y0[1]) / patient_blood_volume_litres );    // Concentration in the blood, mg/L
+            patient_blood_volume_millilitres = patient_blood_volume/(1 * pow(10,3)); // in millilitres
+            v_concentration_in_blood.push_back( (y0[1]) / patient_blood_volume_millilitres );    // Concentration in the blood, mg/ml
 
             //v_concentration_in_blood.push_back( (y0[1]));   // Total lumefantrine in the blood, not concentration                                                                          
 

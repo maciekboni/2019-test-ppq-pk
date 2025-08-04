@@ -144,7 +144,7 @@ public:
     vector<double> v_parasitedensity_in_blood;
     int num_hours_logged;
     double total_mg_dose_per_occassion;
-    double patient_blood_volume_litres;
+    double patient_blood_volume_millilitres;
     
     gsl_rng *rng;		
     
