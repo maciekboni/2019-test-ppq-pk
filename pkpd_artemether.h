@@ -18,7 +18,7 @@ using namespace std;
 //enum parameter_index_artemether { i_artemether_KTR, i_artemether_k20, i_artemether_F1_indiv, i_artemether_F1_thisdose, artemether_num_params }; 
 
 // Editing to add PKPD parameters
-enum parameter_index_artemether { i_artemether_KTR, i_artemether_k20, i_artemether_F1_indiv, i_artemether_F1_thisdose, i_artemether_typical_CL, i_artemether_CL_indiv, i_artemether_typical_V2, i_artemether_V2_indiv, artemether_num_params }; 
+enum parameter_index_artemether { i_artemether_KTR, i_artemether_k20, i_artemether_bioavailability_F_indiv, i_artemether_bioavailability_F_thisdose, i_artemether_typical_CL, i_artemether_CL_indiv, i_artemether_typical_V, i_artemether_V_indiv, i_artemether_central_volume_of_distribution_indiv, artemether_num_params }; 
 
 //typedef enum parameter_index_artemether i_artemether;
 
@@ -114,7 +114,7 @@ public:
     //bool pregnant;                  // usually means just 2nd or 3rd trimester -- TODO: have this replace the "is_pregnant" bool
     bool is_pregnant; // TODO: deprecate
     bool is_male;
-
+    double immune_killing_rate;
 
 
     //
@@ -144,7 +144,7 @@ public:
     vector<double> v_parasitedensity_in_blood;
     int num_hours_logged;
     double total_mg_dose_per_occassion;
-    double patient_blood_volume_millilitres;
+    double indiv_central_volume_millilitres;
     
     gsl_rng *rng;		
     

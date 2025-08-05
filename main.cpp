@@ -523,10 +523,11 @@ int main(int argc, char* argv[])
             dyn1->weight = dyn1->patient_weight; 
 
             //dyn1-> patient_blood_volume = 5500000.0 * (dyn1-> weight/dyn1-> median_weight);       // 5.5L of blood for an adult individual
-            //dyn1-> patient_blood_volume = dyn1->patient_weight * 70.0 * 1000.0;                    
-            dyn1-> patient_blood_volume = pow((dyn1->patient_weight * 70.0 * 1000.0),0.5);                   // Scaling patient blood volume to 70,000 microlitres/kg
-                                                                                                             // Final drug cocncentration in blood is in mg/ml
-            //dyn1-> patient_blood_volume = pow(dyn1->patient_weight, 0.25) * (70.0/sqrt(24.9/22.0));                        
+            dyn1-> patient_blood_volume = dyn1->patient_weight * 70.0 * 1000.0;                     // Scaling patient blood volume to 70,000 microlitres/kg
+            //dyn1-> patient_blood_volume = pow((dyn1->patient_weight * 70.0 * 1000.0),0.49);                   
+                                                                                                               // Final drug cocncentration in blood is in ng/microliter
+            //dyn1-> patient_blood_volume = pow(dyn1->patient_weight, 0.25) * (70.0*1000);     // Lemmens-Bernstein-Brodsky equation for TBV; units are in microliters per kg             
+            //dyn1-> patient_blood_volume = pow(dyn1->patient_weight, 0.25) * ((70.0*1000)/sqrt(24.9/22.0)); 
             dyn1->pdparam_n = G_CLO_HILL_COEFF_ARTEMETHER;
             dyn1->pdparam_EC50 = G_CLO_EC50_ARTEMETHER;
             dyn1->pdparam_Pmax = G_CLO_PMAX_ARTEMETHER;
@@ -549,11 +550,11 @@ int main(int argc, char* argv[])
 
             //dyn2-> patient_blood_volume = 5500000.0 * (dyn2-> weight/dyn2-> median_weight);       // 5.5L of blood for an adult individual
             
-            //dyn2-> patient_blood_volume = dyn2-> weight * 70.0 * 1000.0;                            
-            dyn2-> patient_blood_volume = pow((dyn2->patient_weight * 70.0 * 1000.0), 0.5);                   // Scaling patient blood volume to 70,000 microlitres/kg
-                                                                                                              // Final drug cocncentration in blood is in mg/ml
-            //dyn2-> patient_blood_volume = pow(dyn2->patient_weight, 0.25) * (70.0/sqrt(24.9/22.0));          
-            //dyn2-> patient_blood_volume = pow(dyn2-> patient_weight, 0.25) * (70.0/sqrt(24.9/22.0));     
+            dyn2-> patient_blood_volume = dyn2-> weight * 70.0 * 1000.0;                            // Scaling patient blood volume to 70,000 microlitres/kg                        
+            //dyn2-> patient_blood_volume = pow((dyn2->patient_weight * 70.0 * 1000.0), 0.49);                   
+               
+            //dyn2-> patient_blood_volume = pow(dyn2->patient_weight, 0.25) * (70.0*1000);                       // Final drug concentration in blood is in ng/microlitres
+            //dyn2-> patient_blood_volume = pow(dyn2->patient_weight, 0.25) * ((70.0*1000)/sqrt(24.9/22.0));     // Units: microliters per kg   
             dyn2->pdparam_n = G_CLO_HILL_COEFF_LUM;
             dyn2->pdparam_EC50 = G_CLO_EC50_LUM;
             dyn2->pdparam_Pmax = G_CLO_PMAX_LUM;

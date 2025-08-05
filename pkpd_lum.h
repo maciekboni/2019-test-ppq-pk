@@ -18,7 +18,7 @@ using namespace std;
 // enum parameter_index_lum { i_lum_k12, i_lum_k23, i_lum_k32,  i_lum_k20, i_lum_F1_indiv, i_lum_F1_thisdose, i_lum_pmf, lum_num_params }; 
 
 // Editing to add PKPD parameters
-enum parameter_index_lum { i_lum_k12, i_lum_k23, i_lum_k32,  i_lum_k20, i_lum_F1_indiv, i_lum_F1_thisdose, i_lum_pmf, i_lum_DS, i_lum_Q, i_lum_V_indiv, i_lum_CL, i_lum_VP, lum_num_params }; 
+enum parameter_index_lum { i_lum_k12, i_lum_k23, i_lum_k32,  i_lum_k20, i_lum_bioavailability_F_indiv, i_lum_bioavailability_F_thisdose, i_lum_DS_indiv, i_lum_Q_indiv, i_lum_V_indiv, i_lum_CL_indiv, i_lum_VP_indiv, i_lum_central_volume_of_distribution_indiv, lum_num_params }; 
 
 
 class pkpd_lum
@@ -112,6 +112,7 @@ public:
     double age;                     // in years
     double patient_blood_volume;    // in microliters, so should be between 250,000 (infant) to 6,000,000 (large adult)
     bool pregnant;                  // usually means just 2nd or 3rd trimester
+    double immune_killing_rate;
 
     //
     // ----  6  ----  STORAGE VARIABLES FOR DYNAMICS OF PK AND PD CURVES
@@ -121,7 +122,7 @@ public:
     vector<double> v_dosing_compartment;
     vector<double> v_peripheral_concentration;
     vector<double> v_killing_rate;
-    double patient_blood_volume_millilitres; // in  millilitres
+    double indiv_central_volume_millilitres; // in  millilitres
 
     vector<double> v_concentration_in_blood;                // an hourly time series of drug concentrations in the blood compartment only
                                                             // should be in nanograms per milliliter (ng/ml)

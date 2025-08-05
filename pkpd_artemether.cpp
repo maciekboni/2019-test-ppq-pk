@@ -45,11 +45,12 @@ pkpd_artemether::pkpd_artemether( )
 
     // the parameters 15, exp( 0.525 * log(2700)), and 0.9 give about a 90% drug efficacy for an initial parasitaemia of 10,000/ul (25yo patient, 54kg)
     pdparam_n = 20.0; // default parameter if CLO is not specified
-    pdparam_EC50 = 0.1; // default parameter if CLO is not specified
+    pdparam_EC50 = 0.1; // default parameter if CLO is not specified, ng/microliter
     pdparam_Pmax = 0.99997; // default parameter if CLO is not specified
     //pdparam_Pmax = 0.983; // here you want to enter the max daily killing rate; it will be converted to hourly later
                             
     rng=NULL;
+    //immune_killing_rate = 0.0001; 
 
 }
 
@@ -100,11 +101,9 @@ int pkpd_artemether::rhs_ode(double t, const double y[], double f[], void *pkd_o
     f[8] = y[7]*p->vprms[i_artemether_KTR] - y[8]*p->vprms[i_artemether_k20];
     
     // this is the per/ul parasite population size
-    // double a = (-1.0/24.0) * log( 1.0 - p->pdparam_Pmax * pow(y[8],p->pdparam_n) / (pow(y[8],p->pdparam_n) + pow(p->pdparam_EC50,p->pdparam_n)) );
-
-    // Testing: adjusting the concentration in the central compartment/EC50 by the PATIENT BLOOD VOLUME
-    double a = (-1.0/24.0) * log( 1.0 - p->pdparam_Pmax * pow((y[8]/p -> patient_blood_volume),p->pdparam_n) / (pow((y[8]/p -> patient_blood_volume),p->pdparam_n) + pow(p->pdparam_EC50,p->pdparam_n)));
-
+    // indiv_central_volume_of_distribution (L) =! patient_blood_volume
+    // drug concentration units mg/L, ec50 units ng/microliter, numerically the same
+    double a = (-1.0/24.0) * log( 1.0 - (p->pdparam_Pmax * pow((y[8]/p -> vprms[i_artemether_central_volume_of_distribution_indiv]),p->pdparam_n)) / (pow((y[8]/p -> vprms[i_artemether_central_volume_of_distribution_indiv]),p->pdparam_n) + pow(p->pdparam_EC50,p->pdparam_n)));
 
 
     // static double last_logged_hour = -1.0;  //Just a placeholder, will be updated when the first log is written
@@ -126,6 +125,8 @@ int pkpd_artemether::rhs_ode(double t, const double y[], double f[], void *pkd_o
     // }
 
     f[9] = -a * y[9];
+
+    //f[9] = (-a - p-> immune_killing_rate) * y[9];
     
     
     return GSL_SUCCESS;
@@ -168,7 +169,7 @@ void pkpd_artemether::predict( double t0, double t1 )
                 redraw_params_before_newdose();
                 
                 // add the new dose amount to the "dose compartment", i.e. the first compartment
-                y0[0] +=  v_dosing_amounts[num_doses_given] * vprms[i_artemether_F1_thisdose];
+                y0[0] +=  v_dosing_amounts[num_doses_given] * vprms[i_artemether_bioavailability_F_thisdose];
                 
                 num_doses_given++;
             }
@@ -187,8 +188,11 @@ void pkpd_artemether::predict( double t0, double t1 )
             // v_transit_compartment7.push_back( y0[7] );
 
             //v_concentration_in_blood.push_back( y0[8]); // Not the concentration in the blood, but the total mg of artemether in the blood
-            patient_blood_volume_millilitres = patient_blood_volume/(1 * pow(10,3)); // in millilitres
-            v_concentration_in_blood.push_back( y0[8]/ (patient_blood_volume_millilitres)); // The concentration in the blood, mg/ml
+            indiv_central_volume_millilitres = vprms[i_artemether_central_volume_of_distribution_indiv] * 1000;   // in millilitres
+            v_concentration_in_blood.push_back( y0[8] * pow(10, 6) / (indiv_central_volume_millilitres));         // The concentration in the blood, ng/ml
+                                                                                                                  // The actual hill equation uses drug concentration in mg/L 
+                                                                                                                  // mg/L == ng/microliter numerically 
+                                                                                                                  // This was done as the unit of ec50 ng/microliter
 
 
             v_killing_rate.push_back( y0[9] );
@@ -223,8 +227,8 @@ void pkpd_artemether::initialize_params( void )
     
     // initializse these relative dose factors to one (this should be the default behavior if
     // the model is not stochastic or if we decide to remove between-dose and/or between-patient variability
-    vprms[i_artemether_F1_thisdose] = 1.0;
-    vprms[i_artemether_F1_indiv] = 1.0;
+    vprms[i_artemether_bioavailability_F_thisdose] = 1.0;
+    vprms[i_artemether_bioavailability_F_indiv] = 1.0;
     
     //TVF1 = THETA(4)*(1+THETA(7)*(PARA-3.98)) * (1+THETA(6)*FLAG)
     double THETA7_pe = 0.278;
@@ -232,17 +236,17 @@ void pkpd_artemether::initialize_params( void )
     //double THETA4_pe= 1.0;
     
     initial_log10_totalparasitaemia = log10( y0[dim-1]*patient_blood_volume );
-    double TVF1 = 1.0 + THETA7_pe*(initial_log10_totalparasitaemia-3.98);
-    if(is_pregnant) TVF1 *= (1.0+THETA6_pe);
+    double typical_bioavailibility_TVF = 1.0 + THETA7_pe*(initial_log10_totalparasitaemia-3.98);
+    if(is_pregnant) typical_bioavailibility_TVF *= (1.0+THETA6_pe);
         
-    double F1=TVF1;
+    double indiv_bioavailability_F = typical_bioavailibility_TVF;
     if(pkpd_artemether::stochastic)
     {
         double ETA4_rv = gsl_ran_gaussian( rng, sqrt(0.08800) );
-        F1 *= ETA4_rv;
+        indiv_bioavailability_F *= ETA4_rv;
     }
  
-    vprms[i_artemether_F1_indiv] = F1;
+    vprms[i_artemether_bioavailability_F_indiv] = indiv_bioavailability_F;
     
     //vprms[i_artemether_F1_thisdose] = vprms[i_artemether_F1_indiv]; // Just for testing - Venitha, April 2025
  
@@ -265,7 +269,7 @@ void pkpd_artemether::initialize_params( void )
     // ### ### this is the exit rate from the central compartment (the final exit rate in the model)
     double THETA1_pe = 78.0;
     double THETA2_pe = 129.0;
-    double TVCL = THETA1_pe * pow( weight/mw, 0.75 );  
+    double typical_clearance_TVCL = THETA1_pe * pow( weight/mw, 0.75 );  
     //double TVCL = THETA1_pe; // For debugging
     //double TVCL = THETA1_pe * (weight/mw); 
     //double TVCL = THETA1_pe * (15.0/mw);  
@@ -273,28 +277,29 @@ void pkpd_artemether::initialize_params( void )
     
     //double ETA1_rv = 0.0; // this is fixed in this model
     //double CL = TVCL * exp(ETA1_rv);
-    double CL = TVCL; // just execute this line since ETA1 is fixed at zero above
+    double indiv_clearance_CL = typical_clearance_TVCL; // just execute this line since ETA1 is fixed at zero above
 
-    double TVV2 = THETA2_pe * (weight/mw);  
+    double typical_volume_TVV = THETA2_pe * (weight/mw);  
     //double TVV2 = THETA2_pe * (15.0/mw); 
-    double V2 = TVV2;
+    double indiv_volume_V = typical_volume_TVV;
+    double indiv_central_volume_of_distribution = indiv_volume_V;
 
     if(pkpd_artemether::stochastic) 
     {
         double ETA2_rv = gsl_ran_gaussian( rng, sqrt(0.0162) );
-        V2 *= exp(ETA2_rv);
+        indiv_volume_V *= exp(ETA2_rv);
     }
     
-    vprms[i_artemether_k20] = CL/V2;
+    vprms[i_artemether_k20] = indiv_clearance_CL/indiv_volume_V;
     
     //vprms[i_artemether_k20] = 0.5973735; // Median value of k20 for 50kg patient using this model
     //vprms[i_artemether_k20] = 0.9042795; // Median value of k20 for 10kg patient using this model
 
-    // Added for debugging by Venitha
-    vprms[i_artemether_typical_CL] = TVCL;
-    vprms[i_artemether_CL_indiv] = CL;
-    vprms[i_artemether_typical_V2] = TVV2;
-    vprms[i_artemether_V2_indiv] = V2;
+    vprms[i_artemether_typical_CL] = typical_clearance_TVCL;
+    vprms[i_artemether_CL_indiv] = indiv_clearance_CL;
+    vprms[i_artemether_typical_V] = typical_volume_TVV;
+    vprms[i_artemether_V_indiv] = indiv_volume_V;
+    vprms[i_artemether_central_volume_of_distribution_indiv] = indiv_central_volume_of_distribution;
     
     
 }
@@ -363,29 +368,29 @@ void pkpd_artemether::generate_recommended_dosing_schedule()
     
     double num_tablets_per_dose;
     
-    if( weight < 15.0 )
-    {
-        num_tablets_per_dose = 0.50;
-    }
-    else if( weight < 25.0 )
+    if( weight >= 5.0 && weight < 15.0 )
     {
         num_tablets_per_dose = 1.0;
     }
-    else if( weight < 35.0 )
-    {
-        num_tablets_per_dose = 1.50;
-    }
-    else
+    else if( weight >= 15.0 && weight < 25.0  )
     {
         num_tablets_per_dose = 2.0;
     }
+    else if( weight >= 25.0 && weight < 35.0  )
+    {
+        num_tablets_per_dose = 3;
+    }
+    else
+    {
+        num_tablets_per_dose = 4.0;
+    }
    
     // Artemether given by weight, twice daily, for a total of three days - WHO guidelines, 2024
-    total_mg_dose_per_occassion = num_tablets_per_dose * 40.0;
+    total_mg_dose_per_occassion = num_tablets_per_dose * 20.0;
     
     v_dosing_times.insert( v_dosing_times.begin(), 6, 0.0 );
     v_dosing_times[0] = 0.0;
-    v_dosing_times[1] = 12.0;
+    v_dosing_times[1] = 8.0;
     v_dosing_times[2] = 24.0; 
     v_dosing_times[3] = 36.0;
     v_dosing_times[4] = 48.0;
