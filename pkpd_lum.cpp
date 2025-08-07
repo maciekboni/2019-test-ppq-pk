@@ -105,8 +105,10 @@ int pkpd_lum::rhs_ode(double t, const double y[], double f[], void *pkd_object )
     // Drug concentration in the central compartment is drug amount in central compartment / central volume of distribution (mg/L)
     // mg/L is numerically equivalent to ng/microliter, which is the units of ec50
 
-    double a = (-1.0/24.0) * log( 1.0 - ((p->pdparam_Pmax * pow((y[1]/p -> vprms[i_lum_central_volume_of_distribution_indiv]),p->pdparam_n)) / (pow((y[1]/p -> vprms[i_lum_central_volume_of_distribution_indiv]),p->pdparam_n) + pow(p->pdparam_EC50,p->pdparam_n))));
+    //double a = (-1.0/24.0) * log( 1.0 - ((p->pdparam_Pmax * pow((y[1]/p -> vprms[i_lum_central_volume_of_distribution_indiv]),p->pdparam_n)) / (pow((y[1]/p -> vprms[i_lum_central_volume_of_distribution_indiv]),p->pdparam_n) + pow(p->pdparam_EC50,p->pdparam_n))));
       
+    double a = (-1.0/24.0) * log( 1.0 - ((p->pdparam_Pmax * pow(((y[1]*pow(10, 6)) /p -> patient_blood_volume),p->pdparam_n)) / (pow(((y[1] * pow(10, 6))/p -> patient_blood_volume),p->pdparam_n) + pow(p->pdparam_EC50,p->pdparam_n))));
+    
     // static double last_logged_hour = -1.0;  //Just a placeholder, will be updated when the first log is written
     // double current_hour = floor(t);
 
@@ -179,12 +181,14 @@ void pkpd_lum::predict( double t0, double t1 )
             //v_concentration_in_blood.push_back( (y0[1]) / central_volume_of_distribution );     // The central volume of distribution is in liters - Venitha, April 2025
                                                                                                   // The concentration is in mg/L           
 
-            indiv_central_volume_millilitres = vprms[i_lum_central_volume_of_distribution_indiv] * 1000;    // Converting L to ml
-            v_concentration_in_blood.push_back( (y0[1]) * pow(10, 6) / indiv_central_volume_millilitres );  // Concentration in the blood, ng/ml
+            //indiv_central_volume_millilitres = vprms[i_lum_central_volume_of_distribution_indiv] * 1000;    // Converting L to ml
+            //v_concentration_in_blood.push_back( (y0[1]) * pow(10, 6) / indiv_central_volume_millilitres );  // Concentration in the blood, ng/ml
                                                                                                             // This is only the output! 
                                                                                                             // The actual hill equation uses drug concentration in mg/L 
                                                                                                             // mg/L == ng/microliter numerically 
                                                                                                             // This was done as the unit of ec50 ng/microliter
+
+            v_concentration_in_blood.push_back( (y0[1] * pow(10, 6)) / (patient_blood_volume/1000) );       // Reporting drug concentration in the blood as ng/ml
 
             //v_concentration_in_blood.push_back( (y0[1]));   // Total lumefantrine in the blood, not concentration                                                                          
 
@@ -333,7 +337,7 @@ void pkpd_lum::initialize_params( void )
     vprms[i_lum_DS_indiv] = DS;
     vprms[i_lum_Q_indiv] = indiv_intercompartmental_clearance_Q;
     vprms[i_lum_V_indiv] = indiv_volume_V;
-    vprms[i_lum_central_volume_of_distribution_indiv] = central_volume_of_distribution;   
+    vprms[i_lum_central_volume_of_distribution_indiv] = pow(central_volume_of_distribution, 0.5);   
     vprms[i_lum_CL_indiv] = indiv_clearance_CL;
     vprms[i_lum_VP_indiv] = indiv_intercompartmental_clearance_Q;
 

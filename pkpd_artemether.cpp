@@ -45,7 +45,9 @@ pkpd_artemether::pkpd_artemether( )
 
     // the parameters 15, exp( 0.525 * log(2700)), and 0.9 give about a 90% drug efficacy for an initial parasitaemia of 10,000/ul (25yo patient, 54kg)
     pdparam_n = 20.0; // default parameter if CLO is not specified
+    
     pdparam_EC50 = 0.1; // default parameter if CLO is not specified, ng/microliter
+    
     pdparam_Pmax = 0.99997; // default parameter if CLO is not specified
     //pdparam_Pmax = 0.983; // here you want to enter the max daily killing rate; it will be converted to hourly later
                             
@@ -103,7 +105,10 @@ int pkpd_artemether::rhs_ode(double t, const double y[], double f[], void *pkd_o
     // this is the per/ul parasite population size
     // indiv_central_volume_of_distribution (L) =! patient_blood_volume
     // drug concentration units mg/L, ec50 units ng/microliter, numerically the same
-    double a = (-1.0/24.0) * log( 1.0 - (p->pdparam_Pmax * pow((y[8]/p -> vprms[i_artemether_central_volume_of_distribution_indiv]),p->pdparam_n)) / (pow((y[8]/p -> vprms[i_artemether_central_volume_of_distribution_indiv]),p->pdparam_n) + pow(p->pdparam_EC50,p->pdparam_n)));
+    //double a = (-1.0/24.0) * log( 1.0 - (p->pdparam_Pmax * pow((y[8]/p -> vprms[i_artemether_central_volume_of_distribution_indiv]),p->pdparam_n)) / (pow((y[8]/p -> vprms[i_artemether_central_volume_of_distribution_indiv]),p->pdparam_n) + pow(p->pdparam_EC50,p->pdparam_n)));
+
+    // Converting drug amount in blood from mg to ng and dividing it by patient blood volume in microliters
+    double a = (-1.0/24.0) * log( 1.0 - (p->pdparam_Pmax * pow(((y[8] * pow(10, 6))/p -> patient_blood_volume),p->pdparam_n)) / (pow(((y[8] * pow(10, 6))/p -> patient_blood_volume),p->pdparam_n) + pow(p->pdparam_EC50,p->pdparam_n)));
 
 
     // static double last_logged_hour = -1.0;  //Just a placeholder, will be updated when the first log is written
@@ -188,11 +193,13 @@ void pkpd_artemether::predict( double t0, double t1 )
             // v_transit_compartment7.push_back( y0[7] );
 
             //v_concentration_in_blood.push_back( y0[8]); // Not the concentration in the blood, but the total mg of artemether in the blood
-            indiv_central_volume_millilitres = vprms[i_artemether_central_volume_of_distribution_indiv] * 1000;   // in millilitres
-            v_concentration_in_blood.push_back( y0[8] * pow(10, 6) / (indiv_central_volume_millilitres));         // The concentration in the blood, ng/ml
+            //indiv_central_volume_millilitres = vprms[i_artemether_central_volume_of_distribution_indiv] * 1000;   // in millilitres
+            //v_concentration_in_blood.push_back( (y0[8] * pow(10, 6)) / indiv_central_volume_millilitres);         // The concentration in the blood, ng/ml
                                                                                                                   // The actual hill equation uses drug concentration in mg/L 
                                                                                                                   // mg/L == ng/microliter numerically 
                                                                                                                   // This was done as the unit of ec50 ng/microliter
+            
+            v_concentration_in_blood.push_back( (y0[8] * pow(10, 6)) / (patient_blood_volume/1000));              // Reporting drug concentration in the blood as ng/ml
 
 
             v_killing_rate.push_back( y0[9] );
@@ -299,7 +306,7 @@ void pkpd_artemether::initialize_params( void )
     vprms[i_artemether_CL_indiv] = indiv_clearance_CL;
     vprms[i_artemether_typical_V] = typical_volume_TVV;
     vprms[i_artemether_V_indiv] = indiv_volume_V;
-    vprms[i_artemether_central_volume_of_distribution_indiv] = indiv_central_volume_of_distribution;
+    vprms[i_artemether_central_volume_of_distribution_indiv] = pow(indiv_central_volume_of_distribution, 0.5);
     
     
 }
