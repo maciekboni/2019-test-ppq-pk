@@ -60,6 +60,10 @@ double G_CLO_PMAX_LUM = 0.9995;
 
 int G_CLO_OUTPUT_TYPE = 0;
 
+// Trying to study why AL efficacy changes with weight
+double G_CLO_BLOOD_VOLUME_EXPONENT = 1;
+double G_CLO_CENTRAL_VOLUME_EXPONENT = 1;
+
 // FUNCTION DECLARATIONS
 void ParseArgs(int argc, char **argv);
 
@@ -524,9 +528,10 @@ int main(int argc, char* argv[])
 
             //dyn1-> patient_blood_volume = 5500000.0 * (dyn1-> weight/dyn1-> median_weight);       // 5.5L of blood for an adult individual
             //dyn1-> patient_blood_volume = dyn1->patient_weight * 70.0 * 1000.0;                   // Scaling patient blood volume to 70,000 microlitres/kg
-            dyn1-> patient_blood_volume = pow((dyn1->patient_weight * 70.0 * 1000.0), 0.5);                   
-                                                                                                               // Final drug cocncentration in blood is in ng/microliter
-            //dyn1-> patient_blood_volume = pow(dyn1->patient_weight, 0.25) * (70.0*1000);     // Lemmens-Bernstein-Brodsky equation for TBV; units are in microliters per kg             
+            //dyn1-> patient_blood_volume = pow((dyn1->patient_weight * 70.0 * 1000.0), 0.5);   
+            dyn1-> patient_blood_volume = pow((dyn1->patient_weight * 70.0 * 1000.0), G_CLO_BLOOD_VOLUME_EXPONENT);                
+                                                                                                    // Final drug cocncentration in blood is in ng/microliter
+            //dyn1-> patient_blood_volume = pow(dyn1->patient_weight, 0.25) * (70.0*1000);          // Lemmens-Bernstein-Brodsky equation for TBV; units are in microliters per kg             
             //dyn1-> patient_blood_volume = pow(dyn1->patient_weight, 0.25) * ((70.0*1000)/sqrt(24.9/22.0)); 
             dyn1->pdparam_n = G_CLO_HILL_COEFF_ARTEMETHER;
             dyn1->pdparam_EC50 = G_CLO_EC50_ARTEMETHER;
@@ -551,7 +556,8 @@ int main(int argc, char* argv[])
             //dyn2-> patient_blood_volume = 5500000.0 * (dyn2-> weight/dyn2-> median_weight);       // 5.5L of blood for an adult individual
             
             //dyn2-> patient_blood_volume = dyn2-> weight * 70.0 * 1000.0;                            // Scaling patient blood volume to 70,000 microlitres/kg                        
-            dyn2-> patient_blood_volume = pow((dyn2->patient_weight * 70.0 * 1000.0), 0.5);                   
+            //dyn2-> patient_blood_volume = pow((dyn2->patient_weight * 70.0 * 1000.0), 0.5);
+            dyn2-> patient_blood_volume = pow((dyn2->patient_weight * 70.0 * 1000.0), G_CLO_BLOOD_VOLUME_EXPONENT);                   
                
             //dyn2-> patient_blood_volume = pow(dyn2->patient_weight, 0.25) * (70.0*1000);                       // Final drug concentration in blood is in ng/microlitres
             //dyn2-> patient_blood_volume = pow(dyn2->patient_weight, 0.25) * ((70.0*1000)/sqrt(24.9/22.0));     // Units: microliters per kg   
@@ -781,7 +787,8 @@ void ParseArgs(int argc, char **argv)
         else if (str == "--pmax_artemether" ) 		    G_CLO_PMAX_ARTEMETHER               = atof( argv[++i] );
         else if (str == "--pmax_lum" ) 		            G_CLO_PMAX_LUM	                    = atof( argv[++i] );
 
-
+        else if( str == "--blood_volume_exponent" )     G_CLO_BLOOD_VOLUME_EXPONENT	        = atof( argv[++i] );
+        else if (str == "--central_volume_exponent" )   G_CLO_CENTRAL_VOLUME_EXPONENT       = atof( argv[++i] );
 
         else if (str == "-o" ) 		                    G_CLO_OUTPUT_TYPE	                = atoi( argv[++i] );
         
