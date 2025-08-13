@@ -323,12 +323,6 @@ void pkpd_lum::initialize_params( void )
 
     //fprintf(stderr, "\n\tinside initialize_params function -- calculations finished"); fflush(stderr);
 
-    vprms[i_lum_k12] = indiv_absorption_KA;
-    vprms[i_lum_k23] = indiv_intercompartmental_clearance_Q/indiv_volume_V;
-    vprms[i_lum_k32] = indiv_intercompartmental_clearance_Q/indiv_volume_peripheral_VP;
-    vprms[i_lum_k20] = indiv_clearance_CL/indiv_volume_V;
-    vprms[i_lum_bioavailability_F_indiv] = indiv_bioavailability_F;
-
     //vprms[i_lum_F1_thisdose] = vprms[i_lum_F1_indiv]; // Just for testing - Venitha, April 2025
     //vprms[i_lum_pmf] = 10.0; // this will get assigned in the main file; the reason is that we don't know what it is and we need to experiment with it a bit
 
@@ -336,10 +330,20 @@ void pkpd_lum::initialize_params( void )
     
     vprms[i_lum_DS_indiv] = DS;
     vprms[i_lum_Q_indiv] = indiv_intercompartmental_clearance_Q;
-    vprms[i_lum_V_indiv] = indiv_volume_V;
+    //vprms[i_lum_V_indiv] = indiv_volume_V;
+    vprms[i_lum_V_indiv] = pow(indiv_volume_V, central_volume_exponent);
     vprms[i_lum_central_volume_of_distribution_indiv] = pow(indiv_central_volume_of_distribution, central_volume_exponent);   
     vprms[i_lum_CL_indiv] = indiv_clearance_CL;
-    vprms[i_lum_VP_indiv] = indiv_intercompartmental_clearance_Q;
+    vprms[i_lum_VP_indiv] = pow(indiv_volume_peripheral_VP, central_volume_exponent);
+
+    vprms[i_lum_k12] = indiv_absorption_KA;
+    // vprms[i_lum_k23] = indiv_intercompartmental_clearance_Q/indiv_volume_V;
+    // vprms[i_lum_k32] = indiv_intercompartmental_clearance_Q/indiv_volume_peripheral_VP;
+    // vprms[i_lum_k20] = indiv_clearance_CL/indiv_volume_V;
+    vprms[i_lum_k23] = vprms[i_lum_VP_indiv]/vprms[i_lum_V_indiv];
+    vprms[i_lum_k32] = vprms[i_lum_VP_indiv]/vprms[i_lum_VP_indiv];
+    vprms[i_lum_k20] = indiv_clearance_CL/vprms[i_lum_V_indiv];
+    vprms[i_lum_bioavailability_F_indiv] = indiv_bioavailability_F;
 
 }
 

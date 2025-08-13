@@ -301,16 +301,17 @@ void pkpd_artemether::initialize_params( void )
         indiv_volume_V *= exp(ETA2_rv);
     }
     
-    vprms[i_artemether_k20] = indiv_clearance_CL/indiv_volume_V;
-    
-    //vprms[i_artemether_k20] = 0.5973735; // Median value of k20 for 50kg patient using this model
-    //vprms[i_artemether_k20] = 0.9042795; // Median value of k20 for 10kg patient using this model
-
     vprms[i_artemether_typical_CL] = typical_clearance_TVCL;
     vprms[i_artemether_CL_indiv] = indiv_clearance_CL;
     vprms[i_artemether_typical_V] = typical_volume_TVV;
-    vprms[i_artemether_V_indiv] = indiv_volume_V;
+    vprms[i_artemether_V_indiv] = pow(indiv_volume_V, central_volume_exponent);
     vprms[i_artemether_central_volume_of_distribution_indiv] = pow(indiv_central_volume_of_distribution, central_volume_exponent);
+    
+    vprms[i_artemether_k20] = indiv_clearance_CL/vprms[i_artemether_V_indiv];
+    //vprms[i_artemether_k20] = indiv_clearance_CL/indiv_volume_V;
+    
+    //vprms[i_artemether_k20] = 0.5973735; // Median value of k20 for 50kg patient using this model
+    //vprms[i_artemether_k20] = 0.9042795; // Median value of k20 for 10kg patient using this model
     
     
 }
