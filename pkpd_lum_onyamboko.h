@@ -111,7 +111,6 @@ public:
     double weight;                  // this is the weight that is actually used in the calculations (it's one of the two above)
     double age;                     // in years
     double patient_blood_volume;    // in microliters, so should be between 250,000 (infant) to 6,000,000 (large adult)
-    double central_volume_exponent; // Adding an exponent to the central volume of distribution for 'allometric' scaling
     bool pregnant;                  // usually means just 2nd or 3rd trimester
     double immune_killing_rate;
 

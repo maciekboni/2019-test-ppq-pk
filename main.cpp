@@ -536,6 +536,7 @@ int main(int argc, char* argv[])
             dyn1->pdparam_n = G_CLO_HILL_COEFF_ARTEMETHER;
             dyn1->pdparam_EC50 = G_CLO_EC50_ARTEMETHER;
             dyn1->pdparam_Pmax = G_CLO_PMAX_ARTEMETHER;
+            dyn1->central_volume_exponent = G_CLO_CENTRAL_VOLUME_EXPONENT;
             dyn1->initialize();
 
             // outputFile_artemether.open(filename_artemether, std::ios::app);
@@ -564,6 +565,7 @@ int main(int argc, char* argv[])
             dyn2->pdparam_n = G_CLO_HILL_COEFF_LUM;
             dyn2->pdparam_EC50 = G_CLO_EC50_LUM;
             dyn2->pdparam_Pmax = G_CLO_PMAX_LUM;
+            dyn2->central_volume_exponent = G_CLO_CENTRAL_VOLUME_EXPONENT;
             dyn2->initialize();                             // NB: parasitaemia must be set before initializing parameters
 
         //     // Open the file in append mode

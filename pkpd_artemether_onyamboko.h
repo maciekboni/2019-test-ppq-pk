@@ -110,8 +110,7 @@ public:
     double median_weight;   // this is the median weight of a patient that these estimates were calibrated for
     double weight;         // this is the weight that is actually used in the calculations (it's one of the two above)
     double age;
-    double patient_blood_volume;      // in microliters, so should be between 250,000 (infant) to 6,000,000 (large adult)
-    double central_volume_exponent;   // Adding an exponent to the central volume of distribution for 'allometric' scaling
+    double patient_blood_volume;    // in microliters, so should be between 250,000 (infant) to 6,000,000 (large adult)
     //bool pregnant;                  // usually means just 2nd or 3rd trimester -- TODO: have this replace the "is_pregnant" bool
     bool is_pregnant; // TODO: deprecate
     bool is_male;
