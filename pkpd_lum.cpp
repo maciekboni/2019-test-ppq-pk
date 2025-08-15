@@ -47,7 +47,7 @@ pkpd_lum::pkpd_lum(  )
     doses_still_remain_to_be_taken = true; 
     num_hours_logged = 0;    
     total_mg_dose_per_occassion = -99.0;    // meaning it is not set yet
-    
+
     age = 25.0;
     patient_blood_volume = 5500000.0;       // 5.5L of blood for an adult individual
     central_volume_exponent = 1;
@@ -109,21 +109,22 @@ int pkpd_lum::rhs_ode(double t, const double y[], double f[], void *pkd_object )
       
     //double a = (-1.0/24.0) * log( 1.0 - ((p->pdparam_Pmax * pow(((y[1]*pow(10, 6)) /p -> patient_blood_volume),p->pdparam_n)) / (pow(((y[1] * pow(10, 6))/p -> patient_blood_volume),p->pdparam_n) + pow(p->pdparam_EC50,p->pdparam_n))));
     
-    // static double last_logged_hour = -1.0;  //Just a placeholder, will be updated when the first log is written
-    // double current_hour = floor(t);
+    static double last_logged_hour = -1.0;  //Just a placeholder, will be updated when the first log is written
+    double current_hour = floor(t);
 
-    // if (current_hour > last_logged_hour) {
-    //     std::string filename_kill_lum = "parasite_killing_constant_" + std::to_string(static_cast<int>(p->patient_weight)) + "kg_lumefantrine.txt";
-    //     std::ofstream outputFile_kill_lum;
-    //     outputFile_kill_lum.open(filename_kill_lum, std::ios::app);
-    //     if (outputFile_kill_lum.is_open()) {
-    //         outputFile_kill_lum << a << "," << current_hour << std::endl;
-    //         outputFile_kill_lum.close();
-    //         last_logged_hour = current_hour;  
-    //     } else {
-    //         std::cerr << "Error opening " << filename_kill_lum << " for writing." << std::endl;
-    //     }
-    // }
+    if (current_hour > last_logged_hour) {
+        //std::string filename_kill_lum = "parasite_killing_constant_" + std::to_string(static_cast<int>(p->patient_weight)) + "kg_" + std::to_string(p->patient_id) + "_lumefantrine.txt";
+        std::string filename_kill_lum = "parasite_killing_constant_" + std::to_string(static_cast<int>(p->patient_weight)) + "kg_lumefantrine.txt";
+        std::ofstream outputFile_kill_lum;
+        outputFile_kill_lum.open(filename_kill_lum, std::ios::app);
+        if (outputFile_kill_lum.is_open()) {
+            outputFile_kill_lum << a << "," << current_hour << std::endl;
+            outputFile_kill_lum.close();
+            last_logged_hour = current_hour;  
+        } else {
+            std::cerr << "Error opening " << filename_kill_lum << " for writing." << std::endl;
+        }
+    }
 
     f[3] = - a * y[3];          // NOTE there is no parasite growth here because the PMF factor for parasite growth is done
                                 // manually in the main diff-eq loop  
@@ -334,12 +335,14 @@ void pkpd_lum::initialize_params( void )
     vprms[i_lum_V_indiv] = pow(indiv_volume_V, central_volume_exponent);
     vprms[i_lum_central_volume_of_distribution_indiv] = pow(indiv_central_volume_of_distribution, central_volume_exponent);   
     vprms[i_lum_CL_indiv] = indiv_clearance_CL;
+    //vprms[i_lum_VP_indiv] = indiv_volume_peripheral_VP;
     vprms[i_lum_VP_indiv] = pow(indiv_volume_peripheral_VP, central_volume_exponent);
 
     vprms[i_lum_k12] = indiv_absorption_KA;
     // vprms[i_lum_k23] = indiv_intercompartmental_clearance_Q/indiv_volume_V;
     // vprms[i_lum_k32] = indiv_intercompartmental_clearance_Q/indiv_volume_peripheral_VP;
     // vprms[i_lum_k20] = indiv_clearance_CL/indiv_volume_V;
+    
     vprms[i_lum_k23] = vprms[i_lum_VP_indiv]/vprms[i_lum_V_indiv];
     vprms[i_lum_k32] = vprms[i_lum_VP_indiv]/vprms[i_lum_VP_indiv];
     vprms[i_lum_k20] = indiv_clearance_CL/vprms[i_lum_V_indiv];

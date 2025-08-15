@@ -28,6 +28,7 @@ pkpd_artemether::pkpd_artemether( )
     oc 	= gsl_odeiv_control_y_new (1e-6, 0.0);
     oe 	= gsl_odeiv_evolve_alloc(dim);
     
+    //patient_id = 1; // Updated in main.cpp
     patient_weight = 54.0;      // default weight of the patient in kg, can be overwritten via command line input
     median_weight  =  54.0;     // in kilograms
     weight = patient_weight;    // this is the weight that is actually used in the calculations
@@ -54,7 +55,6 @@ pkpd_artemether::pkpd_artemether( )
     //pdparam_Pmax = 0.983; // here you want to enter the max daily killing rate; it will be converted to hourly later
                             
     rng=NULL;
-    //immune_killing_rate = 0.0001; 
 
 }
 
@@ -109,34 +109,35 @@ int pkpd_artemether::rhs_ode(double t, const double y[], double f[], void *pkd_o
     // drug concentration units mg/L, ec50 units ng/microliter, numerically the same
     double a = (-1.0/24.0) * log( 1.0 - (p->pdparam_Pmax * pow((y[8]/p -> vprms[i_artemether_central_volume_of_distribution_indiv]),p->pdparam_n)) / (pow((y[8]/p -> vprms[i_artemether_central_volume_of_distribution_indiv]),p->pdparam_n) + pow(p->pdparam_EC50,p->pdparam_n)));
 
+
     // Converting drug amount in blood from mg to ng and dividing it by patient blood volume in microliters
     //double a = (-1.0/24.0) * log( 1.0 - (p->pdparam_Pmax * pow(((y[8] * pow(10, 6))/p -> patient_blood_volume),p->pdparam_n)) / (pow(((y[8] * pow(10, 6))/p -> patient_blood_volume),p->pdparam_n) + pow(p->pdparam_EC50,p->pdparam_n)));
 
+    f[9] = -(pow(a,0.5)) * y[9];
 
-    // static double last_logged_hour = -1.0;  //Just a placeholder, will be updated when the first log is written
-    // double current_hour = floor(t);
-
-    // if (current_hour > last_logged_hour) {
-    //     std::string filename_kill_art = "parasite_killing_constant_" + std::to_string(static_cast<int>(p->patient_weight)) + "kg_artemether.txt";
-    //     std::ofstream outputFile_kill_art;
-    //     outputFile_kill_art.open(filename_kill_art, std::ios::app);
-    //     if (outputFile_kill_art.is_open()) {
-    //     // Append data to the file            
-    //     outputFile_kill_art << a << "," << t << std::endl;
-    //     outputFile_kill_art.close(); 
-    //     last_logged_hour = current_hour;  
-    //     } 
-    //     else {
-    //     std::cerr << "Error opening" << filename_kill_art <<" for writing." << std::endl;
-    //     }
-    // }
-
-    f[9] = -a * y[9];
-
-    //f[9] = (-a - p-> immune_killing_rate) * y[9];
+    //f[9] = (-a * p-> immune_killing_rate) * y[9];
     
-    
+    static double last_logged_hour = -1.0;  //Just a placeholder, will be updated when the first log is written
+    double current_hour = floor(t);
+
+    if (current_hour > last_logged_hour) {
+        //std::string filename_kill_art = "parasite_killing_constant_" + std::to_string(static_cast<int>(p->patient_weight)) + "kg_" + std::to_string(p->patient_id) + "_artemether.txt";
+        std::string filename_kill_art = "parasite_killing_constant_" + std::to_string(static_cast<int>(p->patient_weight)) + "kg_artemether.txt";
+        std::ofstream outputFile_kill_art;
+        outputFile_kill_art.open(filename_kill_art, std::ios::app);
+        if (outputFile_kill_art.is_open()) {
+        // Append data to the file            
+        outputFile_kill_art << a << "," << t << std::endl;
+        outputFile_kill_art.close(); 
+        last_logged_hour = current_hour;  
+        } 
+        else {
+        std::cerr << "Error opening" << filename_kill_art <<" for writing." << std::endl;
+        }
+    } 
+
     return GSL_SUCCESS;
+
 }
 
 void pkpd_artemether::give_next_dose_to_patient( double fractional_dose_taken )
@@ -159,6 +160,7 @@ void pkpd_artemether::give_next_dose_to_patient( double fractional_dose_taken )
 
 void pkpd_artemether::predict( double t0, double t1 )
 {
+    static double last_logged_hour = -1.0;
     gsl_odeiv_system sys = {pkpd_artemether::rhs_ode, pkpd_artemether::jac, dim, this};   // the fourth argument is a void pointer that you 
                                                                             // are supossed to use freely; you normally
                                                                             // use it to access the paramters
@@ -210,7 +212,7 @@ void pkpd_artemether::predict( double t0, double t1 )
 
             v_parasitedensity_in_blood.push_back( y0[dim-1] );
             v_concentration_in_blood_hourtimes.push_back( t );
-            
+
             num_hours_logged++;
         }
 
