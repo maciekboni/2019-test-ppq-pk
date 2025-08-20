@@ -36,7 +36,7 @@ double G_CLO_WEIGHT = 54.0;
 double G_CLO_PMF = 8.0;
 
 int G_CLO_N = 1; // this is the default number of patients
-int G_CLO_PID = 1; // just a global variable to name files by pid
+//int G_CLO_PID = 1; // just a global variable to name files by pid
 
 // from correspondence with Aubrey Cunnington, the parasite density level at which growth is inhibited 
 // to 50% of its max value occurs at ln(10.82) (10.49), 11.54) parasites per microliter for 
@@ -143,7 +143,7 @@ int main(int argc, char* argv[])
             dyn->rng = G_RNG;    
             dyn->age = G_CLO_AGE;
             dyn->weight = G_CLO_WEIGHT;
-            dyn->initialize();                              // NB: parasitaemia must be set before initializing parameters
+            dyn->initialize();                                  // NB: parasitaemia must be set before initializing parameters
         
             t0=0.0;
             t1=maximum_enforced_stepsize;
@@ -262,8 +262,8 @@ int main(int argc, char* argv[])
             
             dyn2->parasites_per_ul_at_first_lum_dose = final_random_patient_parasitaemia;   // NOTE YOU MUST DO THIS SEPARATELY because the parasitaemia level "at first
                                                                                             // lum dose" is a special quantity that affects the lum absorption
-
             dyn1->rng = G_RNG;
+            dyn1->patient_id = pi;
             dyn1->age = G_CLO_AGE;
             dyn1->patient_weight = G_CLO_WEIGHT;
             dyn1->weight = dyn1->patient_weight; 
@@ -278,7 +278,8 @@ int main(int argc, char* argv[])
             dyn1->central_volume_exponent = G_CLO_CENTRAL_VOLUME_EXPONENT;
             dyn1->initialize();
 
-            dyn2->rng = G_RNG;   
+            dyn2->rng = G_RNG;  
+            dyn2->patient_id = pi; 
             dyn2->age = G_CLO_AGE;
             dyn2->patient_weight = G_CLO_WEIGHT;
             dyn2->weight = dyn2->patient_weight;
@@ -362,7 +363,7 @@ int main(int argc, char* argv[])
             }
             //END - INTEGRATION 
             
-            output_results_combination_AL(G_CLO_PID, dyn1, dyn2);
+            output_results_combination_AL(pi, dyn1, dyn2);
             delete dyn1;
             delete dyn2;
         }

@@ -1,6 +1,6 @@
 #include "assert.h"
 #include "pkpd_artemether.h"
-
+#include <filesystem>
 #include <string>
 #include <fstream>
 #include <iostream>
@@ -28,13 +28,14 @@ pkpd_artemether::pkpd_artemether( )
     oc 	= gsl_odeiv_control_y_new (1e-6, 0.0);
     oe 	= gsl_odeiv_evolve_alloc(dim);
     
-    //patient_id = 1; // Updated in main.cpp
+    patient_id = 0; // Updated in main.cpp
     patient_weight = 54.0;      // default weight of the patient in kg, can be overwritten via command line input
     median_weight  =  54.0;     // in kilograms
     weight = patient_weight;    // this is the weight that is actually used in the calculations
 
     num_doses_given = 0;
-    num_hours_logged = 0;    
+    num_hours_logged = 0;  
+    last_logged_hour = -1.0; 
     total_mg_dose_per_occassion = -99.0;    // Moved to constructor for uniformity with other classes
     
     age = 25.0;
@@ -116,20 +117,22 @@ int pkpd_artemether::rhs_ode(double t, const double y[], double f[], void *pkd_o
     f[9] = -(pow(a,0.5)) * y[9];
 
     //f[9] = (-a * p-> immune_killing_rate) * y[9];
-    
-    static double last_logged_hour = -1.0;  //Just a placeholder, will be updated when the first log is written
-    double current_hour = floor(t);
 
-    if (current_hour > last_logged_hour) {
-        //std::string filename_kill_art = "parasite_killing_constant_" + std::to_string(static_cast<int>(p->patient_weight)) + "kg_" + std::to_string(p->patient_id) + "_artemether.txt";
-        std::string filename_kill_art = "parasite_killing_constant_" + std::to_string(static_cast<int>(p->patient_weight)) + "kg_artemether.txt";
+    double current_hour = floor(t);
+    std::filesystem::path folder_kill_art = "parasite_killing_constant_artemether";
+    std::filesystem::create_directories(folder_kill_art);
+    
+
+    if (current_hour > p->last_logged_hour) {
+        std::filesystem::path filename_kill_art =  folder_kill_art / ("parasite_killing_constant_" + std::to_string(static_cast<int>(p->patient_weight)) + "kg_" + std::to_string(p->patient_id) + "_artemether.txt");
+        //std::string filename_kill_art = "parasite_killing_constant_" + std::to_string(static_cast<int>(p->patient_weight)) + "kg_artemether.txt";
         std::ofstream outputFile_kill_art;
         outputFile_kill_art.open(filename_kill_art, std::ios::app);
         if (outputFile_kill_art.is_open()) {
-        // Append data to the file            
-        outputFile_kill_art << a << "," << t << std::endl;
-        outputFile_kill_art.close(); 
-        last_logged_hour = current_hour;  
+            // Append data to the file            
+            outputFile_kill_art << a << "," << t << std::endl;
+            outputFile_kill_art.close(); 
+            p->last_logged_hour = current_hour;  
         } 
         else {
         std::cerr << "Error opening" << filename_kill_art <<" for writing." << std::endl;

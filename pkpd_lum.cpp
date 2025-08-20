@@ -1,11 +1,14 @@
 #include "assert.h"
 #include "pkpd_lum.h"
-
+#include <filesystem>
 #include <string>
 #include <fstream>
 #include <iostream>
 
+using namespace std;
+
 bool pkpd_lum::stochastic = true;
+
 
 // constructor
 pkpd_lum::pkpd_lum(  )
@@ -38,6 +41,10 @@ pkpd_lum::pkpd_lum(  )
     oc 	= gsl_odeiv_control_y_new (1e-6, 0.0);
     oe 	= gsl_odeiv_evolve_alloc(dim);
     
+    patient_id = 0;
+    age = 25.0;
+    patient_blood_volume = 5500000.0;       // 5.5L of blood for an adult individual
+    central_volume_exponent = 1;
     patient_weight = 54.0;     // default weight of the patient in kg, can be overwritten via command line input
     median_weight  = 54.0;     // in kilograms 
     weight = patient_weight;   // this is the weight that is actually used in the calculations
@@ -45,12 +52,11 @@ pkpd_lum::pkpd_lum(  )
 
     num_doses_given = 0;
     doses_still_remain_to_be_taken = true; 
-    num_hours_logged = 0;    
+    num_hours_logged = 0;  
+    last_logged_hour = -1.0;  
     total_mg_dose_per_occassion = -99.0;    // meaning it is not set yet
 
-    age = 25.0;
-    patient_blood_volume = 5500000.0;       // 5.5L of blood for an adult individual
-    central_volume_exponent = 1;
+
 
     pdparam_n = 15.0; // default parameter if CLO is not specified
 
@@ -109,18 +115,20 @@ int pkpd_lum::rhs_ode(double t, const double y[], double f[], void *pkd_object )
       
     //double a = (-1.0/24.0) * log( 1.0 - ((p->pdparam_Pmax * pow(((y[1]*pow(10, 6)) /p -> patient_blood_volume),p->pdparam_n)) / (pow(((y[1] * pow(10, 6))/p -> patient_blood_volume),p->pdparam_n) + pow(p->pdparam_EC50,p->pdparam_n))));
     
-    static double last_logged_hour = -1.0;  //Just a placeholder, will be updated when the first log is written
     double current_hour = floor(t);
 
-    if (current_hour > last_logged_hour) {
-        //std::string filename_kill_lum = "parasite_killing_constant_" + std::to_string(static_cast<int>(p->patient_weight)) + "kg_" + std::to_string(p->patient_id) + "_lumefantrine.txt";
-        std::string filename_kill_lum = "parasite_killing_constant_" + std::to_string(static_cast<int>(p->patient_weight)) + "kg_lumefantrine.txt";
+    std::filesystem::path folder_kill_lum = "parasite_killing_constant_lumefantrine";
+    std::filesystem::create_directories(folder_kill_lum);
+
+    if (current_hour > p->last_logged_hour) {
+        std::filesystem::path filename_kill_lum =  folder_kill_lum / ("parasite_killing_constant_" + std::to_string(static_cast<int>(p->patient_weight)) + "kg_" + std::to_string(p->patient_id) + "_lumefantrine.txt");
+        //std::string filename_kill_lum = "parasite_killing_constant_" + std::to_string(static_cast<int>(p->patient_weight)) + "kg_lumefantrine.txt";
         std::ofstream outputFile_kill_lum;
         outputFile_kill_lum.open(filename_kill_lum, std::ios::app);
         if (outputFile_kill_lum.is_open()) {
             outputFile_kill_lum << a << "," << current_hour << std::endl;
             outputFile_kill_lum.close();
-            last_logged_hour = current_hour;  
+            p->last_logged_hour = current_hour;  
         } else {
             std::cerr << "Error opening " << filename_kill_lum << " for writing." << std::endl;
         }

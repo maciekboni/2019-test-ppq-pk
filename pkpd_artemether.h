@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <math.h>
+#include <filesystem>
 #include <gsl/gsl_errno.h>
 #include <gsl/gsl_matrix.h>
 #include <gsl/gsl_odeiv.h>
@@ -106,6 +107,7 @@ public:
     // ----  5  ----  PATIENT CHARACTERISTICS
     //
 
+    int patient_id;         // for testing
     double patient_weight;  // this is the kg weight of the current patient
     double median_weight;   // this is the median weight of a patient that these estimates were calibrated for
     double weight;         // this is the weight that is actually used in the calculations (it's one of the two above)
@@ -144,6 +146,7 @@ public:
     vector<double> v_concentration_in_blood_hourtimes;
     vector<double> v_parasitedensity_in_blood;
     int num_hours_logged;
+    double last_logged_hour;
     double total_mg_dose_per_occassion;
     double indiv_central_volume_millilitres;
     
