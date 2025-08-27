@@ -114,7 +114,8 @@ int pkpd_artemether::rhs_ode(double t, const double y[], double f[], void *pkd_o
     // Converting drug amount in blood from mg to ng and dividing it by patient blood volume in microliters
     //double a = (-1.0/24.0) * log( 1.0 - (p->pdparam_Pmax * pow(((y[8] * pow(10, 6))/p -> patient_blood_volume),p->pdparam_n)) / (pow(((y[8] * pow(10, 6))/p -> patient_blood_volume),p->pdparam_n) + pow(p->pdparam_EC50,p->pdparam_n)));
 
-    f[9] = -(pow(a,0.5)) * y[9];
+    f[9] = -a * y[9];
+    //f[9] = -(pow(a,0.5)) * y[9];
 
     //f[9] = (-a * p-> immune_killing_rate) * y[9];
 

@@ -112,9 +112,7 @@ int pkpd_lum::rhs_ode(double t, const double y[], double f[], void *pkd_object )
     // mg/L is numerically equivalent to ng/microliter, which is the units of ec50
 
     double a = (-1.0/24.0) * log( 1.0 - ((p->pdparam_Pmax * pow((y[1]/p -> vprms[i_lum_central_volume_of_distribution_indiv]),p->pdparam_n)) / (pow((y[1]/p -> vprms[i_lum_central_volume_of_distribution_indiv]),p->pdparam_n) + pow(p->pdparam_EC50,p->pdparam_n))));
-      
-    //double a = (-1.0/24.0) * log( 1.0 - ((p->pdparam_Pmax * pow(((y[1]*pow(10, 6)) /p -> patient_blood_volume),p->pdparam_n)) / (pow(((y[1] * pow(10, 6))/p -> patient_blood_volume),p->pdparam_n) + pow(p->pdparam_EC50,p->pdparam_n))));
-    
+         
     double current_hour = floor(t);
 
     std::filesystem::path folder_kill_lum = "parasite_killing_constant_lumefantrine";
@@ -137,7 +135,7 @@ int pkpd_lum::rhs_ode(double t, const double y[], double f[], void *pkd_object )
     f[3] = - a * y[3];          // NOTE there is no parasite growth here because the PMF factor for parasite growth is done
                                 // manually in the main diff-eq loop  
     
-    //f[3] = (-a - p-> immune_killing_rate) * y[3]; 
+    //f[3] = -(pow(a,(1/1.25))) * y[3];
 
     return GSL_SUCCESS;
 }
@@ -295,8 +293,6 @@ void pkpd_lum::initialize_params( void )
     // this you keep fixed, and you use the total mg dose per occassion, and NOT any randomly drawn number
     double DS = 1.0 - ( total_mg_dose_per_occassion/weight ) / ( ( total_mg_dose_per_occassion/weight ) + D50  ); // Not implemented
 
-
-    
     // PARASITE = ((LNPC /4.20)**THETA(9)) -- TODO: -- check the log type on the parasitaemia (CONFIRMED on 3/31/2024 that it is log-10)
     //      check if it's parasites/microliter (CONFIRMED also on 3/31/2024)
     //      
