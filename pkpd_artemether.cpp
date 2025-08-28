@@ -30,9 +30,6 @@ pkpd_artemether::pkpd_artemether( )
     
     patient_id = 0; // Updated in main.cpp
     patient_weight = 54.0;      // default weight of the patient in kg, can be overwritten via command line input
-    median_weight  =  54.0;     // in kilograms
-    weight = patient_weight;    // this is the weight that is actually used in the calculations
-
     num_doses_given = 0;
     num_hours_logged = 0;  
     last_logged_hour = -1.0; 
@@ -286,18 +283,14 @@ void pkpd_artemether::initialize_params( void )
     // ### ### this is the exit rate from the central compartment (the final exit rate in the model)
     double THETA1_pe = 78.0;
     double THETA2_pe = 129.0;
-    double typical_clearance_TVCL = THETA1_pe * pow( weight/mw, 0.75 );  
-    //double TVCL = THETA1_pe; // For debugging
-    //double TVCL = THETA1_pe * (weight/mw); 
-    //double TVCL = THETA1_pe * (15.0/mw);  
+    double typical_clearance_TVCL = THETA1_pe * pow( patient_weight/mw, 0.75 );  
     
     
     //double ETA1_rv = 0.0; // this is fixed in this model
     //double CL = TVCL * exp(ETA1_rv);
     double indiv_clearance_CL = typical_clearance_TVCL; // just execute this line since ETA1 is fixed at zero above
 
-    double typical_volume_TVV = THETA2_pe * (weight/mw);  
-    //double TVV2 = THETA2_pe * (15.0/mw); 
+    double typical_volume_TVV = THETA2_pe * (patient_weight/mw);  
     double indiv_volume_V = typical_volume_TVV;
     double indiv_central_volume_of_distribution = indiv_volume_V;
 
@@ -386,15 +379,15 @@ void pkpd_artemether::generate_recommended_dosing_schedule()
     
     double num_tablets_per_dose;
     
-    if( weight >= 5.0 && weight < 15.0 )
+    if( patient_weight >= 5.0 && patient_weight < 15.0 )
     {
         num_tablets_per_dose = 1.0;
     }
-    else if( weight >= 15.0 && weight < 25.0  )
+    else if( patient_weight >= 15.0 && patient_weight < 25.0  )
     {
         num_tablets_per_dose = 2.0;
     }
-    else if( weight >= 25.0 && weight < 35.0  )
+    else if( patient_weight >= 25.0 && patient_weight < 35.0  )
     {
         num_tablets_per_dose = 3;
     }

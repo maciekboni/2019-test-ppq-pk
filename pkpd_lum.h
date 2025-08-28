@@ -95,7 +95,7 @@ public:
     vector<double> v_dosing_amounts;    // matched to the dosing times above
 
     int num_doses_given;
-    double total_mg_dose_per_occassion; // this is the same as daily dose for most therapies
+    double total_mg_dose_per_occasion; // this is the same as daily dose for most therapies
                                         // but NOT for artemether-lumefantrine or ALAQ
     bool doses_still_remain_to_be_taken;
     bool we_are_past_a_dosing_time( double current_time );    
