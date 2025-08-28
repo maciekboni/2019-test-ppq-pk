@@ -1,5 +1,9 @@
 #include "assert.h"
 #include "pkpd_dha.h"
+#include <filesystem>
+#include <string>
+#include <fstream>
+#include <iostream>
 
 bool pkpd_dha::stochastic = true;
 
@@ -9,6 +13,7 @@ pkpd_dha::pkpd_dha(  )
     
     vprms.insert( vprms.begin(), dha_num_params, 0.0 );
     assert( vprms.size()==dha_num_params );
+
     // this is the dimensionality of the ODE system
     // there are 9 PK compartments and 1 variable for the parasite density
     dim = 10;
@@ -24,36 +29,37 @@ pkpd_dha::pkpd_dha(  )
     // the last differential equation is for the parasitaemia; it is a per/ul measure
     y0[dim-1] = 10000.0;
     
-    
-    
     const gsl_odeiv_step_type* T = gsl_odeiv_step_rkf45;
     os 	= gsl_odeiv_step_alloc(T, dim);
     oc 	= gsl_odeiv_control_y_new (1e-6, 0.0);
     oe 	= gsl_odeiv_evolve_alloc(dim);
     
-    patient_weight = -1.0;
-    median_weight  =  48.5;
-    weight = median_weight;  // this is the weight that is actually used in the calculations
 
-    num_doses_given = 0;
-    num_hours_logged = 0;    
+    // Patient Characteristics
     
-    age = 25.0;
-    patient_blood_volume = 5500000.0; // 5.5L of blood for an adult individual // 5500000 ul gives 5.5 L
+    patient_id = 0;             // Updated in main.cpp
+    patient_age = 25.0;
+    patient_weight = 54.0;              // default weight of the patient in kg, can be overwritten via command line input
+    patient_blood_volume = 5500000.0;   // 5500000 ul gives 5.5 L
+                                        // 5.5L of blood for an adult individual of weight 54kg. 
+                                        // Scaled later according to patient_weight in main function
     is_male=false;
     is_pregnant=false;
+    
+    // Individual Patient Dosing Log
+    num_doses_given = 0;
+    num_hours_logged = 0;    
+    total_mg_dose_per_occasion = -99.0; // Moved to constructor for uniformity with other classes
     doses_still_remain_to_be_taken = true;
 
-    initial_log10_totalparasitaemia = log10( y0[dim-1]*patient_blood_volume );
+    // For testing
+    central_volume_exponent = 1;
 
-    
+    // Patient PD characteristics
     // the parameters 15, exp( 0.525 * log(2700)), and 0.9 give about a 90% drug efficacy for an initial parasitaemia of 10,000/ul (25yo patient, 54kg)
     pdparam_n = 20.0; 
     pdparam_EC50 = 0.1; 
     pdparam_Pmax = 0.99997; // here you want to enter the max daily killing rate; it will be converted to hourly later
-                            
-    // TODO CHECK IF THIS IS THE RIGHT PLACE TO CALL THIS FUNCTION
-    // generate_recommended_dosing_schedule();
 
     rng=NULL;
 
@@ -106,9 +112,12 @@ int pkpd_dha::rhs_ode(double t, const double y[], double f[], void *pkd_object )
     f[8] = y[7]*p->vprms[i_dha_KTR] - y[8]*p->vprms[i_dha_k20];
     
     // this is the per/ul parasite population size
-    double a = (-1.0/24.0) * log( 1.0 - p->pdparam_Pmax * pow(y[8],p->pdparam_n) / (pow(y[8],p->pdparam_n) + pow(p->pdparam_EC50,p->pdparam_n)) );
+    // indiv_central_volume_of_distribution (L) =! patient_blood_volume
+    // drug concentration units mg/L, ec50 units ng/microliter, numerically the same
+    //double a = (-1.0/24.0) * log( 1.0 - p->pdparam_Pmax * pow(y[8],p->pdparam_n) / (pow(y[8],p->pdparam_n) + pow(p->pdparam_EC50,p->pdparam_n)) );
+    double a = (-1.0/24.0) * log( 1.0 - (p->pdparam_Pmax * pow((y[8]/p -> vprms[i_dha_central_volume_of_distribution_indiv]),p->pdparam_n)) / (pow((y[8]/p -> vprms[i_dha_central_volume_of_distribution_indiv]),p->pdparam_n) + pow(p->pdparam_EC50,p->pdparam_n)));
+
     f[9] = -a * y[9];
-    
     
     return GSL_SUCCESS;
 }
@@ -150,7 +159,7 @@ void pkpd_dha::predict( double t0, double t1 )
                 redraw_params_before_newdose();
                 
                 // add the new dose amount to the "dose compartment", i.e. the first compartment
-                y0[0] +=  v_dosing_amounts[num_doses_given] * vprms[i_dha_F1_thisdose];
+                y0[0] +=  v_dosing_amounts[num_doses_given] * vprms[i_dha_bioavailability_F_thisdose];
                 
                 num_doses_given++;
             }
@@ -159,7 +168,16 @@ void pkpd_dha::predict( double t0, double t1 )
         // check if time t is equal to or larger than the next scheduled hour to log
         if( t >= ((double)num_hours_logged)  )
         {
-            v_concentration_in_blood.push_back( y0[8] );
+            //v_concentration_in_blood.push_back( y0[8] );
+
+            indiv_central_volume_millilitres = vprms[i_dha_central_volume_of_distribution_indiv] * 1000;   // Converting L to ml
+            v_concentration_in_blood.push_back( (y0[8] * pow(10, 6)) / indiv_central_volume_millilitres);         // The concentration in the blood, ng/ml
+                                                                                                                  // This is only the output! 
+                                                                                                                  // The actual hill equation uses drug concentration in mg/L 
+                                                                                                                  // mg/L == ng/microliter numerically 
+                                                                                                                  // This was done as the unit of ec50 ng/microliter
+     
+
             v_parasitedensity_in_blood.push_back( y0[dim-1] );
             v_concentration_in_blood_hourtimes.push_back( t );
             
@@ -198,32 +216,34 @@ void pkpd_dha::initialize_params( void )
     
     // this is the median weight of the participants whose data were used to estimate the paramters for this study
     // it is used as a relative scaling factor below
-    double mw=48.5;
+    double median_weight=48.5;
     
     // initializse these relative dose factors to one (this should be the default behavior if
     // the model is not stochastic or if we decide to remove between-dose and/or between-patient variability
-    vprms[i_dha_F1_thisdose] = 1.0;
-    vprms[i_dha_F1_indiv] = 1.0;
+    // vprms[i_dha_F1_thisdose] = 1.0;
+    // vprms[i_dha_F1_indiv] = 1.0;
+
+    vprms[i_dha_bioavailability_F_thisdose] = 1.0;
+    vprms[i_dha_bioavailability_F_indiv] = 1.0;
     
     //TVF1 = THETA(4)*(1+THETA(7)*(PARA-3.98)) * (1+THETA(6)*FLAG)
     double THETA7_pe = 0.278;
     double THETA6_pe = -0.375;
     //double THETA4_pe= 1.0;
     
-    double TVF1 = 1.0 + THETA7_pe*(initial_log10_totalparasitaemia-3.98);
-    if(is_pregnant) TVF1 *= (1.0+THETA6_pe);
+    initial_log10_totalparasitaemia = log10( y0[dim-1]*patient_blood_volume );
+    double typical_bioavailibility_TVF = 1.0 + THETA7_pe*(initial_log10_totalparasitaemia-3.98);
+    if(is_pregnant) typical_bioavailibility_TVF *= (1.0+THETA6_pe);
         
-    double F1=TVF1;
+    double indiv_bioavailability_F = typical_bioavailibility_TVF;
     if(pkpd_dha::stochastic)
     {
         double ETA4_rv = gsl_ran_gaussian( rng, sqrt(0.08800) );
-        F1 *= ETA4_rv;
+        indiv_bioavailability_F *= ETA4_rv;
     }
  
-    vprms[i_dha_F1_indiv] = F1;
+    vprms[i_dha_bioavailability_F_indiv] = indiv_bioavailability_F;
  
-    
-    
     // ### ### KTR is the transition rate to, between, and from the seven transit compartments
     double TVMT_pe = 0.982; // this is the point estimate (_pe) for TVMT; there is no need to draw a random variate here
     //double ETA3_rv = gsl_ran_gaussian( rng, sqrt(0.0) );  // _rv means random variate
@@ -242,21 +262,29 @@ void pkpd_dha::initialize_params( void )
     // ### ### this is the exit rate from the central compartment (the final exit rate in the model
     double THETA1_pe = 78.0;
     double THETA2_pe = 129.0;
-    double TVCL = THETA1_pe * pow( weight/mw, 0.75 );  
+    double typical_clearance_TVCL = THETA1_pe * pow(patient_weight/median_weight, 0.75 );  
     
     //double ETA1_rv = 0.0; // this is fixed in this model
     //double CL = TVCL * exp(ETA1_rv);
-    double CL = TVCL; // just execute this line since ETA1 is fixed at zero above
+    double indiv_clearance_CL = typical_clearance_TVCL; // just execute this line since ETA1 is fixed at zero above
 
-    double TVV2 = THETA2_pe * (weight/mw);  
-    double V2 = TVV2;
+    double typical_volume_TVV = THETA2_pe * (patient_weight/median_weight);  
+    double indiv_volume_V = typical_volume_TVV;
+    double indiv_central_volume_of_distribution = indiv_volume_V;
+
     if(pkpd_dha::stochastic) 
     {
         double ETA2_rv = gsl_ran_gaussian( rng, sqrt(0.0162) );
-        V2 *= exp(ETA2_rv);
+        indiv_volume_V *= exp(ETA2_rv);
     }
-    
-    vprms[i_dha_k20] = CL/V2;
+
+    vprms[i_dha_typical_CL] = typical_clearance_TVCL;
+    vprms[i_dha_CL_indiv] = indiv_clearance_CL;
+    vprms[i_dha_typical_V] = typical_volume_TVV;
+    vprms[i_dha_V_indiv] = pow(indiv_volume_V, central_volume_exponent);
+    vprms[i_dha_central_volume_of_distribution_indiv] = pow(indiv_central_volume_of_distribution, central_volume_exponent);
+
+    vprms[i_dha_k20] = indiv_clearance_CL/vprms[i_dha_V_indiv];
     
 }
 
@@ -280,9 +308,6 @@ void pkpd_dha::redraw_params_before_newdose()
     
     // you need to multiple MT by exp(ETA_rv)
     // BUT:  KTR = 8/MT, so instead, simply multiple KTR by exp(-ETA_rv)
-    
-    
-    
     
     //  TVF1 = THETA(4)*(1+THETA(6)*FLAG)*(1+THETA(7)*(PARA-3.98));;
     //  F1   = TVF1*EXP(ETA(4));
@@ -311,62 +336,65 @@ bool pkpd_dha::we_are_past_a_dosing_time( double current_time )
 
 void pkpd_dha::generate_recommended_dosing_schedule()
 {
-    // TODO NEEDS TO BE DONE BY AGE AND WEIGHT
+    // TODO NEEDS TO BE DONE BY AGE
 	
-    // one tablet is 40mg of dihydroartemisinin
+    // DHA-PPQ comes in two fixed-dose combinations: 20/160 and 40/320
+    // Using the pediatric combination of 20/160 and adjusting the dose accordingly
+ 
+    // TODO: need to get tablet schedule by pregnancy status
     
-    // TODO: need to get tablet schedule by weight, age, pregnancy status
-    double num_tablets_per_dose = 1.0;
-    
-    if( weight < 5.0 )
+    // Updated dosing schedule by weight with accordance to the latest WHO guidelines (copied below):
+
+    // Revised dose recommendation for DHA + PPQ in young children (2015)
+    // Children weighing <25kg treated with DHA + PPQ should receive a minimum of 
+    // 2.5 mg/kg bw per day of DHA and 20 mg/ kg bw per day of PPQ daily for 3 days.
+
+    double num_tablets_per_dose;
+
+    if( patient_weight < 8.0 )
     {
-        num_tablets_per_dose = 0.0;
+        num_tablets_per_dose = 1;
     }
-    else if( weight < 8.0 )
+    else if( patient_weight >= 8.0 && patient_weight < 11.0 )
     {
-        num_tablets_per_dose = 0.5;
+        num_tablets_per_dose = 1.50;
     }
-    else if( weight < 11.0 )
-    {
-        num_tablets_per_dose = 0.75;
-    }
-    else if( weight < 17.0 )
-    {
-        num_tablets_per_dose = 1.0;
-    }
-    else if( weight < 25.0 )
-    {
-        num_tablets_per_dose = 1.5;
-    }
-    else if( weight < 36.0 )
+    else if(patient_weight >= 11.0 && patient_weight < 17.0 )
     {
         num_tablets_per_dose = 2.0;
     }
-    else if( weight < 60.0 )
+    else if(patient_weight >= 17.0 && patient_weight < 25.0 )
     {
         num_tablets_per_dose = 3.0;
     }
-    else if( weight < 80.0 )
+    else if( patient_weight >= 25.0 && patient_weight < 36.0 )
     {
         num_tablets_per_dose = 4.0;
     }
-    else
+    else if( patient_weight >= 36.0 && patient_weight < 60.0 )
     {
-        num_tablets_per_dose = 5.0;
+        num_tablets_per_dose = 6.0;
     }
-    
-    // TODO REMOVE PLACEHOLDER BELOW
-    // num_tablets_per_dose = 1.0;
-    
-    //fprintf(stdout, "\npatient is %1.1f kg, taking %1.1f tablets", weight, num_tablets_per_dose );
+    else if( patient_weight >= 60.0 && patient_weight < 80.0 )
+    {
+        num_tablets_per_dose = 8.0;
+    }
+    else if( patient_weight >= 80.0 )
+    {
+        num_tablets_per_dose = 10.0;
+    } // Adding an error message just in case
+    else {
+        std::cerr << "Error: Weight not supported." << std::endl;
+    }
 
-    double total_mg_dose = num_tablets_per_dose * 40.0; // one tablet is 40 mg of dihydroartemisinin
+    double total_mg_dose_per_occasion = num_tablets_per_dose * 20.0; // one tablet is 20 mg of DHA
     
     v_dosing_times.insert( v_dosing_times.begin(), 3, 0.0 );
+    v_dosing_times[0] = 0.0;
     v_dosing_times[1] = 24.0;
     v_dosing_times[2] = 48.0;
     
-    v_dosing_amounts.insert( v_dosing_amounts.begin(), 3, total_mg_dose );
+    v_dosing_amounts.insert( v_dosing_amounts.begin(), 3, total_mg_dose_per_occasion );
 }
 
 

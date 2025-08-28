@@ -22,33 +22,36 @@ pkpd_artemether::pkpd_artemether( )
     for(int i=0; i<dim; i++) y0[i]=0.0;
     y0[dim-1] = 10000.0;
     
-    
     const gsl_odeiv_step_type* T = gsl_odeiv_step_rkf45;
     os 	= gsl_odeiv_step_alloc(T, dim);
     oc 	= gsl_odeiv_control_y_new (1e-6, 0.0);
     oe 	= gsl_odeiv_evolve_alloc(dim);
     
-    patient_id = 0; // Updated in main.cpp
+    // Patient Characteristics
+
+    patient_id = 0;             // Updated in main.cpp
     patient_weight = 54.0;      // default weight of the patient in kg, can be overwritten via command line input
+    is_male=false;
+    is_pregnant=false;
+    patient_age = 25.0;
+    patient_blood_volume = 5500000.0; // 5.5L of blood for an adult individual of weight 54kg. 
+                                      // Scaled later according to patient_weight in main function
+    
+    // Individual Patient Dosing Log
     num_doses_given = 0;
     num_hours_logged = 0;  
     last_logged_hour = -1.0; 
     total_mg_dose_per_occassion = -99.0;    // Moved to constructor for uniformity with other classes
-    
-    age = 25.0;
-    patient_blood_volume = 5500000.0; // 5.5L of blood for an adult individual of weight 54kg. 
-                                      // Scaled later according to patient_weight in main function
-    
-    central_volume_exponent = 1;
-    is_male=false;
-    is_pregnant=false;
     doses_still_remain_to_be_taken = true;
+   
+    // For testing
+    central_volume_exponent = 1;
 
+    // Parasite PD Characteristics
     // the parameters 15, exp( 0.525 * log(2700)), and 0.9 give about a 90% drug efficacy for an initial parasitaemia of 10,000/ul (25yo patient, 54kg)
+    
     pdparam_n = 20.0; // default parameter if CLO is not specified
-    
     pdparam_EC50 = 0.1; // default parameter if CLO is not specified, ng/microliter
-    
     pdparam_Pmax = 0.99997; // default parameter if CLO is not specified
     //pdparam_Pmax = 0.983; // here you want to enter the max daily killing rate; it will be converted to hourly later
                             
@@ -69,8 +72,6 @@ void pkpd_artemether::set_parasitaemia( double parasites_per_ul )
 {
     y0[dim-1] = parasites_per_ul; //  the final ODE equation is always the Pf asexual parasitaemia
 }
-
-
 
 // NOTE MUST REMEMBER THAT THE FUNCTION BELOW IS A STATIC MEMBER FUNCTIONS OF THIS CLASS
 //
@@ -106,7 +107,6 @@ int pkpd_artemether::rhs_ode(double t, const double y[], double f[], void *pkd_o
     // indiv_central_volume_of_distribution (L) =! patient_blood_volume
     // drug concentration units mg/L, ec50 units ng/microliter, numerically the same
     double a = (-1.0/24.0) * log( 1.0 - (p->pdparam_Pmax * pow((y[8]/p -> vprms[i_artemether_central_volume_of_distribution_indiv]),p->pdparam_n)) / (pow((y[8]/p -> vprms[i_artemether_central_volume_of_distribution_indiv]),p->pdparam_n) + pow(p->pdparam_EC50,p->pdparam_n)));
-
 
     // Converting drug amount in blood from mg to ng and dividing it by patient blood volume in microliters
     //double a = (-1.0/24.0) * log( 1.0 - (p->pdparam_Pmax * pow(((y[8] * pow(10, 6))/p -> patient_blood_volume),p->pdparam_n)) / (pow(((y[8] * pow(10, 6))/p -> patient_blood_volume),p->pdparam_n) + pow(p->pdparam_EC50,p->pdparam_n)));
@@ -209,7 +209,7 @@ void pkpd_artemether::predict( double t0, double t1 )
             //v_concentration_in_blood.push_back( (y0[8] * pow(10, 6)) / (patient_blood_volume/1000));            // Reporting drug concentration in the blood as ng/ml
 
 
-            v_killing_rate.push_back( y0[9] );
+            //v_killing_rate.push_back( y0[9] );
 
             v_parasitedensity_in_blood.push_back( y0[dim-1] );
             v_concentration_in_blood_hourtimes.push_back( t );
@@ -237,7 +237,7 @@ void pkpd_artemether::initialize_params( void )
     
     // this is the median weight of the participants whose data were used to estimate the paramters for this study
     // it is used as a relative scaling factor below
-    double mw=48.5;
+    double median_weight=48.5;
     
     // initializse these relative dose factors to one (this should be the default behavior if
     // the model is not stochastic or if we decide to remove between-dose and/or between-patient variability
@@ -276,21 +276,21 @@ void pkpd_artemether::initialize_params( void )
     double MT = TVMT_pe; // * exp(ETA3_rv); we think that "MT" here stands for mean time to transition from dose compartment to blood
 
     // NOTE at this point you have an MT value without any effect of dose order (i.e. whether it's dose 1, dose 2, etc.
-    //      later, you must/may draw another mean-zero normal rv, and multiply by the value above
+    // later, you must/may draw another mean-zero normal rv, and multiply by the value above
     vprms[i_artemether_KTR] = 8.0/MT;
 
 
     // ### ### this is the exit rate from the central compartment (the final exit rate in the model)
     double THETA1_pe = 78.0;
     double THETA2_pe = 129.0;
-    double typical_clearance_TVCL = THETA1_pe * pow( patient_weight/mw, 0.75 );  
+    double typical_clearance_TVCL = THETA1_pe * pow( patient_weight/median_weight, 0.75 );  
     
     
     //double ETA1_rv = 0.0; // this is fixed in this model
     //double CL = TVCL * exp(ETA1_rv);
     double indiv_clearance_CL = typical_clearance_TVCL; // just execute this line since ETA1 is fixed at zero above
 
-    double typical_volume_TVV = THETA2_pe * (patient_weight/mw);  
+    double typical_volume_TVV = THETA2_pe * (patient_weight/median_weight);  
     double indiv_volume_V = typical_volume_TVV;
     double indiv_central_volume_of_distribution = indiv_volume_V;
 
@@ -375,7 +375,7 @@ void pkpd_artemether::generate_recommended_dosing_schedule()
     // DOSING GUIDELINES SAY    0,  8, 24, 36, 48, 60
     // BUT WE CAN JUST DO       0, 12, 24, 36, 48, 60
 
-    //printf("The age and weight is %f and %f\n", age, weight);
+    // Dosing updated to match WHO guidelines in the hopes that it will improve efficacy...
     
     double num_tablets_per_dose;
     
@@ -391,12 +391,19 @@ void pkpd_artemether::generate_recommended_dosing_schedule()
     {
         num_tablets_per_dose = 3;
     }
-    else
+    else if (patient_weight >= 35.0)
     {
         num_tablets_per_dose = 4.0;
+    } 
+    // Adding an error message saying weight not supported
+    else {
+        std::cerr << "Error: Weight not supported." << std::endl;
     }
    
     // Artemether given by weight, twice daily, for a total of three days - WHO guidelines, 2024
+    // This is the total milligrams of artemether taken each dose
+    // Fixed-combination come in two doses: 20 mg and 40 mg; switching to 20 mg 'coz why not
+    // Also adjusted the doses accordingly 
     total_mg_dose_per_occassion = num_tablets_per_dose * 20.0;
     
     v_dosing_times.insert( v_dosing_times.begin(), 6, 0.0 );

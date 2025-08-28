@@ -96,7 +96,7 @@ public:
 
     int num_doses_given;
     double total_mg_dose_per_occasion; // this is the same as daily dose for most therapies
-                                        // but NOT for artemether-lumefantrine or ALAQ
+                                       // but NOT for artemether-lumefantrine or ALAQ
     bool doses_still_remain_to_be_taken;
     bool we_are_past_a_dosing_time( double current_time );    
     void give_next_dose_to_patient( double fractional_dose_taken );
@@ -109,13 +109,11 @@ public:
 
     int patient_id;
     double patient_weight;          // this is the kg weight of the current patient
-    double median_weight;           // this is the median weight of a patient that these estimates were calibrated for
-    double weight;                  // this is the weight that is actually used in the calculations (it's one of the two above)
-    double age;                     // in years
+    double patient_age;             // in years
     double patient_blood_volume;    // in microliters, so should be between 250,000 (infant) to 6,000,000 (large adult)
     double central_volume_exponent; // Adding an exponent to the central volume of distribution for 'allometric' scaling
     bool pregnant;                  // usually means just 2nd or 3rd trimester
-    double immune_killing_rate;
+    //double immune_killing_rate;
 
     //
     // ----  6  ----  STORAGE VARIABLES FOR DYNAMICS OF PK AND PD CURVES

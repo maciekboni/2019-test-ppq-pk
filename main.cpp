@@ -25,7 +25,7 @@ std::mt19937 G_RNG_CPP;	// Change to pointer if required
 bool G_CLO_LUM = false;
 bool G_CLO_ADQ = false;
 
-enum therapy_type { therapy_none , therapy_artemisinin , therapy_lumefantrine , therapy_amodiaquine , therapy_AL }; 
+enum therapy_type { therapy_none , therapy_amodiaquine, therapy_artemether, therapy_artesunate , therapy_dha, therapy_lumefantrine , therapy_AL, therapy_DHA_PPQ, therapy_AS_AQ}; 
 enum therapy_type G_CLO_THERAPY = therapy_none;
 
 double G_CLO_AGE = 25.0;
@@ -50,8 +50,8 @@ double G_CLO_HILL_COEFF_ARTEMETHER = 20.0;
 double G_CLO_HILL_COEFF_LUM = 15.0;
 
 double G_CLO_EC50_DHA = 0.1;
-double G_CLO_EC50_ARTEMETHER = 0.1; // Assuming this to be mg/ml
-double G_CLO_EC50_LUM = exp( 0.525 * log (2700)); // use natural log, 63.30907617 // Assuming this to be mg/ml
+double G_CLO_EC50_ARTEMETHER = 0.1;                                               // Assuming this to be ng/ml
+double G_CLO_EC50_LUM = exp( 0.525 * log (2700)); // use natural log, 63.30907617 // Assuming this to be ng/ml
 
 double G_CLO_PMAX_DHA = 0.983; //pmax_dha = 0.983 gives ~68.9% efficacy for DHA monotherapy, calibrated by Venitha in Dec 2024 
                                //Original value = 0.99997
@@ -83,6 +83,20 @@ void output_results_monotherapy_dha(int pi, pkpd_dha *dyn)
 }
 
 void output_results_combination_AL(int pi, pkpd_artemether *dyn1, pkpd_lum *dyn2)
+{
+    if (G_CLO_OUTPUT_TYPE == 1) {
+        int j = dyn1->v_concentration_in_blood.size()-1;
+        fprintf(stdout, "%d %10.3f %10.3f %10.3f %10.3f \n", pi, dyn1->v_concentration_in_blood_hourtimes[j], dyn1->v_concentration_in_blood[j], dyn2->v_concentration_in_blood[j], dyn1->v_parasitedensity_in_blood[j] );        
+    }
+    else {
+        for(int j=0; j<dyn1->v_concentration_in_blood.size(); j++ )
+        {
+            fprintf(stdout, "%d %10.3f %10.3f %10.3f %10.3f \n", pi, dyn1->v_concentration_in_blood_hourtimes[j], dyn1->v_concentration_in_blood[j], dyn2->v_concentration_in_blood[j], dyn1->v_parasitedensity_in_blood[j] );
+        }
+    }
+}
+
+void output_results_combination_DHA_PPQ(int pi, pkpd_dha *dyn1, pkpd_ppq *dyn2)
 {
     if (G_CLO_OUTPUT_TYPE == 1) {
         int j = dyn1->v_concentration_in_blood.size()-1;
@@ -183,7 +197,7 @@ int main(int argc, char* argv[])
     }
 
 
-    if( G_CLO_THERAPY == therapy_artemisinin )
+    if( G_CLO_THERAPY == therapy_dha )
     {
 
         fprintf(stdout, "PID,HOUR,COMP2CONC,PARASITEDENSITY\n" );
@@ -197,8 +211,8 @@ int main(int argc, char* argv[])
             dyn->set_parasitaemia( 20000.0 );    
 
             dyn->rng = G_RNG;    
-            dyn->age = G_CLO_AGE;
-            dyn->weight = G_CLO_WEIGHT;
+            dyn->patient_age = G_CLO_AGE;
+            dyn->patient_weight = G_CLO_WEIGHT;
 
             dyn->initialize_params();                              // NOTE parasitaemia must be set before initializing parameters
         
@@ -235,8 +249,6 @@ int main(int argc, char* argv[])
     }
 
 
-
-
     if( G_CLO_THERAPY == therapy_AL )
     {
         fprintf(stdout, "PID,HOUR,COMP2CONC_ARTEMETHER,COMP2CONC_LUM,PARASITEDENSITY\n" );
@@ -247,6 +259,136 @@ int main(int argc, char* argv[])
         {
             auto dyn1 = new pkpd_artemether();
             auto dyn2 = new pkpd_lum();
+
+            //Drawing parasitaemia from a uniform distribution
+
+            double min_patient_parasitaemia_log10 = log10(2000); // Minimum parasitaemia
+            double max_patient_parasitaemia_log10 = log10(200000); // Maximum parasitaemia
+            std::uniform_real_distribution<> patient_parasitaemia_distribution_log10(min_patient_parasitaemia_log10, max_patient_parasitaemia_log10);   
+            double random_patient_parasitaemia_log10 = patient_parasitaemia_distribution_log10(G_RNG_CPP);
+            double scaled_patient_parasitaemia = pow(10.0, random_patient_parasitaemia_log10); // Convert back to original scale
+            double final_random_patient_parasitaemia = floor(scaled_patient_parasitaemia);   // Round to the lowest integer
+
+            dyn1->set_parasitaemia(final_random_patient_parasitaemia); // NOTE: you must set both of these to the same thing
+            dyn2->set_parasitaemia(final_random_patient_parasitaemia);   
+            
+            dyn2->parasites_per_ul_at_first_lum_dose = final_random_patient_parasitaemia;   // NOTE YOU MUST DO THIS SEPARATELY because the parasitaemia level "at first
+                                                                                            // lum dose" is a special quantity that affects the lum absorption
+            dyn1->rng = G_RNG;
+            dyn1->patient_id = pi;
+            dyn1->patient_age = G_CLO_AGE;
+            dyn1->patient_weight = G_CLO_WEIGHT;
+
+            dyn1-> patient_blood_volume = pow((dyn1->patient_weight * 70.0 * 1000.0), G_CLO_BLOOD_VOLUME_EXPONENT);     // Units: microliters
+                                                                                                                        // Drug concentration in centrtal compartment is in mg/microliter
+                                                                                                                        // Drug concentration is output in ng/microliter
+            dyn1->pdparam_n = G_CLO_HILL_COEFF_ARTEMETHER;
+                                                                                                    
+            dyn1->pdparam_EC50 = G_CLO_EC50_ARTEMETHER;
+            dyn1->pdparam_Pmax = G_CLO_PMAX_ARTEMETHER;
+            dyn1->central_volume_exponent = G_CLO_CENTRAL_VOLUME_EXPONENT;
+            dyn1->initialize();
+
+            dyn2->rng = G_RNG;  
+            dyn2->patient_id = pi; 
+            dyn2->patient_age = G_CLO_AGE;
+            dyn2->patient_weight = G_CLO_WEIGHT;
+
+            dyn2-> patient_blood_volume = pow((dyn2->patient_weight * 70.0 * 1000.0), G_CLO_BLOOD_VOLUME_EXPONENT);     // Units: microliters               
+            dyn2->pdparam_n = G_CLO_HILL_COEFF_LUM;
+            dyn2->pdparam_EC50 = G_CLO_EC50_LUM;
+            dyn2->pdparam_Pmax = G_CLO_PMAX_LUM;
+            dyn2->central_volume_exponent = G_CLO_CENTRAL_VOLUME_EXPONENT;
+            dyn2->initialize();                             // NB: parasitaemia must be set before initializing parameters
+
+            t0=0.0;
+            t1=maximum_enforced_stepsize;           // normally set to 0.5 hours
+        
+
+            //BEGIN - INTEGRATION
+            while( t0 < 168.0*4.0 )
+            {
+
+                // ---- first, calculate artemisinin clearance and killing over a 30-minute period (maximum_enforced_stepsize)
+                if( dyn1->doses_still_remain_to_be_taken )
+                {
+                    if( dyn1->we_are_past_a_dosing_time(t0) )   
+                    {
+                        dyn1->give_next_dose_to_patient(1.0);    // 1.0 means the full dose is given
+                                                                // if no dose remains to be given, function does nothing
+                    }
+                }
+                dyn1->predict(t0, t1);
+
+                // now that we have killed some parasites with the art component of the therapy, we need to
+                // adjust the parasite density in the lum object (dyn2) so that it matches the parasite density
+                // in the artemether object (dyn1)
+                dyn2->y0[ dyn2->dim - 1 ] = dyn1->y0[ dyn1->dim - 1 ];
+
+
+                // ---- then, calculate lumefantrine clearance and killing over a 30-minute period (maximum_enforced_stepsize)
+                if( dyn2->doses_still_remain_to_be_taken )
+                {
+                    if( dyn2->we_are_past_a_dosing_time(t0) )   
+                    {
+                        dyn2->give_next_dose_to_patient(1.0);    // 1.0 means the full dose is given
+                                                                // if no dose remains to be given, function does nothing
+                    }
+                }
+                dyn2->predict(t0, t1);
+
+                // now that we have killed some parasites with the lum component of the therapy, we need to
+                // adjust the parasite density in the art object (dyn1) so that it matches the parasite density
+                // in the lum object (dyn2)
+                dyn1->y0[ dyn1->dim - 1 ] = dyn2->y0[ dyn2->dim - 1 ];
+
+                // Decided to go with value after testing with 10^-4, 10^-5, 10^-7 // May 09 2025
+        
+                if (dyn1->y0[dyn1 -> dim -1] <= pow(10.0, -5.0))
+                {
+                    dyn1->y0[dyn1 -> dim -1] = 0.0;
+                }
+                
+                if (dyn2->y0[dyn2 -> dim -1] <= pow(10.0, -5.0))
+                {
+                    dyn2->y0[dyn2 -> dim -1] = 0.0;
+                }
+
+                // after integrating the differential equations in the predict functions above,
+                // we need to ---- GROW THE PARASITES ---- for half-an-hour (i.e the maximum_enforced_stepsize)   
+                
+                // this is the PMF adjusted to the 30-minute stepsize with density dependence     
+                if (true)
+                {
+                    double dd_factor = 1.0 / ( 1.0 + ( dyn1->y0[ dyn1->dim - 1 ] / G_DENSITY_50 ) );
+                    double dd_48hr_PMF = G_CLO_PMF * dd_factor;
+                    double dd_stepsize_PMF = pow( dd_48hr_PMF, 1.0 / (48.0/maximum_enforced_stepsize) );
+
+                    dyn1->y0[ dyn1->dim - 1 ] *= dd_stepsize_PMF;
+                    dyn2->y0[ dyn2->dim - 1 ] *= dd_stepsize_PMF; 
+                }
+
+                t0 += maximum_enforced_stepsize; t1 += maximum_enforced_stepsize;
+                
+            }
+            //END - INTEGRATION 
+            
+            output_results_combination_AL(pi, dyn1, dyn2);
+            delete dyn1;
+            delete dyn2;
+        }
+    }
+
+    if( G_CLO_THERAPY == therapy_DHA_PPQ )
+    {
+        fprintf(stdout, "PID,HOUR,COMP2CONC_DHA,COMP2CONC_PPQ,PARASITEDENSITY\n" );
+        fprintf(stderr, "\n");
+
+        // pi is patient index
+        for(int pi=0; pi < G_CLO_N; pi++)
+        {
+            auto dyn1 = new pkpd_dha();
+            auto dyn2 = new pkpd_ppq();
 
             //Drawing parasitaemia from a uniform distribution
 
@@ -292,7 +434,7 @@ int main(int argc, char* argv[])
             dyn2->initialize();                             // NB: parasitaemia must be set before initializing parameters
 
             t0=0.0;
-            t1=maximum_enforced_stepsize;           // normally set to 0.5 hours
+            t1=maximum_enforced_stepsize;                   // normally set to 0.5 hours
         
 
             //BEGIN - INTEGRATION
@@ -304,7 +446,7 @@ int main(int argc, char* argv[])
                 {
                     if( dyn1->we_are_past_a_dosing_time(t0) )   
                     {
-                        dyn1->give_next_dose_to_patient(1.0);    // 1.0 means the full dose is given
+                        dyn1->give_next_dose_to_patient(1.0);   // 1.0 means the full dose is given
                                                                 // if no dose remains to be given, function does nothing
                     }
                 }
@@ -463,10 +605,18 @@ void ParseArgs(int argc, char **argv)
     for(i=start; i<argc; i++)
     {
         str = argv[i];
-             if( str == "--lum" )		                G_CLO_THERAPY  		                = therapy_lumefantrine;
-	    else if( str == "--adq" ) 		                G_CLO_THERAPY  		                = therapy_amodiaquine;
+        
+
+        if( str == "--adq" ) 		                    G_CLO_THERAPY  		                = therapy_amodiaquine;
+        else if( str == "--artemether" )		        G_CLO_THERAPY  		                = therapy_artemether;
+        else if( str == "--artesunate" )		        G_CLO_THERAPY  		                = therapy_artesunate;
+        else if( str == "--dha" ) 		                G_CLO_THERAPY  		                = therapy_dha;
+        else if( str == "--lum" )		                G_CLO_THERAPY  		                = therapy_lumefantrine;
+
         else if( str == "--AL" ) 		                G_CLO_THERAPY  		                = therapy_AL;
-        else if( str == "--art" ) 		                G_CLO_THERAPY  		                = therapy_artemisinin;
+        else if( str == "--DHA-PPQ" ) 		            G_CLO_THERAPY  		                = therapy_DHA_PPQ;
+        else if( str == "--AS-AQ" ) 		            G_CLO_THERAPY  		                = therapy_AS_AQ;
+
         else if( str == "--age" ) 		                G_CLO_AGE  		                    = atof( argv[++i] );
         else if( str == "--weight" ) 	                G_CLO_WEIGHT	                    = atof( argv[++i] );
         else if( str == "-n" ) 	                        G_CLO_N	                            = atoi( argv[++i] );

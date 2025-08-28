@@ -23,6 +23,7 @@ pkpd_lum::pkpd_lum(  )
     // this is the main vector of state variables
     y0 = new double[dim];
     for(int i=0; i<dim; i++) y0[i]=0.0;
+
     // above y0 is initialized to zero, because it's the dosing schedule that creates
     // non-zero initial conditions for the ODEs
     
@@ -30,10 +31,12 @@ pkpd_lum::pkpd_lum(  )
     // this should be obtained from the person class
     // the last differential equation is for the parasitaemia; it is a per/ul measure
     // y0[dim-1] = 10000.0;
+
     set_parasitaemia(10000.0); // simply a wrapper for the statement above
 
     parasites_per_ul_at_first_lum_dose = 10000.0;   // YOU MUST DO THIS SEPARATELY because the parasitaemia level "at first
                                                     // lum dose" is a special quantity that affects the lum absorption
+                                                    // Later we can use the current parasitaemia levels to modify bioavailability between doses
 
 
     const gsl_odeiv_step_type* T = gsl_odeiv_step_rkf45;
@@ -41,11 +44,14 @@ pkpd_lum::pkpd_lum(  )
     oc 	= gsl_odeiv_control_y_new (1e-6, 0.0);
     oe 	= gsl_odeiv_evolve_alloc(dim);
     
+
+    // Patient Characteristics
+
     patient_id = 0;
-    age = 25.0;
+    patient_age = 25.0;
     patient_blood_volume = 5500000.0;       // 5.5L of blood for an adult individual
     central_volume_exponent = 1;
-    patient_weight = 54.0;     // default weight of the patient in kg, can be overwritten via command line input
+    patient_weight = 54.0;                  // default weight of the patient in kg, can be overwritten via command line input
     pregnant = false;
 
     num_doses_given = 0;
@@ -107,7 +113,7 @@ int pkpd_lum::rhs_ode(double t, const double y[], double f[], void *pkd_object )
     
     // this is the per/ul parasite population size
     // Drug concentration in the central compartment is drug amount in central compartment / central volume of distribution (mg/L)
-    // mg/L is numerically equivalent to ng/microliter, which is the units of ec50
+    // mg/L is numerically equivalent to ng/microliter, which is the units of ec50_lum
 
     double a = (-1.0/24.0) * log( 1.0 - ((p->pdparam_Pmax * pow((y[1]/p -> vprms[i_lum_central_volume_of_distribution_indiv]),p->pdparam_n)) / (pow((y[1]/p -> vprms[i_lum_central_volume_of_distribution_indiv]),p->pdparam_n) + pow(p->pdparam_EC50,p->pdparam_n))));
          
@@ -233,9 +239,11 @@ void pkpd_lum::initialize( void )
 
 void pkpd_lum::initialize_params( void )
 {
-
-     // all 10 below are point estimates
-     // all estimates centered on non-pregnant adult of weight 42 Kg and admission parasitaemia 15800 parasites per microliter - Venitha, 08/27/2025
+    // this is the median weight of a patient that these estimates were calibrated for
+    double median_weight = 42.0;
+    
+    // all 10 below are point estimates
+    // all estimates centered on non-pregnant adult of weight 42 Kg and admission parasitaemia 15800 parasites per microliter - Venitha, 08/27/2025
     double THETA1 = 1.35;
     double THETA2 = 11.2;           // NOTE: this is the "central volume of distribution" in liters in a 42kg adult which in non-PKPD language
                                     // is the volume of the blood plus the volume of everything else that is in 
@@ -255,6 +263,7 @@ void pkpd_lum::initialize_params( void )
     // the variables below are random draws from normal distributions; they will be exponentiated to have the final 
     // random variate '_rv' be log-normally distributed
     //
+
     double ETA1_rv = 0.0;   // this is fixed bc there was not enough data to identify/infer variability around this process
     double ETA2_rv = 0.0;
     double ETA3_rv = 0.0;   // this is fixed bc there was not enough data to identify/infer variability around this process
@@ -271,49 +280,52 @@ void pkpd_lum::initialize_params( void )
 
     // in the parameter calculations below
     // "TV" means typical value or population mean for some parameter
-
     // F1_indiv is the relative absorbtion level for this individual
     
     // before we take into account the effects of dose, the value of TVF1 is one; this is the bioavailability parameter
-    //
+    
     // we will need to multiply this by a DS parameter (something to do w mg/kg scaling) and a "PARASITE" parameter that tells
     // us what the reduced bioavailability of lumefantrine is when parasitaemia is high
     
 
     double box_cox_BXPAR = -0.343; // parameter from box-cox transformation
     double PHI = exp( ETA6_rv );
-    double ETATR = ( pow(PHI, box_cox_BXPAR) - 1.0  ) / box_cox_BXPAR ; // Becomes 0
-
-    double D50 = THETA7; // 
-
-    //fprintf(stderr, "\n\tinside initialize_params function -- about to set DS param"); fflush(stderr);
+    double ETATR = ( pow(PHI, box_cox_BXPAR) - 1.0  ) / box_cox_BXPAR ; 
+    double D50 = THETA7; 
     
     // this you keep fixed, and you use the total mg dose per occasion, and NOT any randomly drawn number
     double DS = 1.0 - ( total_mg_dose_per_occasion/patient_weight ) / ( ( total_mg_dose_per_occasion/patient_weight ) + D50  ); // Not implemented
 
     // PARASITE = ((LNPC /4.20)**THETA(9)) -- TODO: -- check the log type on the parasitaemia (CONFIRMED on 3/31/2024 that it is log-10)
-    //      check if it's parasites/microliter (CONFIRMED also on 3/31/2024)
+    //check if it's parasites/microliter (CONFIRMED also on 3/31/2024)
     //      
-    //fprintf(stderr, "\n\tinside initialize_params function -- about to set PARASITE param"); fflush(stderr);
     //double PARASITE = pow( log10( parasites_per_ul_at_first_lum_dose ) / 4.20 , THETA9 );
-    //fprintf(stderr, "\n\tinside initialize_params function -- PARASITE param set"); fflush(stderr);
 
     // Re-writing effect of parasitaemia on lumefantrine bioavailability similar to how its expressed in the paper
     // log10(15800) gives ~4.20; 15800 parasites/microliter is the median value
+    // Kloprogge 2018 has a typo in the formula they have provided, the correct formula 'should' be the one below. 
+    // 'Should' as no one officially told me so, I ran some tests and came to this conclusion - Venitha, 08/28/2025
     double PARASITE = exp( THETA9 * (log10( parasites_per_ul_at_first_lum_dose) - 4.20));
 
-    double typical_bioavailability_TVF = THETA6 * DS; // Dose saturation effect on bioavailability, increasing the amount doesn't necessarily increase the amount of drug absorbed
-    typical_bioavailability_TVF *= PARASITE;
-    double indiv_bioavailability_F = typical_bioavailability_TVF * exp(ETATR); // Implementing IIV
+    // Dose saturation effect on bioavailability, increasing the amount doesn't necessarily increase the amount of drug absorbed
+    double typical_bioavailability_TVF = THETA6 * DS; 
 
-    double typical_intercompartmental_clearance_TVQ = THETA3 * pow( patient_weight/42.0 , 0.75 );  // allometric scaling for weight on the Q parameter
+    // Modifying typical_bioavailability_TVF by parasitaemia
+    typical_bioavailability_TVF *= PARASITE;
+
+    // Implementing IIV in F as follows:
+    double indiv_bioavailability_F = typical_bioavailability_TVF * exp(ETATR); 
+
+    // allometric scaling for weight on the Q parameter; clearance is scaled by 0.75, volume by 1.0
+    double typical_intercompartmental_clearance_TVQ = THETA3 * pow( patient_weight/42.0 , 0.75 );  
     double indiv_intercompartmental_clearance_Q = typical_intercompartmental_clearance_TVQ * exp( ETA3_rv );
 
     double typical_volume_TVV = THETA2 * pow( patient_weight/42.0 , 1.0 ); 
     double indiv_volume_V = typical_volume_TVV * exp( ETA2_rv );  
     double indiv_central_volume_of_distribution = indiv_volume_V;
 
-    double typical_clearance_TVCL = THETA1 * pow( patient_weight/42.0 , 0.75 );  // allometric scaling for weight on the clearance parameter
+    // allometric scaling for weight on the clearance parameter
+    double typical_clearance_TVCL = THETA1 * pow( patient_weight/42.0 , 0.75 );  
     double indiv_clearance_CL = typical_clearance_TVCL * exp( ETA1_rv );
 
     double typical_volume_peripheral_TVVP = THETA4 * pow( patient_weight/42.0 , 1.0 );
@@ -323,11 +335,7 @@ void pkpd_lum::initialize_params( void )
     double typical_absorption_TVKA = THETA5 * PREGNANCY;
     double indiv_absorption_KA = typical_absorption_TVKA* exp( ETA5_rv );
 
-    //fprintf(stderr, "\n\tinside initialize_params function -- calculations finished"); fflush(stderr);
-
     //vprms[i_lum_F1_thisdose] = vprms[i_lum_F1_indiv]; // Just for testing - Venitha, April 2025
-    //vprms[i_lum_pmf] = 10.0; // this will get assigned in the main file; the reason is that we don't know what it is and we need to experiment with it a bit
-
     // Added as a stable feature and not just for debugging
     
     vprms[i_lum_DS_indiv] = DS;
@@ -381,10 +389,10 @@ void pkpd_lum::generate_recommended_dosing_schedule()
     // DOSING GUIDELINES SAY    0,  8, 24, 36, 48, 60
     // BUT WE CAN JUST DO       0, 12, 24, 36, 48, 60
 
-    //printf("The age and weight is %f and %f\n", age, weight);
+    // Dosing updated to match WHO guidelines in the hopes that it will improve efficacy...
     
     double num_tablets_per_dose;
-    
+
     if( patient_weight >= 5.0 && patient_weight < 15.0  )
     {
         num_tablets_per_dose = 1.0;
@@ -397,16 +405,23 @@ void pkpd_lum::generate_recommended_dosing_schedule()
     {
         num_tablets_per_dose = 3.0;
     }
-    else
+    else if (patient_weight >= 35.0)
     {
         num_tablets_per_dose = 4.0;
     }
+    // Adding an error message saying weight not supported
+    else {
+        std::cerr << "Error: Weight not supported." << std::endl;
+    }
    
     // NOTE - do not confuse this with daily dosing - AL is taken twice daily, two occasions per day
+    // This is the total milligrams of lumefantrine taken each dose
+
+    // Fixed-combination come in two doses: 120 mg and 240 mg; switching to 120 mg 'coz why not
     total_mg_dose_per_occasion = num_tablets_per_dose * 120.0;
-    
+
     v_dosing_times.insert( v_dosing_times.begin(), 6, 0.0 );
-    v_dosing_times[0] = 0.0;
+    v_dosing_times[0] = 0.0;   
     v_dosing_times[1] = 8.0;
     v_dosing_times[2] = 24.0; 
     v_dosing_times[3] = 36.0;

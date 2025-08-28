@@ -107,17 +107,15 @@ public:
     // ----  5  ----  PATIENT CHARACTERISTICS
     //
 
-    int patient_id;         // for testing
+    int patient_id;         // for testing the instantaeneous killing rate
     double patient_weight;  // this is the kg weight of the current patient
-    double median_weight;   // this is the median weight of a patient that these estimates were calibrated for
-    double weight;         // this is the weight that is actually used in the calculations (it's one of the two above)
-    double age;
+    double patient_age;
     double patient_blood_volume;      // in microliters, so should be between 250,000 (infant) to 6,000,000 (large adult)
     double central_volume_exponent;   // Adding an exponent to the central volume of distribution for 'allometric' scaling
     //bool pregnant;                  // usually means just 2nd or 3rd trimester -- TODO: have this replace the "is_pregnant" bool
     bool is_pregnant; // TODO: deprecate
     bool is_male;
-    double immune_killing_rate;
+    //double immune_killing_rate;
 
 
     //
@@ -134,7 +132,7 @@ public:
     vector<double> v_transit_compartment6;              // an hourly time series of drug concentrations in the transit compartment 6
     vector<double> v_transit_compartment7;              // an hourly time series of drug concentrations in the transit compartment 7
 
-    vector<double> v_killing_rate;                    // an hourly time series of the killing rate
+    vector<double> v_killing_rate;                      // an hourly time series of the killing rate
     
     // an hourly time series of drug concentrations in the blood compartment only
     vector<double> v_concentration_in_blood;                // an hourly time series of drug concentrations in the blood compartment only

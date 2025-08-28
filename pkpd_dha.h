@@ -15,7 +15,10 @@ using namespace std;
 
 
 // these are the parameters
-enum parameter_index_dha { i_dha_KTR, i_dha_k20, i_dha_F1_indiv, i_dha_F1_thisdose, dha_num_params }; 
+//enum parameter_index_dha { i_dha_KTR, i_dha_k20, i_dha_F1_indiv, i_dha_F1_thisdose, dha_num_params }; 
+
+// Editing to add PKPD parameters
+enum parameter_index_dha { i_dha_KTR, i_dha_k20, i_dha_bioavailability_F_indiv, i_dha_bioavailability_F_thisdose, i_dha_typical_CL, i_dha_CL_indiv, i_dha_typical_V, i_dha_V_indiv, i_dha_central_volume_of_distribution_indiv, dha_num_params }; 
 
 //typedef enum parameter_index_dha i_dha;
 
@@ -80,7 +83,7 @@ public:
     double pdparam_Pmax;
     
     // TODO: check this (from 2019)  Ricardo says it should be the log-natural of the per/ul parasitaemia
-    //          UPDATE - 2024 - this can be deprecated
+    // UPDATE - 2024 - this can be deprecated
     double initial_log10_totalparasitaemia;
 
 
@@ -93,32 +96,27 @@ public:
     vector<double> v_dosing_times;
     vector<double> v_dosing_amounts;
     int num_doses_given;
+    double total_mg_dose_per_occasion;
     bool doses_still_remain_to_be_taken;
     bool we_are_past_a_dosing_time( double current_time );    
     void give_next_dose_to_patient( double fraction_of_dose_taken ); // TODO: this needs to be implemented
-
-
 
     //
     // ----  5  ----  PATIENT CHARACTERISTICS
     //
 
-    double patient_weight;  // this is the kg weight of the current patient
-    double median_weight;   // this is the median weight of a patient that these estimates were calibrated for
-    double weight;         // this is the weight that is actually used in the calculations (it's one of the two above)
-    double age;
-    double patient_blood_volume;    // in microliters, so should be between 250,000 (infant) to 6,000,000 (large adult)
-    //bool pregnant;                  // usually means just 2nd or 3rd trimester -- TODO: have this replace the "is_pregnant" bool
+    int patient_id;                     // for testing the instantaeneous killing rate
+    double patient_weight;              // this is the kg weight of the current patient
+    double patient_age;
+    double patient_blood_volume;        // in microliters, so should be between 250,000 (infant) to 6,000,000 (large adult)
+    double central_volume_exponent;     // Adding an exponent to the central volume of distribution for 'allometric' scaling
+    //bool pregnant;                    // usually means just 2nd or 3rd trimester -- TODO: have this replace the "is_pregnant" bool
     bool is_pregnant; // TODO: deprecate
     bool is_male;
-
-
 
     //
     // ----  6  ----  STORAGE VARIABLES FOR DYNAMICS OF PK AND PD CURVES
     //
-
-
 
     // an hourly time series of drug concentrations in the blood compartment only
     vector<double> v_concentration_in_blood;                // an hourly time series of drug concentrations in the blood compartment only
@@ -129,10 +127,8 @@ public:
     vector<double> v_concentration_in_blood_hourtimes;
     vector<double> v_parasitedensity_in_blood;
     int num_hours_logged;
-    
-    
+    double indiv_central_volume_millilitres;
 
-    
     gsl_rng *rng;		
     
 };
