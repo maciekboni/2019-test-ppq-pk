@@ -20,7 +20,9 @@ pkpd_artemether::pkpd_artemether( )
     // this is the main vector of state variables
     y0 = new double[dim];
     for(int i=0; i<dim; i++) y0[i]=0.0;
-    y0[dim-1] = 10000.0;
+
+    //y0[dim-1] = 10000.0;
+    set_parasitaemia(10000.0); // simply a wrapper for the statement above
     
     const gsl_odeiv_step_type* T = gsl_odeiv_step_rkf45;
     os 	= gsl_odeiv_step_alloc(T, dim);
@@ -41,7 +43,7 @@ pkpd_artemether::pkpd_artemether( )
     num_doses_given = 0;
     num_hours_logged = 0;  
     last_logged_hour = -1.0; 
-    total_mg_dose_per_occassion = -99.0;    // Moved to constructor for uniformity with other classes
+    total_mg_dose_per_occasion = -99.0;    // Moved to constructor for uniformity with other classes
     doses_still_remain_to_be_taken = true;
    
     // For testing
@@ -116,43 +118,61 @@ int pkpd_artemether::rhs_ode(double t, const double y[], double f[], void *pkd_o
 
     //f[9] = (-a * p-> immune_killing_rate) * y[9];
 
-    double current_hour = floor(t);
-    std::filesystem::path folder_kill_art = "parasite_killing_constant_artemether";
-    std::filesystem::create_directories(folder_kill_art);
+    // double current_hour = floor(t);
+    // std::filesystem::path folder_kill_art = "parasite_killing_constant_artemether";
+    // std::filesystem::create_directories(folder_kill_art);
     
 
-    if (current_hour > p->last_logged_hour) {
-        std::filesystem::path filename_kill_art =  folder_kill_art / ("parasite_killing_constant_" + std::to_string(static_cast<int>(p->patient_weight)) + "kg_" + std::to_string(p->patient_id) + "_artemether.txt");
-        //std::string filename_kill_art = "parasite_killing_constant_" + std::to_string(static_cast<int>(p->patient_weight)) + "kg_artemether.txt";
-        std::ofstream outputFile_kill_art;
-        outputFile_kill_art.open(filename_kill_art, std::ios::app);
-        if (outputFile_kill_art.is_open()) {
-            // Append data to the file            
-            outputFile_kill_art << a << "," << t << std::endl;
-            outputFile_kill_art.close(); 
-            p->last_logged_hour = current_hour;  
-        } 
-        else {
-        std::cerr << "Error opening" << filename_kill_art <<" for writing." << std::endl;
-        }
-    } 
+    // if (current_hour > p->last_logged_hour) {
+    //     std::filesystem::path filename_kill_art =  folder_kill_art / ("parasite_killing_constant_" + std::to_string(static_cast<int>(p->patient_weight)) + "kg_" + std::to_string(p->patient_id) + "_artemether.txt");
+    //     //std::string filename_kill_art = "parasite_killing_constant_" + std::to_string(static_cast<int>(p->patient_weight)) + "kg_artemether.txt";
+    //     std::ofstream outputFile_kill_art;
+    //     outputFile_kill_art.open(filename_kill_art, std::ios::app);
+    //     if (outputFile_kill_art.is_open()) {
+    //         // Append data to the file            
+    //         outputFile_kill_art << a << "," << t << std::endl;
+    //         outputFile_kill_art.close(); 
+    //         p->last_logged_hour = current_hour;  
+    //     } 
+    //     else {
+    //     std::cerr << "Error opening" << filename_kill_art <<" for writing." << std::endl;
+    //     }
+    // } 
 
     return GSL_SUCCESS;
 
 }
 
+// The function is called using the bioavailability_F_indiv in main.cpp
 void pkpd_artemether::give_next_dose_to_patient( double fractional_dose_taken )
 {
     if( doses_still_remain_to_be_taken )
     {
+        // The KA/KTR is modified by the IOV by calling this function
+        // Rewrote function to modify bioavailability_F_thisdose instead
 
         redraw_params_before_newdose(); // these are the dose-specific parameters that you're drawing here
         
-        y0[0] +=  v_dosing_amounts[num_doses_given] * fractional_dose_taken;
+        // add the new dose amount to the "dose compartment", i.e. the first compartment
+        
+        // After redrawing the dose parameters, the individual bioavailability should be modified by the IOV/bioavailability_F_thisdose
+        fractional_dose_taken *= vprms[i_artemether_bioavailability_F_thisdose]; 
+        y0[0] +=  v_dosing_amounts[num_doses_given] * fractional_dose_taken; // 
+       
+        //y0[0] +=  v_dosing_amounts[num_doses_given] * vprms[i_artemether_bioavailability_F_thisdose];
+        // I guess fractional dose taken here is actually the bioavailability of the current dose
+        // Need to check how this varies
+        // The IOV applied when we redraw parameters is on the rate of absorption/transit between doses
+        // And not the modified bioavailability
+        // Also, although individual bioavailability is calculated, we don't implement it anywhere
+        // Need to see how to apply it, either only to the first dose or if the change in F between doses can be directly
+        // applied to F_indiv
         
         num_doses_given++;
 
-        if( num_doses_given >= v_dosing_amounts.size() ) doses_still_remain_to_be_taken=false;
+        if( num_doses_given >= v_dosing_amounts.size() ) {
+            doses_still_remain_to_be_taken=false;
+        }
 
     }
 
@@ -163,28 +183,13 @@ void pkpd_artemether::predict( double t0, double t1 )
 {
     static double last_logged_hour = -1.0;
     gsl_odeiv_system sys = {pkpd_artemether::rhs_ode, pkpd_artemether::jac, dim, this};   // the fourth argument is a void pointer that you 
-                                                                            // are supossed to use freely; you normally
-                                                                            // use it to access the paramters
+                                                                                          // are supossed to use freely; you normally
+                                                                                          // use it to access the paramters
     double t = t0;    
     double h = 1e-6;
 
     while (t < t1)
     {
-        // check if there are still doses to give
-        if( num_doses_given < v_dosing_times.size() )
-        {
-            // check if time t is equal to or larger than the next scheduled dose
-            if( t >= v_dosing_times[num_doses_given]  )
-            {
-                redraw_params_before_newdose();
-                
-                // add the new dose amount to the "dose compartment", i.e. the first compartment
-                y0[0] +=  v_dosing_amounts[num_doses_given] * vprms[i_artemether_bioavailability_F_thisdose];
-                
-                num_doses_given++;
-            }
-        }
-
         // check if time t is equal to or larger than the next scheduled hour to log
         if( t >= ((double)num_hours_logged)  )
         {
@@ -239,7 +244,7 @@ void pkpd_artemether::initialize_params( void )
     // it is used as a relative scaling factor below
     double median_weight=48.5;
     
-    // initializse these relative dose factors to one (this should be the default behavior if
+    // initialize these relative dose factors to one (this should be the default behavior if
     // the model is not stochastic or if we decide to remove between-dose and/or between-patient variability
     vprms[i_artemether_bioavailability_F_thisdose] = 1.0;
     vprms[i_artemether_bioavailability_F_indiv] = 1.0;
@@ -249,7 +254,7 @@ void pkpd_artemether::initialize_params( void )
     double THETA6_pe = -0.375;
     //double THETA4_pe= 1.0;
     
-    initial_log10_totalparasitaemia = log10( y0[dim-1]*patient_blood_volume );
+    initial_log10_totalparasitaemia = log10(y0[dim-1]*patient_blood_volume);
     double typical_bioavailibility_TVF = 1.0 + THETA7_pe*(initial_log10_totalparasitaemia-3.98);
     if(is_pregnant) typical_bioavailibility_TVF *= (1.0+THETA6_pe);
         
@@ -261,10 +266,6 @@ void pkpd_artemether::initialize_params( void )
     }
  
     vprms[i_artemether_bioavailability_F_indiv] = indiv_bioavailability_F;
-    
-    //vprms[i_artemether_F1_thisdose] = vprms[i_artemether_F1_indiv]; // Just for testing - Venitha, April 2025
- 
-    
     
     // ### ### KTR is the transition rate to, between, and from the seven transit compartments
     double TVMT_pe = 0.982; // this is the point estimate (_pe) for TVMT; there is no need to draw a random variate here
@@ -322,6 +323,7 @@ void pkpd_artemether::initialize() {
 }
 
 // TODO the function below is a copy-and-paste from the PPQ function; must be modified
+// Completed - Venitha, 08/2025
 void pkpd_artemether::redraw_params_before_newdose()
 {
      
@@ -329,14 +331,19 @@ void pkpd_artemether::redraw_params_before_newdose()
     // on whether you're sitting or standing, whether you've recently had a big meal, whether some gets stuck
     // between your teeth; below, we set the parameter F1 (with some random draws) to adjust this initial dose
 
-    // this is the "dose occassion", i.e. the order of the dose (first, second, etc)
+    // this is the "dose occasion", i.e. the order of the dose (first, second, etc)
+    // This parameter is not used anywhere, perhaps the implementation needs to be re-written?
     double OCC = 1.0 + (double)num_doses_given; // NOTE the RHS here is a class member
     
     if(pkpd_artemether::stochastic) 
     {
         double ETA_rv = gsl_ran_gaussian( rng, sqrt(0.23000) ); // this is ETA6, ETA7, and ETA8
-        vprms[i_artemether_KTR] *= exp(-ETA_rv);       // WARNING this behavior is strange ... check if this is the right way to do it
-                                                       // Seems okay - Venitha, April 2025
+        //vprms[i_artemether_KTR] *= exp(-ETA_rv);                // WARNING this behavior is strange ... check if this is the right way to do it
+                                                                // Seems okay - Venitha, April 2025 
+                                                                // Actually, this alters the absorption/transit rate and not F_thisdose
+                                                                // Modified to alter F_thisdose between occasions
+                                                                // This parameter will later modify the individual bioavailability between doses
+        vprms[i_artemether_bioavailability_F_thisdose] *= exp(-ETA_rv);
     }
     //double IOV_rv = ETA_rv;
     
@@ -404,7 +411,7 @@ void pkpd_artemether::generate_recommended_dosing_schedule()
     // This is the total milligrams of artemether taken each dose
     // Fixed-combination come in two doses: 20 mg and 40 mg; switching to 20 mg 'coz why not
     // Also adjusted the doses accordingly 
-    total_mg_dose_per_occassion = num_tablets_per_dose * 20.0;
+    total_mg_dose_per_occasion = num_tablets_per_dose * 20.0;
     
     v_dosing_times.insert( v_dosing_times.begin(), 6, 0.0 );
     v_dosing_times[0] = 0.0;
@@ -414,6 +421,6 @@ void pkpd_artemether::generate_recommended_dosing_schedule()
     v_dosing_times[4] = 48.0;
     v_dosing_times[5] = 60.0;
 
-    v_dosing_amounts.insert( v_dosing_amounts.begin(), 6, total_mg_dose_per_occassion );
+    v_dosing_amounts.insert( v_dosing_amounts.begin(), 6, total_mg_dose_per_occasion );
 
 }

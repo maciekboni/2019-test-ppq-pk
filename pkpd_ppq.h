@@ -16,7 +16,11 @@ using namespace std;
 
 
 // these are the parameters -- the n intercept parameters (for the n slopes for the n patients) are not included in this list
-enum parameter_index_ppq { i_ppq_k15, i_ppq_k62, i_ppq_k20, i_ppq_k23, i_ppq_k32, i_ppq_k24, i_ppq_k42, i_ppq_k56, i_ppq_F1_indiv, i_ppq_F1_thisdose, ppq_num_params }; 
+//enum parameter_index_ppq { i_ppq_k15, i_ppq_k62, i_ppq_k20, i_ppq_k23, i_ppq_k32, i_ppq_k24, i_ppq_k42, i_ppq_k56, i_ppq_F1_indiv, i_ppq_F1_thisdose, ppq_num_params }; 
+
+enum parameter_index_ppq { i_ppq_k15, i_ppq_k62, i_ppq_k20, i_ppq_k23, i_ppq_k32, i_ppq_k24, i_ppq_k42, i_ppq_k56, i_ppq_bioavailability_F_indiv, i_ppq_bioavailability_F_thisdose, ppq_num_params }; 
+
+
 
 // NOTE -- there is no need to declare the typedef below; in practice, you always use integers, and you never cycle through the parameters
 // typedef enum parameter_index_ppq i_ppq;
@@ -47,7 +51,7 @@ public:
     static int rhs_ode(double t, const double y[], double f[], void *params);
 
     void initialize();
-    void initialize_params_w_population_means(); // TODO deprecate this member function
+    // void initialize_params_w_population_means(); // TODO deprecate this member function // Deprecated
     void initialize_params();
 
     void set_parasitaemia( double parasites_per_ul );
@@ -61,12 +65,12 @@ public:
     double pdparam_EC50;
     double pdparam_Pmax;
     
-    
     // the members below are used to create and manage the dose schedule; i.e. the course of treatment
     void generate_recommended_dosing_schedule();
     vector<double> v_dosing_times; // in hours
     vector<double> v_dosing_amounts;
     int num_doses_given;
+    double total_mg_dose_per_occasion;
 
     // an hourly time series of drug concentrations in the blood compartment only
     vector<double> v_concentration_in_blood;
@@ -79,12 +83,12 @@ public:
     gsl_odeiv_control* 	oc;
     gsl_odeiv_evolve*	oe;
     
-    double patient_weight;  // this is the kg weight of the current patient
-    double median_weight;   // this is the median weight of a patient that these estimates were calibrated for
-    double weight;         // this is the weight that is actually used in the calculations (it's one of the two above)
-    double age;
-
-    double patient_blood_volume; // in microliters
+    int patient_id;
+    double patient_weight;          // this is the kg weight of the current patient
+    double median_weight;           // this is the median weight of a patient that these estimates were calibrated for
+    double patient_age;
+    double patient_blood_volume;    // in microliters
+    double central_volume_exponent;
     
     gsl_rng *rng;		
     

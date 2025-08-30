@@ -58,7 +58,7 @@ pkpd_lum::pkpd_lum(  )
     doses_still_remain_to_be_taken = true; 
     num_hours_logged = 0;  
     last_logged_hour = -1.0;  
-    total_mg_dose_per_occasion = -99.0;    // meaning it is not set yet
+    total_mg_dose_per_occasion = -99.0;     // meaning it is not set yet
 
 
 
@@ -117,24 +117,24 @@ int pkpd_lum::rhs_ode(double t, const double y[], double f[], void *pkd_object )
 
     double a = (-1.0/24.0) * log( 1.0 - ((p->pdparam_Pmax * pow((y[1]/p -> vprms[i_lum_central_volume_of_distribution_indiv]),p->pdparam_n)) / (pow((y[1]/p -> vprms[i_lum_central_volume_of_distribution_indiv]),p->pdparam_n) + pow(p->pdparam_EC50,p->pdparam_n))));
          
-    double current_hour = floor(t);
+    // double current_hour = floor(t);
 
-    std::filesystem::path folder_kill_lum = "parasite_killing_constant_lumefantrine";
-    std::filesystem::create_directories(folder_kill_lum);
+    // std::filesystem::path folder_kill_lum = "parasite_killing_constant_lumefantrine";
+    // std::filesystem::create_directories(folder_kill_lum);
 
-    if (current_hour > p->last_logged_hour) {
-        std::filesystem::path filename_kill_lum =  folder_kill_lum / ("parasite_killing_constant_" + std::to_string(static_cast<int>(p->patient_weight)) + "kg_" + std::to_string(p->patient_id) + "_lumefantrine.txt");
-        //std::string filename_kill_lum = "parasite_killing_constant_" + std::to_string(static_cast<int>(p->patient_weight)) + "kg_lumefantrine.txt";
-        std::ofstream outputFile_kill_lum;
-        outputFile_kill_lum.open(filename_kill_lum, std::ios::app);
-        if (outputFile_kill_lum.is_open()) {
-            outputFile_kill_lum << a << "," << current_hour << std::endl;
-            outputFile_kill_lum.close();
-            p->last_logged_hour = current_hour;  
-        } else {
-            std::cerr << "Error opening " << filename_kill_lum << " for writing." << std::endl;
-        }
-    }
+    // if (current_hour > p->last_logged_hour) {
+    //     std::filesystem::path filename_kill_lum =  folder_kill_lum / ("parasite_killing_constant_" + std::to_string(static_cast<int>(p->patient_weight)) + "kg_" + std::to_string(p->patient_id) + "_lumefantrine.txt");
+    //     //std::string filename_kill_lum = "parasite_killing_constant_" + std::to_string(static_cast<int>(p->patient_weight)) + "kg_lumefantrine.txt";
+    //     std::ofstream outputFile_kill_lum;
+    //     outputFile_kill_lum.open(filename_kill_lum, std::ios::app);
+    //     if (outputFile_kill_lum.is_open()) {
+    //         outputFile_kill_lum << a << "," << current_hour << std::endl;
+    //         outputFile_kill_lum.close();
+    //         p->last_logged_hour = current_hour;  
+    //     } else {
+    //         std::cerr << "Error opening " << filename_kill_lum << " for writing." << std::endl;
+    //     }
+    // }
 
     f[3] = - a * y[3];          // NOTE there is no parasite growth here because the PMF factor for parasite growth is done
                                 // manually in the main diff-eq loop  
@@ -144,6 +144,8 @@ int pkpd_lum::rhs_ode(double t, const double y[], double f[], void *pkd_object )
     return GSL_SUCCESS;
 }
 
+// The function is called using the bioavailability_F_indiv in main.cpp
+// That is, the fractional dose for each patient is set to the bioavailability_F_indiv parameter in main.cpp
 
 void pkpd_lum::give_next_dose_to_patient( double fractional_dose_taken )
 {
@@ -152,14 +154,16 @@ void pkpd_lum::give_next_dose_to_patient( double fractional_dose_taken )
         // redraw_params_before_newdose(); // these are the dose-specific parameters that you're drawing here 
                                            // Currently not implemented
         
-        // basically, for LUM, we do not redraw, bc there is no inter-occassion variability
+        // basically, for LUM, we do not redraw, bc there is no inter-occasion variability
         // so this whole function just adds a dose or fractional dose
 
         // for LUM there is no need to get a new F1 param for each dose
-        //y0[0] +=  v_dosing_amounts[num_doses_given] * vprms[i_lum_bioavailability_F_thisdose] * fractional_dose_taken;
 
         y0[0] +=  v_dosing_amounts[num_doses_given] * fractional_dose_taken;
         
+        //y0[0] +=  v_dosing_amounts[num_doses_given] * vprms[i_lum_bioavailability_F_thisdose]; // There's no IOV in lumefantrine acc. to Kloprogge et al.
+                                                                                                 // Can remove this line
+
         num_doses_given++;
 
         if( num_doses_given >= v_dosing_amounts.size() ) doses_still_remain_to_be_taken=false;
@@ -291,10 +295,11 @@ void pkpd_lum::initialize_params( void )
     double box_cox_BXPAR = -0.343; // parameter from box-cox transformation
     double PHI = exp( ETA6_rv );
     double ETATR = ( pow(PHI, box_cox_BXPAR) - 1.0  ) / box_cox_BXPAR ; 
-    double D50 = THETA7; 
+    double D50 = THETA7;
     
     // this you keep fixed, and you use the total mg dose per occasion, and NOT any randomly drawn number
-    double DS = 1.0 - ( total_mg_dose_per_occasion/patient_weight ) / ( ( total_mg_dose_per_occasion/patient_weight ) + D50  ); // Not implemented
+    double DOSE = 1.0 - ( total_mg_dose_per_occasion/patient_weight ) / ( ( total_mg_dose_per_occasion/patient_weight ) + D50  ); // Not implemented
+                                                                                                                                  // Just got implemented! - Venitha, 08/2025
 
     // PARASITE = ((LNPC /4.20)**THETA(9)) -- TODO: -- check the log type on the parasitaemia (CONFIRMED on 3/31/2024 that it is log-10)
     //check if it's parasites/microliter (CONFIRMED also on 3/31/2024)
@@ -308,37 +313,38 @@ void pkpd_lum::initialize_params( void )
     double PARASITE = exp( THETA9 * (log10( parasites_per_ul_at_first_lum_dose) - 4.20));
 
     // Dose saturation effect on bioavailability, increasing the amount doesn't necessarily increase the amount of drug absorbed
-    double typical_bioavailability_TVF = THETA6 * DS; 
+    // 50% saturation on dose
+    double typical_bioavailability_TVF = THETA6 * DOSE; 
 
-    // Modifying typical_bioavailability_TVF by parasitaemia
+    // Modifying typical_bioavailability_TVF by initial parasitaemia 
+    // Refer to Supplementary S1 Text Kloprogge 2018
     typical_bioavailability_TVF *= PARASITE;
 
     // Implementing IIV in F as follows:
     double indiv_bioavailability_F = typical_bioavailability_TVF * exp(ETATR); 
 
     // allometric scaling for weight on the Q parameter; clearance is scaled by 0.75, volume by 1.0
-    double typical_intercompartmental_clearance_TVQ = THETA3 * pow( patient_weight/42.0 , 0.75 );  
+    double typical_intercompartmental_clearance_TVQ = THETA3 * pow( patient_weight/median_weight , 0.75 );  
     double indiv_intercompartmental_clearance_Q = typical_intercompartmental_clearance_TVQ * exp( ETA3_rv );
 
-    double typical_volume_TVV = THETA2 * pow( patient_weight/42.0 , 1.0 ); 
+    double typical_volume_TVV = THETA2 * pow( patient_weight/median_weight , 1.0 ); 
     double indiv_volume_V = typical_volume_TVV * exp( ETA2_rv );  
     double indiv_central_volume_of_distribution = indiv_volume_V;
 
     // allometric scaling for weight on the clearance parameter
-    double typical_clearance_TVCL = THETA1 * pow( patient_weight/42.0 , 0.75 );  
+    double typical_clearance_TVCL = THETA1 * pow( patient_weight/median_weight , 0.75 );  
     double indiv_clearance_CL = typical_clearance_TVCL * exp( ETA1_rv );
 
-    double typical_volume_peripheral_TVVP = THETA4 * pow( patient_weight/42.0 , 1.0 );
+    double typical_volume_peripheral_TVVP = THETA4 * pow( patient_weight/median_weight , 1.0 );
     double indiv_volume_peripheral_VP = typical_volume_peripheral_TVVP * exp( ETA4_rv );
 
     double PREGNANCY = pregnant ? (1.0 + THETA8) : 1.0;
     double typical_absorption_TVKA = THETA5 * PREGNANCY;
     double indiv_absorption_KA = typical_absorption_TVKA* exp( ETA5_rv );
 
-    //vprms[i_lum_F1_thisdose] = vprms[i_lum_F1_indiv]; // Just for testing - Venitha, April 2025
     // Added as a stable feature and not just for debugging
     
-    vprms[i_lum_DS_indiv] = DS;
+    vprms[i_lum_DS_indiv] = DOSE;
     vprms[i_lum_Q_indiv] = indiv_intercompartmental_clearance_Q;
     //vprms[i_lum_V_indiv] = indiv_volume_V;
     vprms[i_lum_V_indiv] = pow(indiv_volume_V, central_volume_exponent);
@@ -366,6 +372,8 @@ void pkpd_lum::redraw_params_before_newdose()
     
     // NO INTER-OCCASSION VARIABILITY SO NOTHING FOR THIS FUNCTION TO DO
     // Maybe it will be implemented in the future...? - Venitha, April 2025
+
+    // Okay, the Kloprogge paper didn't implement IOV, so there's no IOV in F for lumefantrine
     
 }
 

@@ -37,16 +37,18 @@ pkpd_ppq::pkpd_ppq(  )
     os 	= gsl_odeiv_step_alloc(T, dim);
     oc 	= gsl_odeiv_control_y_new (1e-6, 0.0);
     oe 	= gsl_odeiv_evolve_alloc(dim);
-    
-    patient_weight = -1.0;
-    median_weight  =  54.0;
-    weight = median_weight;  // this is the weight that is actually used in the calculations
 
-    num_doses_given = 0;
-    num_hours_logged = 0;    
+    // Patient Characteristics
     
-    age = 25.0;
-    patient_blood_volume = 5500000.0; // 5.5L of blood for an adult individual
+    patient_id = 0;                     // Updated in main.cpp
+    patient_age = 25.0;
+    patient_weight = 54.0;              // default weight of the patient in kg, can be overwritten via command line input
+    patient_blood_volume = 5500000.0;   // 5.5L of blood for an adult individual
+    
+    num_doses_given = 0;
+    num_hours_logged = 0;
+    total_mg_dose_per_occasion = -99.0; // Moved to constructor for uniformity with other classes
+    //doses_still_remain_to_be_taken = true; 
     
     // the parameters 15, exp( 0.525 * log(2700)), and 0.9 give about a 90% drug efficacy for an initial parasitaemia of 10,000/ul (25yo patient, 54kg)
     pdparam_n = 15.0;
@@ -54,7 +56,11 @@ pkpd_ppq::pkpd_ppq(  )
     pdparam_Pmax = 0.9; // here you want to enter the max daily killing rate; it will be converted to hourly later
 
 
+    // For testing
+    central_volume_exponent = 1;
+
     rng=NULL;
+ 
 }
 
 // destructor
@@ -120,7 +126,8 @@ void pkpd_ppq::give_next_dose_to_patient( double fractional_dose_taken )
     else
     {
         redraw_params_before_newdose(); // these are the dose-specific parameters that you're drawing here
-        y0[0] +=  v_dosing_amounts[num_doses_given] * vprms[i_ppq_F1_thisdose] * fractional_dose_taken;
+        //y0[0] +=  v_dosing_amounts[num_doses_given] * vprms[i_ppq_F1_thisdose] * fractional_dose_taken;
+        y0[0] +=  v_dosing_amounts[num_doses_given] * vprms[i_ppq_bioavailability_F_thisdose] * fractional_dose_taken;
         num_doses_given++;
     }
 
@@ -140,19 +147,20 @@ void pkpd_ppq::predict( double t0, double t1 )
     while (t < t1)
     {
         // check if there are still doses to give
-        //if( num_doses_given < v_dosing_times.size() )
-        //{
-            // check if time t is equal to or larger than the next scheduled dose
-            //if( t >= v_dosing_times[num_doses_given]  )
-            //{
-                //redraw_params_before_newdose();
+        // if( num_doses_given < v_dosing_times.size() )
+        // {
+        //     // check if time t is equal to or larger than the next scheduled dose
+        //     if( t >= v_dosing_times[num_doses_given]  )
+        //     {
+        //         redraw_params_before_newdose();
                 
-                // add the new dose amount to the "dose compartment", i.e. the first compartment
-                //y0[0] +=  v_dosing_amounts[num_doses_given] * vprms[i_ppq_F1_thisdose];
+        //         // add the new dose amount to the "dose compartment", i.e. the first compartment
+        //         //y0[0] +=  v_dosing_amounts[num_doses_given] * vprms[i_ppq_F1_thisdose];
+        //         y0[0] +=  v_dosing_amounts[num_doses_given] * vprms[i_ppq_bioavailability_F_thisdose];
                 
-                //num_doses_given++;
-            //}
-        //}
+        //         num_doses_given++;
+        //     }
+        // }
 
         // check if time t is equal to or larger than the next scheduled hour to log
         if( t >= ((double)num_hours_logged)  )
@@ -184,107 +192,17 @@ void pkpd_ppq::initialize( void )
     
 }
 
-
-
-void pkpd_ppq::initialize_params_w_population_means( void )
-{
-    // NOTE 2019/11/10
-    // NOTE this function is deprecated.  Do not use it anymore.
-    assert(false);
-
-    // ### ###  as a safety this should default to one; you multiply the dose amount given (in the dose compartment)
-    //          by this factor F1; the dose compartment is compartment 0 here and compartment 1 in the PLoS Med paper
-    vprms[i_ppq_F1_indiv] = 1.0;
-
- 
-    // ### ### KTR is the transition rate among the first three compartments
-    double TVMT_pe = 2.11; // this is the point estimate (_pe) for TVMT; there is no need to draw a random variate here
-    double MT = TVMT_pe; // * exp( ETA7_rv );
-    double KTR = 3.0/MT;
-    vprms[i_ppq_k15] = KTR;
-    vprms[i_ppq_k56] = KTR;
-    vprms[i_ppq_k62] = KTR;
-
-    
-    // ### ### this is the transition rate from the central compt to peripheral compt #1
-    double ACL = 0.75;  // this is the allometric scaling parameter for weight's influence on the Q1 parameter
-    double AV = 1.0;    // this is the allometric scaling parameter for weight's influence on the V2 parameter
-
-    double THETA2_pe = 2910.0;
-    double THETA3_pe = 310.0;
-    
-    double Q1 = THETA3_pe * pow( weight/median_weight, ACL ); 
-    double V2 = THETA2_pe * pow( weight/median_weight, AV ); 
-
-//     double ETA2_rv = gsl_ran_gaussian( rng, sqrt(0.371) );  
-//     V2 *= exp( ETA2_rv );
-
-    // NOTE ETA3 is fixed at zero; so we do not draw
-    // double ETA3_rv = gsl_ran_gaussian( rng, sqrt(0.0) );
-    // Q1 *= exp( ETA3 ); // should be zero
-    
-    vprms[i_ppq_k23] = Q1/V2;
-    
-    
-    // ### ### this is the transition rate from to peripheral compt #1 back to the central compt 
-    //         TVV3 = THETA(4)*(WT/M_WE)**AV;
-    //         V3 = TVV3*EXP(ETA(4));
-    double THETA4_pe = 4910.0;
-    //double ETA4_rv = gsl_ran_gaussian( rng, sqrt(0.0558) ); 
-    double TVV3 = THETA4_pe * pow( weight/median_weight, AV ); 
-    double V3 = TVV3; // * exp(ETA4_rv);
-    
-    vprms[i_ppq_k32] = Q1/V3;
-    
-    
-    // ### ###  this is the transition rate from the central compt to peripheral compt #2
-    //          Q2 = TVQ2*EXP(ETA(5));
-    //          TVQ2 = THETA(5)*(WT/M_WE)**ACL;
-    double THETA5_pe = 105.0;
-    //double ETA5_rv = gsl_ran_gaussian( rng, sqrt(0.0541) ); 
-    double TVQ2 = THETA5_pe * pow( weight/median_weight, ACL ); 
-    double Q2 = TVQ2; //* exp(ETA5_rv); 
-    vprms[i_ppq_k24] = Q2/V2;
-
-    
-    // ### ### this is the transition rate from to peripheral compt #2 back to the central compt 
-    //         V4 = TVV4*EXP(ETA(6));
-    //         TVV4 = THETA(6)*(WT/M_WE)**AV;
-    double THETA6_pe = 30900.0;
-    //double ETA6_rv = gsl_ran_gaussian( rng, sqrt(0.114) ); 
-    double TVV4 = THETA6_pe * pow( weight/median_weight, AV ); 
-    double V4 = TVV4; // * exp(ETA6_rv); 
-    vprms[i_ppq_k42] = Q2/V4;
-    
-    
-    // ### ### this is the exit rate from the central compartment (the final exit rate in the model
-    //         CL = TVCL*EXP(ETA(1));
-    //         TVCL = THETA(1)*MF*(WT/M_WE)**ACL;
-    double THETA1_pe = 55.4; 
-    //double ETA1_rv = gsl_ran_gaussian( rng, sqrt(0.0752) ); 
-    double HILL = 5.51;
-    double EM50 = 0.575; 
-    double MF = pow(age,HILL) / ( pow(age,HILL) + pow(EM50,HILL) );
-    
-    double TVCL = THETA1_pe * MF * pow( weight/median_weight, ACL ); 
-    double CL = TVCL; //* exp(ETA1_rv); 
-
-    vprms[i_ppq_k20] = CL/V2;    
-
-    
-}
-
-
 void pkpd_ppq::initialize_params( void )
 {
+    
+    median_weight  =  54.0;
+    
     //NOTE --- in this function alone, THE KTR PARAM HERE HAS INTER-PATIENT VARIABILITY BUT NO INTER-DOSE VARIABILITY
     //     --- THE F1 PARAMETER HERE IS JUST DEFUALTED TO ONE
     //     --- BOTH OF THESE WILL BE REDRAWN IN THE "redraw_params_before_newdose" FUNCTION IF IT IS CALLED 
     
- 
+    // F1_indiv is the relative absorption level for this individual
 
-    // ### ### F1_indiv is the relative absorbtion level for this individual
-    
     // before we take into account the effects of dose, the value of TVF1 is one
     double TVF1 = 1.0;
     double ETA8_rv = 0.0;
@@ -294,10 +212,8 @@ void pkpd_ppq::initialize_params( void )
                                                         // this represents between-patient variability 
     }
     double F1 = TVF1 * exp(ETA8_rv);  
-    vprms[i_ppq_F1_indiv] = F1;
-    
-    
-
+    //vprms[i_ppq_F1_indiv] = F1;
+    vprms[i_ppq_bioavailability_F_indiv] = F1;
     
     // ### ### KTR is the transition rate among the first three compartments
     double TVMT_pe = 2.11; // this is the point estimate (_pe) for TVMT; there is no need to draw a random variate here
@@ -317,11 +233,6 @@ void pkpd_ppq::initialize_params( void )
     vprms[i_ppq_k56] = KTR;
     vprms[i_ppq_k62] = KTR;
 
-
-
-
-
-    
     // ### ### this is the transition rate from the central compt to peripheral compt #1
     double ACL = 0.75;  // this is the allometric scaling parameter for weight's influence on the Q1 parameter
     double AV = 1.0;    // this is the allometric scaling parameter for weight's influence on the V2 parameter
@@ -329,8 +240,8 @@ void pkpd_ppq::initialize_params( void )
     double THETA2_pe = 2910.0;
     double THETA3_pe = 310.0;
     
-    double Q1 = THETA3_pe * pow( weight/median_weight, ACL ); 
-    double V2 = THETA2_pe * pow( weight/median_weight, AV ); 
+    double Q1 = THETA3_pe * pow(patient_weight/median_weight, ACL ); 
+    double V2 = THETA2_pe * pow(patient_weight/median_weight, AV ); 
 
     double ETA2_rv = 0.0;
     if( pkpd_ppq::stochastic )
@@ -345,9 +256,6 @@ void pkpd_ppq::initialize_params( void )
     
     vprms[i_ppq_k23] = Q1/V2;
 
-
-    
-    
     // ### ### this is the transition rate from to peripheral compt #1 back to the central compt 
     //         TVV3 = THETA(4)*(WT/M_WE)**AV;
     //         V3 = TVV3*EXP(ETA(4));
@@ -357,7 +265,7 @@ void pkpd_ppq::initialize_params( void )
     {
         ETA4_rv = gsl_ran_gaussian( rng, sqrt(0.0558) ); 
     }
-    double TVV3 = THETA4_pe * pow( weight/median_weight, AV ); 
+    double TVV3 = THETA4_pe * pow(patient_weight/median_weight, AV ); 
     double V3 = TVV3 * exp(ETA4_rv);
     
     vprms[i_ppq_k32] = Q1/V3;
@@ -373,11 +281,9 @@ void pkpd_ppq::initialize_params( void )
     {
         ETA5_rv = gsl_ran_gaussian( rng, sqrt(0.0541) ); 
     }
-    double TVQ2 = THETA5_pe * pow( weight/median_weight, ACL ); 
+    double TVQ2 = THETA5_pe * pow(patient_weight/median_weight, ACL ); 
     double Q2 = TVQ2 * exp(ETA5_rv); 
     vprms[i_ppq_k24] = Q2/V2;
-
-    
 
     
     // ### ### this is the transition rate from to peripheral compt #2 back to the central compt 
@@ -389,7 +295,7 @@ void pkpd_ppq::initialize_params( void )
     {
         ETA6_rv = gsl_ran_gaussian( rng, sqrt(0.114) ); 
     }
-    double TVV4 = THETA6_pe * pow( weight/median_weight, AV ); 
+    double TVV4 = THETA6_pe * pow(patient_weight/median_weight, AV ); 
     double V4 = TVV4 * exp(ETA6_rv); 
     vprms[i_ppq_k42] = Q2/V4;
     
@@ -406,9 +312,9 @@ void pkpd_ppq::initialize_params( void )
     }
     double HILL = 5.51;
     double EM50 = 0.575; 
-    double MF = pow(age,HILL) / ( pow(age,HILL) + pow(EM50,HILL) );
+    double MF = pow(patient_age,HILL) / ( pow(patient_age,HILL) + pow(EM50,HILL) );
     
-    double TVCL = THETA1_pe * MF * pow( weight/median_weight, ACL ); 
+    double TVCL = THETA1_pe * MF * pow(patient_weight/median_weight, ACL ); 
     double CL = TVCL * exp(ETA1_rv); 
 
     vprms[i_ppq_k20] = CL/V2;    
@@ -441,10 +347,11 @@ void pkpd_ppq::redraw_params_before_newdose()
     // double THETA8 = 1.0;  // this is just fixed at one
     // double TVF1 = THETA8*F1COVD;
     double TVF1 = F1COVD;
-    double F1 =  vprms[i_ppq_F1_indiv] * TVF1 * exp(IOV_rv); // IOV is the between dose variability
-    vprms[i_ppq_F1_thisdose] = F1;
-    
-
+    // double F1 =  vprms[i_ppq_F1_indiv] * TVF1 * exp(IOV_rv); // IOV is the between dose variability
+    // vprms[i_ppq_F1_thisdose] = F1;
+    double F1 =  vprms[i_ppq_bioavailability_F_indiv] * TVF1 * exp(IOV_rv); // IOV is the between dose variability
+    vprms[i_ppq_bioavailability_F_thisdose] = F1;
+   
     
     // ### second, you redraw a specific KTR parameter for this dose, using a draw of the variable IOV2
     //     draw a random variate to get the value of the IOV2 variable
@@ -480,60 +387,165 @@ bool pkpd_ppq::we_are_past_a_dosing_time( double current_time )
 
 void pkpd_ppq::generate_recommended_dosing_schedule()
 {
-    // TODO NEEDS TO BE DONE BY AGE AND WEIGHT
+    // TODO NEEDS TO BE DONE BY AGE
 	
     // NEED TO MULTIPLY THE DOSING AMOUNT BY 0.57 (THE SCALING PARAM) THAT
     // GIVES YOU THE SCALING IN MOLECULAR WEIGHT FROM PPQ-PHOSPHATE TO PPQ
+
+    // DHA-PPQ comes in two fixed-dose combinations: 20/160 and 40/320
+    // Using the pediatric combination of 20/160 and adjusting the dose accordingly
+ 
+    // Updated dosing schedule by weight with accordance to the latest WHO guidelines dated 13 August 2025 (copied below):
+
+    // Target dose and range: 
+    // Adults and children weighing ≥ 25 kg: 4 (2–10) mg/kg bw per day DHA and 18 (16–27) mg/kg bw per day PPQ given once a day for 3 days 
+    // Children weighing < 25 kg:            4 (2.5–10) mg/kg bw per day DHA and 24 (20–32) mg/kg bw per day PPQ once a day for 3 days
     
+    // Revised dose recommendation for DHA + PPQ in young children (2015)
+    // Children weighing < 25 kg should receive at least 
+    // 2.5 mg/kg bw DHA and 20 mg/kg bw PPQ to achieve the same exposure as children weighing ≥ 25 kg and adults.
+
     double num_tablets_per_dose;
     
-    if( weight < 5.0 )
+   
+    if( patient_weight < 8.0 )
     {
-        num_tablets_per_dose = 0.0;
+        num_tablets_per_dose = 1;
     }
-    else if( weight < 8.0 )
+    else if( patient_weight >= 8.0 && patient_weight < 11.0 )
     {
-        num_tablets_per_dose = 0.5;
+        num_tablets_per_dose = 1.50;
     }
-    else if( weight < 11.0 )
-    {
-        num_tablets_per_dose = 0.75;
-    }
-    else if( weight < 17.0 )
-    {
-        num_tablets_per_dose = 1.0;
-    }
-    else if( weight < 25.0 )
-    {
-        num_tablets_per_dose = 1.5;
-    }
-    else if( weight < 36.0 )
+    else if(patient_weight >= 11.0 && patient_weight < 17.0 )
     {
         num_tablets_per_dose = 2.0;
     }
-    else if( weight < 60.0 )
+    else if(patient_weight >= 17.0 && patient_weight < 25.0 )
     {
         num_tablets_per_dose = 3.0;
     }
-    else if( weight < 80.0 )
+    else if( patient_weight >= 25.0 && patient_weight < 36.0 )
     {
         num_tablets_per_dose = 4.0;
     }
-    else
+    else if( patient_weight >= 36.0 && patient_weight < 60.0 )
     {
-        num_tablets_per_dose = 5.0;
+        num_tablets_per_dose = 6.0;
     }
-    
-    double total_mg_dose = num_tablets_per_dose * 320.0;
-    
+    else if( patient_weight >= 60.0 && patient_weight < 80.0 )
+    {
+        num_tablets_per_dose = 8.0;
+    }
+    else if( patient_weight >= 80.0 )
+    {
+        num_tablets_per_dose = 10.0;
+    } // Adding an error message just in case
+    else {
+        std::cerr << "Error: Weight not supported." << std::endl;
+    }
+
+
+    total_mg_dose_per_occasion = num_tablets_per_dose * 160.0;  // A single tablet contains 160 mg of PPQ
+
     v_dosing_times.insert( v_dosing_times.begin(), 3, 0.0 );
+    v_dosing_times[0] = 0.0;
     v_dosing_times[1] = 24.0;
     v_dosing_times[2] = 48.0;
     
-    v_dosing_amounts.insert( v_dosing_amounts.begin(), 3, total_mg_dose*0.577 );
+    v_dosing_amounts.insert( v_dosing_amounts.begin(), 3, total_mg_dose_per_occasion*0.577 ); // Need to check why this is
     
 }
 
+// NOTE 2019/11/10
+// NOTE this function is deprecated.  Do not use it anymore.
+// Using pkpd_ppq::initialize_params instead 
+// Moving it to the end of the file and commenting it out so as to avoid confusion - Venitha, 08/2025
+// void pkpd_ppq::initialize_params_w_population_means( void )
+// {
+    
+//     assert(false);
 
+//     // as a safety this should default to one; you multiply the dose amount given (in the dose compartment)
+//     // by this factor F1; the dose compartment is compartment 0 here and compartment 1 in the PLoS Med paper
+//     vprms[i_ppq_F1_indiv] = 1.0;
+
+ 
+//     // KTR is the transition rate among the first three compartments
+//     double TVMT_pe = 2.11; // this is the point estimate (_pe) for TVMT; there is no need to draw a random variate here
+//     double MT = TVMT_pe; // * exp( ETA7_rv );
+//     double KTR = 3.0/MT;
+//     vprms[i_ppq_k15] = KTR;
+//     vprms[i_ppq_k56] = KTR;
+//     vprms[i_ppq_k62] = KTR;
+
+    
+//     // this is the transition rate from the central compt to peripheral compt #1
+//     // double ACL = 0.75;  // this is the allometric scaling parameter for weight's influence on the Q1 parameter
+//     // double AV = 1.0;    // this is the allometric scaling parameter for weight's influence on the V2 parameter
+
+//     // Directly incorporating the allometric scaling parameters to mantain consistency
+
+//     double THETA2_pe = 2910.0;
+//     double THETA3_pe = 310.0;
+    
+//     double Q1 = THETA3_pe * pow(patient_weight/median_weight,0.75); 
+//     double V2 = THETA2_pe * pow(patient_weight/median_weight,1.0); 
+
+//     double ETA2_rv = gsl_ran_gaussian( rng, sqrt(0.371) );  
+//     V2 *= exp( ETA2_rv );
+
+//     // NOTE ETA3 is fixed at zero; so we do not draw
+//     // double ETA3_rv = gsl_ran_gaussian( rng, sqrt(0.0) );
+//     // Q1 *= exp( ETA3 ); // should be zero
+    
+//     vprms[i_ppq_k23] = Q1/V2;
+    
+    
+//     // this is the transition rate from to peripheral compt #1 back to the central compt 
+//     //         TVV3 = THETA(4)*(WT/M_WE)**AV;
+//     //         V3 = TVV3*EXP(ETA(4));
+//     double THETA4_pe = 4910.0;
+//     //double ETA4_rv = gsl_ran_gaussian( rng, sqrt(0.0558) ); 
+//     double TVV3 = THETA4_pe * pow(patient_weight/median_weight,1.0); 
+//     double V3 = TVV3; // * exp(ETA4_rv);
+    
+//     vprms[i_ppq_k32] = Q1/V3;
+    
+    
+//     // this is the transition rate from the central compt to peripheral compt #2
+//     //          Q2 = TVQ2*EXP(ETA(5));
+//     //          TVQ2 = THETA(5)*(WT/M_WE)**ACL;
+//     double THETA5_pe = 105.0;
+//     //double ETA5_rv = gsl_ran_gaussian( rng, sqrt(0.0541) ); 
+//     double TVQ2 = THETA5_pe * pow(patient_weight/median_weight, 0.75); 
+//     double Q2 = TVQ2; //* exp(ETA5_rv); 
+//     vprms[i_ppq_k24] = Q2/V2;
+
+    
+//     // this is the transition rate from to peripheral compt #2 back to the central compt 
+//     //         V4 = TVV4*EXP(ETA(6));
+//     //         TVV4 = THETA(6)*(WT/M_WE)**AV;
+//     double THETA6_pe = 30900.0;
+//     //double ETA6_rv = gsl_ran_gaussian( rng, sqrt(0.114) ); 
+//     double TVV4 = THETA6_pe * pow(patient_weight/median_weight, 1.0); 
+//     double V4 = TVV4; // * exp(ETA6_rv); 
+//     vprms[i_ppq_k42] = Q2/V4;
+    
+    
+//     // this is the exit rate from the central compartment (the final exit rate in the model)
+//     //         CL = TVCL*EXP(ETA(1));
+//     //         TVCL = THETA(1)*MF*(WT/M_WE)**ACL;
+//     double THETA1_pe = 55.4; 
+//     //double ETA1_rv = gsl_ran_gaussian( rng, sqrt(0.0752) ); 
+//     double HILL = 5.51;
+//     double EM50 = 0.575; 
+//     double MF = pow(patient_age,HILL) / ( pow(patient_age,HILL) + pow(EM50,HILL) );
+    
+//     double TVCL = THETA1_pe * MF * pow(patient_weight/median_weight, 0.75); 
+//     double CL = TVCL; //* exp(ETA1_rv); 
+
+//     vprms[i_ppq_k20] = CL/V2;    
+   
+// }
 
 

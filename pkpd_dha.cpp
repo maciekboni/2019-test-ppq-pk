@@ -129,6 +129,16 @@ void pkpd_dha::give_next_dose_to_patient( double fractional_dose_taken )
         redraw_params_before_newdose(); // these are the dose-specific parameters that you're drawing here
         
         y0[0] +=  v_dosing_amounts[num_doses_given] * fractional_dose_taken;
+       
+        // add the new dose amount to the "dose compartment", i.e. the first compartment
+        //y0[0] +=  v_dosing_amounts[num_doses_given] * vprms[i_dha_bioavailability_F_thisdose];
+        // I guess fractional dose taken here is actually the bioavailability of the current dose
+        // Need to check how this varies
+        // The IOV applied when we redraw parameters is on the rate of absorption/transit between doses
+        // And not the modified bioavailability
+        // Also, although individual bioavailability is calculated, we don't implement it anywhere
+        // Need to see how to apply it, either only to the first dose or if the change in F between doses can be directly
+        // applied to F_indiv
         
         num_doses_given++;
 
@@ -150,21 +160,7 @@ void pkpd_dha::predict( double t0, double t1 )
     
     while (t < t1)
     {
-        // check if there are still doses to give
-        if( num_doses_given < v_dosing_times.size() )
-        {
-            // check if time t is equal to or larger than the next scheduled dose
-            if( t >= v_dosing_times[num_doses_given]  )
-            {
-                redraw_params_before_newdose();
-                
-                // add the new dose amount to the "dose compartment", i.e. the first compartment
-                y0[0] +=  v_dosing_amounts[num_doses_given] * vprms[i_dha_bioavailability_F_thisdose];
-                
-                num_doses_given++;
-            }
-        }
-
+       
         // check if time t is equal to or larger than the next scheduled hour to log
         if( t >= ((double)num_hours_logged)  )
         {
@@ -198,7 +194,6 @@ void pkpd_dha::initialize( void )
     
     //-- WARNING -- the age member variable must be set before you call this function -- add this check
     
-
     // NOTE must call the two functions below in this order -- dosing schedule needs to be set first
     generate_recommended_dosing_schedule();
     initialize_params();
@@ -218,7 +213,7 @@ void pkpd_dha::initialize_params( void )
     // it is used as a relative scaling factor below
     double median_weight=48.5;
     
-    // initializse these relative dose factors to one (this should be the default behavior if
+    // initialize these relative dose factors to one (this should be the default behavior if
     // the model is not stochastic or if we decide to remove between-dose and/or between-patient variability
     // vprms[i_dha_F1_thisdose] = 1.0;
     // vprms[i_dha_F1_indiv] = 1.0;
@@ -304,6 +299,7 @@ void pkpd_dha::redraw_params_before_newdose()
         double ETA_rv = gsl_ran_gaussian( rng, sqrt(0.23000) ); // this is ETA6, ETA7, and ETA8
         vprms[i_dha_KTR] *= exp(-ETA_rv);       // WARNING this behavior is strange ... check if this is the right way to do it
     }
+
     //double IOV_rv = ETA_rv;
     
     // you need to multiple MT by exp(ETA_rv)
@@ -314,7 +310,6 @@ void pkpd_dha::redraw_params_before_newdose()
 
     //double THETA4_pe = 1.0; //TODO check if this is really fixed at 1.0 as a point estimate; checked.  It is fixed at 1.0.
     //double ETA4_rv = gsl_ran_gaussian( rng, sqrt(0.08800) );
-    
 }
 
 
@@ -343,11 +338,11 @@ void pkpd_dha::generate_recommended_dosing_schedule()
  
     // TODO: need to get tablet schedule by pregnancy status
     
-    // Updated dosing schedule by weight with accordance to the latest WHO guidelines (copied below):
+    // Updated dosing schedule by weight with accordance to the latest WHO guidelines dated 13 August 2025 (copied below):
 
     // Revised dose recommendation for DHA + PPQ in young children (2015)
-    // Children weighing <25kg treated with DHA + PPQ should receive a minimum of 
-    // 2.5 mg/kg bw per day of DHA and 20 mg/ kg bw per day of PPQ daily for 3 days.
+    // Children weighing < 25 kg should receive at least 
+    // 2.5 mg/kg bw DHA and 20 mg/kg bw PPQ to achieve the same exposure as children weighing ≥ 25 kg and adults.
 
     double num_tablets_per_dose;
 
