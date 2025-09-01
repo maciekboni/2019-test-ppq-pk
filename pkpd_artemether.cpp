@@ -156,7 +156,8 @@ void pkpd_artemether::give_next_dose_to_patient( double fractional_dose_taken )
         // add the new dose amount to the "dose compartment", i.e. the first compartment
         
         // After redrawing the dose parameters, the individual bioavailability should be modified by the IOV/bioavailability_F_thisdose
-        fractional_dose_taken *= vprms[i_artemether_bioavailability_F_thisdose]; 
+        // There is no IOV in dha acc. to Tarning 2012, removed IOV between doses
+        
         y0[0] +=  v_dosing_amounts[num_doses_given] * fractional_dose_taken; // 
        
         //y0[0] +=  v_dosing_amounts[num_doses_given] * vprms[i_artemether_bioavailability_F_thisdose];
@@ -254,15 +255,22 @@ void pkpd_artemether::initialize_params( void )
     double THETA6_pe = -0.375;
     //double THETA4_pe= 1.0;
     
-    initial_log10_totalparasitaemia = log10(y0[dim-1]*patient_blood_volume);
+    //initial_log10_totalparasitaemia = log10(y0[dim-1]*patient_blood_volume);
+    initial_log10_totalparasitaemia = log10(y0[dim-1]);
     double typical_bioavailibility_TVF = 1.0 + THETA7_pe*(initial_log10_totalparasitaemia-3.98);
     if(is_pregnant) typical_bioavailibility_TVF *= (1.0+THETA6_pe);
         
     double indiv_bioavailability_F = typical_bioavailibility_TVF;
+
+    // Applying IIV in relative bioavailability F
+    // The variance is from Table 4 of Tarning 2012,  and is calculated as ln((0.303)^2+1) = 0.0878
+
     if(pkpd_artemether::stochastic)
     {
         double ETA4_rv = gsl_ran_gaussian( rng, sqrt(0.08800) );
-        indiv_bioavailability_F *= ETA4_rv;
+        indiv_bioavailability_F *= exp(ETA4_rv); 
+        // Original function was indiv_bioavailability_F *= ETA4_rv
+        // But it has to be indiv_bioavailability_F *= exp(ETA4_rv) acc to Tarning 2012
     }
  
     vprms[i_artemether_bioavailability_F_indiv] = indiv_bioavailability_F;
@@ -293,14 +301,18 @@ void pkpd_artemether::initialize_params( void )
 
     double typical_volume_TVV = THETA2_pe * (patient_weight/median_weight);  
     double indiv_volume_V = typical_volume_TVV;
-    double indiv_central_volume_of_distribution = indiv_volume_V;
 
+    // Applying IIV in Vd
+    // The variance is from Table 4 of Tarning 2012,  and is calculated as ln((0.128)^2+1) = 0.01625
     if(pkpd_artemether::stochastic) 
+    
     {
         double ETA2_rv = gsl_ran_gaussian( rng, sqrt(0.0162) );
         indiv_volume_V *= exp(ETA2_rv);
     }
-    
+
+    double indiv_central_volume_of_distribution = indiv_volume_V;
+
     vprms[i_artemether_typical_CL] = typical_clearance_TVCL;
     vprms[i_artemether_CL_indiv] = indiv_clearance_CL;
     vprms[i_artemether_typical_V] = typical_volume_TVV;
@@ -338,19 +350,19 @@ void pkpd_artemether::redraw_params_before_newdose()
     if(pkpd_artemether::stochastic) 
     {
         double ETA_rv = gsl_ran_gaussian( rng, sqrt(0.23000) ); // this is ETA6, ETA7, and ETA8
-        //vprms[i_artemether_KTR] *= exp(-ETA_rv);                // WARNING this behavior is strange ... check if this is the right way to do it
+        vprms[i_artemether_KTR] *= exp(-ETA_rv);                // WARNING this behavior is strange ... check if this is the right way to do it
                                                                 // Seems okay - Venitha, April 2025 
-                                                                // Actually, this alters the absorption/transit rate and not F_thisdose
-                                                                // Modified to alter F_thisdose between occasions
-                                                                // This parameter will later modify the individual bioavailability between doses
-        vprms[i_artemether_bioavailability_F_thisdose] *= exp(-ETA_rv);
+                                                                // Actually this modifies the KTR by the previous value, not sure if that's right
+        // This alters the absorption/transit rate by adding IOV in MTT
+        // and not relative bioavailability F_thisdose
+
+        // you need to multiple MT by exp(ETA_rv)
+        // BUT:  KTR = 8/MT, so instead, simply multiple KTR by exp(-ETA_rv)
+        // Hence the negative sign
+
     }
     //double IOV_rv = ETA_rv;
-    
-    // you need to multiple MT by exp(ETA_rv)
-    // BUT:  KTR = 8/MT, so instead, simply multiple KTR by exp(-ETA_rv)
-    
-    
+
     //  TVF1 = THETA(4)*(1+THETA(6)*FLAG)*(1+THETA(7)*(PARA-3.98));;
     //  F1   = TVF1*EXP(ETA(4));
 

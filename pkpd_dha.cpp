@@ -265,13 +265,14 @@ void pkpd_dha::initialize_params( void )
 
     double typical_volume_TVV = THETA2_pe * (patient_weight/median_weight);  
     double indiv_volume_V = typical_volume_TVV;
-    double indiv_central_volume_of_distribution = indiv_volume_V;
 
-    if(pkpd_dha::stochastic) 
+     if(pkpd_dha::stochastic) 
     {
         double ETA2_rv = gsl_ran_gaussian( rng, sqrt(0.0162) );
         indiv_volume_V *= exp(ETA2_rv);
     }
+
+    double indiv_central_volume_of_distribution = indiv_volume_V;
 
     vprms[i_dha_typical_CL] = typical_clearance_TVCL;
     vprms[i_dha_CL_indiv] = indiv_clearance_CL;
