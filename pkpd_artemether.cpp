@@ -88,22 +88,22 @@ int pkpd_artemether::rhs_ode(double t, const double y[], double f[], void *pkd_o
     
     // this is compartment 1, the gut or fixed dose compartment, i.e. the hypothetical compartment
     // where the drug goes in first
-    f[0] =  - p->vprms[i_artemether_KTR] * y[0];
+    f[0] =  - p->vprms[i_artemether_KTR_indiv] * y[0];
 
     // these are the seven transit compartments
-    f[1] = y[0]*p->vprms[i_artemether_KTR] - y[1]*p->vprms[i_artemether_KTR];
-    f[2] = y[1]*p->vprms[i_artemether_KTR] - y[2]*p->vprms[i_artemether_KTR];
-    f[3] = y[2]*p->vprms[i_artemether_KTR] - y[3]*p->vprms[i_artemether_KTR];
-    f[4] = y[3]*p->vprms[i_artemether_KTR] - y[4]*p->vprms[i_artemether_KTR];
-    f[5] = y[4]*p->vprms[i_artemether_KTR] - y[5]*p->vprms[i_artemether_KTR];
-    f[6] = y[5]*p->vprms[i_artemether_KTR] - y[6]*p->vprms[i_artemether_KTR];
-    f[7] = y[6]*p->vprms[i_artemether_KTR] - y[7]*p->vprms[i_artemether_KTR];
+    f[1] = y[0]*p->vprms[i_artemether_KTR_indiv] - y[1]*p->vprms[i_artemether_KTR_indiv];
+    f[2] = y[1]*p->vprms[i_artemether_KTR_indiv] - y[2]*p->vprms[i_artemether_KTR_indiv];
+    f[3] = y[2]*p->vprms[i_artemether_KTR_indiv] - y[3]*p->vprms[i_artemether_KTR_indiv];
+    f[4] = y[3]*p->vprms[i_artemether_KTR_indiv] - y[4]*p->vprms[i_artemether_KTR_indiv];
+    f[5] = y[4]*p->vprms[i_artemether_KTR_indiv] - y[5]*p->vprms[i_artemether_KTR_indiv];
+    f[6] = y[5]*p->vprms[i_artemether_KTR_indiv] - y[6]*p->vprms[i_artemether_KTR_indiv];
+    f[7] = y[6]*p->vprms[i_artemether_KTR_indiv] - y[7]*p->vprms[i_artemether_KTR_indiv];
     
     // this is the central compartment (the blood)
     //
     // and the current units here (Aug 7 2024) are simply the total mg of artemether in the blood
     // NOTE it looks like all of our blood concentrations in these PK classes simply track "total mg of molecule in blood"
-    f[8] = y[7]*p->vprms[i_artemether_KTR] - y[8]*p->vprms[i_artemether_k20];
+    f[8] = y[7]*p->vprms[i_artemether_KTR_indiv] - y[8]*p->vprms[i_artemether_k20];
     
     // this is the per/ul parasite population size
     // indiv_central_volume_of_distribution (L) =! patient_blood_volume
@@ -148,26 +148,14 @@ void pkpd_artemether::give_next_dose_to_patient( double fractional_dose_taken )
 {
     if( doses_still_remain_to_be_taken )
     {
-        // The KA/KTR is modified by the IOV by calling this function
-        // Rewrote function to modify bioavailability_F_thisdose instead
-
+        // The KA/KTR is modified by IOV by calling this function
+    
         redraw_params_before_newdose(); // these are the dose-specific parameters that you're drawing here
         
         // add the new dose amount to the "dose compartment", i.e. the first compartment
-        
-        // After redrawing the dose parameters, the individual bioavailability should be modified by the IOV/bioavailability_F_thisdose
-        // There is no IOV in dha acc. to Tarning 2012, removed IOV between doses
-        
+        // There is no IOV in F dha acc. to Tarning 2012, removed IOV between doses on F
+
         y0[0] +=  v_dosing_amounts[num_doses_given] * fractional_dose_taken; // 
-       
-        //y0[0] +=  v_dosing_amounts[num_doses_given] * vprms[i_artemether_bioavailability_F_thisdose];
-        // I guess fractional dose taken here is actually the bioavailability of the current dose
-        // Need to check how this varies
-        // The IOV applied when we redraw parameters is on the rate of absorption/transit between doses
-        // And not the modified bioavailability
-        // Also, although individual bioavailability is calculated, we don't implement it anywhere
-        // Need to see how to apply it, either only to the first dose or if the change in F between doses can be directly
-        // applied to F_indiv
         
         num_doses_given++;
 
@@ -247,7 +235,11 @@ void pkpd_artemether::initialize_params( void )
     
     // initialize these relative dose factors to one (this should be the default behavior if
     // the model is not stochastic or if we decide to remove between-dose and/or between-patient variability
-    vprms[i_artemether_bioavailability_F_thisdose] = 1.0;
+
+    // There is no IOV in F_thisdose acc to Tarning 2012
+    // Leaving this line here in-case we adopt a different model/parameters
+    //vprms[i_artemether_bioavailability_F_thisdose] = 1.0;
+
     vprms[i_artemether_bioavailability_F_indiv] = 1.0;
     
     //TVF1 = THETA(4)*(1+THETA(7)*(PARA-3.98)) * (1+THETA(6)*FLAG)
@@ -256,6 +248,11 @@ void pkpd_artemether::initialize_params( void )
     //double THETA4_pe= 1.0;
     
     //initial_log10_totalparasitaemia = log10(y0[dim-1]*patient_blood_volume);
+
+    // To calculate the effect of initial parasitaemia on F_indiv, we need to use initial parasitemia per microliter
+    // and not the total parasitemia as the value 3.98 in the equation below is log10(9549.93)
+    // which is in parasites per microliter, not total parasitemia, which would be way, way, way higher
+
     initial_log10_totalparasitaemia = log10(y0[dim-1]);
     double typical_bioavailibility_TVF = 1.0 + THETA7_pe*(initial_log10_totalparasitaemia-3.98);
     if(is_pregnant) typical_bioavailibility_TVF *= (1.0+THETA6_pe);
@@ -282,11 +279,15 @@ void pkpd_artemether::initialize_params( void )
                                                             //        be the STANDARD DEVIATION not the variance
     // ETA3 is fixed at zero in this model
     // therefore, below, we do no add any variation into MT
-    double MT = TVMT_pe; // * exp(ETA3_rv); we think that "MT" here stands for mean time to transition from dose compartment to blood
+    //double MT = TVMT_pe; // * exp(ETA3_rv); we think that "MT" here stands for mean time to transition from dose compartment to blood
+    vprms[i_artemether_MT_indiv] = TVMT_pe;
+
 
     // NOTE at this point you have an MT value without any effect of dose order (i.e. whether it's dose 1, dose 2, etc.
     // later, you must/may draw another mean-zero normal rv, and multiply by the value above
-    vprms[i_artemether_KTR] = 8.0/MT;
+    // this is done in redraw_params_before_newdose()
+    //vprms[i_artemether_KTR_indiv] = 8.0/MT;
+    vprms[i_artemether_KTR_indiv] = 8.0/vprms[i_artemether_MT_indiv];
 
 
     // ### ### this is the exit rate from the central compartment (the final exit rate in the model)
@@ -350,9 +351,14 @@ void pkpd_artemether::redraw_params_before_newdose()
     if(pkpd_artemether::stochastic) 
     {
         double ETA_rv = gsl_ran_gaussian( rng, sqrt(0.23000) ); // this is ETA6, ETA7, and ETA8
-        vprms[i_artemether_KTR] *= exp(-ETA_rv);                // WARNING this behavior is strange ... check if this is the right way to do it
+        //vprms[i_artemether_KTR] *= exp(-ETA_rv);                // WARNING this behavior is strange ... check if this is the right way to do it
                                                                 // Seems okay - Venitha, April 2025 
-                                                                // Actually this modifies the KTR by the previous value, not sure if that's right
+                                                                // Actually, this does not assume independence between doses
+                                                                // Modifying KTR between doses independently and not cumulatively
+        
+        vprms[i_artemether_KTR_thisdose] = 8.0/vprms[i_artemether_MT_indiv] * exp(-ETA_rv);
+        vprms[i_artemether_KTR_indiv] = vprms[i_artemether_KTR_thisdose];
+
         // This alters the absorption/transit rate by adding IOV in MTT
         // and not relative bioavailability F_thisdose
 
