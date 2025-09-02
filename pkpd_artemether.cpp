@@ -31,19 +31,19 @@ pkpd_artemether::pkpd_artemether( )
     
     // Patient Characteristics
 
-    patient_id = 0;             // Updated in main.cpp
-    patient_weight = 54.0;      // default weight of the patient in kg, can be overwritten via command line input
+    patient_id = 0;                     // Updated in main.cpp
+    patient_weight = 54.0;              // default weight of the patient in kg, can be overwritten via command line input
     is_male=false;
     is_pregnant=false;
     patient_age = 25.0;
-    patient_blood_volume = 5500000.0; // 5.5L of blood for an adult individual of weight 54kg. 
-                                      // Scaled later according to patient_weight in main function
+    patient_blood_volume = 5500000.0;   // 5.5L of blood for an adult individual of weight 54kg. 
+                                        // Scaled later according to patient_weight in main function
     
     // Individual Patient Dosing Log
     num_doses_given = 0;
     num_hours_logged = 0;  
     last_logged_hour = -1.0; 
-    total_mg_dose_per_occasion = -99.0;    // Moved to constructor for uniformity with other classes
+    total_mg_dose_per_occasion = -99.0; // Moved to constructor for uniformity with other classes
     doses_still_remain_to_be_taken = true;
    
     // For testing
@@ -110,9 +110,6 @@ int pkpd_artemether::rhs_ode(double t, const double y[], double f[], void *pkd_o
     // drug concentration units mg/L, ec50 units ng/microliter, numerically the same
     double a = (-1.0/24.0) * log( 1.0 - (p->pdparam_Pmax * pow((y[8]/p -> vprms[i_artemether_central_volume_of_distribution_indiv]),p->pdparam_n)) / (pow((y[8]/p -> vprms[i_artemether_central_volume_of_distribution_indiv]),p->pdparam_n) + pow(p->pdparam_EC50,p->pdparam_n)));
 
-    // Converting drug amount in blood from mg to ng and dividing it by patient blood volume in microliters
-    //double a = (-1.0/24.0) * log( 1.0 - (p->pdparam_Pmax * pow(((y[8] * pow(10, 6))/p -> patient_blood_volume),p->pdparam_n)) / (pow(((y[8] * pow(10, 6))/p -> patient_blood_volume),p->pdparam_n) + pow(p->pdparam_EC50,p->pdparam_n)));
-
     f[9] = -a * y[9];
     //f[9] = -(pow(a,0.5)) * y[9];
 
@@ -155,8 +152,7 @@ void pkpd_artemether::give_next_dose_to_patient( double fractional_dose_taken )
         // add the new dose amount to the "dose compartment", i.e. the first compartment
         // There is no IOV in F dha acc. to Tarning 2012, removed IOV between doses on F
 
-        // Implementing IIV in F, refer to Fig 1B in Tarning 2012
-        //y0[0] +=  v_dosing_amounts[num_doses_given] * fractional_dose_taken; 
+        // Implementing F on dose, F has already been adjusted for IIV; refer to Fig 1B in Tarning 2012
         y0[0] +=  v_dosing_amounts[num_doses_given] * vprms[i_artemether_bioavailability_F_indiv] * fractional_dose_taken; 
         
         num_doses_given++;
@@ -184,16 +180,6 @@ void pkpd_artemether::predict( double t0, double t1 )
         // check if time t is equal to or larger than the next scheduled hour to log
         if( t >= ((double)num_hours_logged)  )
         {
-            // v_dosing_compartment.push_back( y0[0] );
-            // v_transit_compartment1.push_back( y0[1] );
-            // v_transit_compartment2.push_back( y0[2] );
-            // v_transit_compartment3.push_back( y0[3] );
-            // v_transit_compartment4.push_back( y0[4] );
-            // v_transit_compartment5.push_back( y0[5] );
-            // v_transit_compartment6.push_back( y0[6] );
-            // v_transit_compartment7.push_back( y0[7] );
-
-            //v_concentration_in_blood.push_back( y0[8]); // Not the concentration in the blood, but the total mg of artemether in the blood
 
             indiv_central_volume_millilitres = vprms[i_artemether_central_volume_of_distribution_indiv] * 1000;   // Converting L to ml
             v_concentration_in_blood.push_back( (y0[8] * pow(10, 6)) / indiv_central_volume_millilitres);         // The concentration in the blood, ng/ml
@@ -201,12 +187,7 @@ void pkpd_artemether::predict( double t0, double t1 )
                                                                                                                   // The actual hill equation uses drug concentration in mg/L 
                                                                                                                   // mg/L == ng/microliter numerically 
                                                                                                                   // This was done as the unit of ec50 ng/microliter
-            
-            //v_concentration_in_blood.push_back( (y0[8] * pow(10, 6)) / (patient_blood_volume/1000));            // Reporting drug concentration in the blood as ng/ml
-
-
-            //v_killing_rate.push_back( y0[9] );
-
+                                                                                                                  // Reporting drug concentration in the blood as ng/ml
             v_parasitedensity_in_blood.push_back( y0[dim-1] );
             v_concentration_in_blood_hourtimes.push_back( t );
 
@@ -231,7 +212,7 @@ void pkpd_artemether::initialize_params( void )
 
     //NOTE --- in this function alone, THE KTR PARAM HERE HAS INTER-PATIENT VARIABILITY BUT NO INTER-DOSE VARIABILITY
     
-    // this is the median weight of the participants whose data were used to estimate the paramters for this study
+    // this is the median weight of the participants whose data were used to estimate the parameters for this study
     // it is used as a relative scaling factor below
     double median_weight=48.5;
     
@@ -262,7 +243,7 @@ void pkpd_artemether::initialize_params( void )
     double indiv_bioavailability_F = typical_bioavailibility_TVF;
 
     // Applying IIV in relative bioavailability F
-    // The variance is from Table 4 of Tarning 2012,  and is calculated as ln((0.303)^2+1) = 0.0878
+    // The variance is from Table 4 of Tarning 2012,  and is calculated as ln((30.3/100)^2+1) = 0.0878 or ln((0.303)^2+1) = 0.0878
 
     if(pkpd_artemether::stochastic)
     {
@@ -306,7 +287,7 @@ void pkpd_artemether::initialize_params( void )
     double indiv_volume_V = typical_volume_TVV;
 
     // Applying IIV in Vd
-    // The variance is from Table 4 of Tarning 2012,  and is calculated as ln((0.128)^2+1) = 0.01625
+    // The variance is from Table 4 of Tarning 2012,  and is calculated as ln((12.8/100)^2+1) or ln((0.128)^2+1) = 0.01625
     if(pkpd_artemether::stochastic) 
     
     {
@@ -324,11 +305,6 @@ void pkpd_artemether::initialize_params( void )
     
     vprms[i_artemether_k20] = indiv_clearance_CL/vprms[i_artemether_V_indiv];
     //vprms[i_artemether_k20] = indiv_clearance_CL/indiv_volume_V;
-    
-    //vprms[i_artemether_k20] = 0.5973735; // Median value of k20 for 50kg patient using this model
-    //vprms[i_artemether_k20] = 0.9042795; // Median value of k20 for 10kg patient using this model
-    
-    
 }
 
 void pkpd_artemether::initialize() {
@@ -337,8 +313,7 @@ void pkpd_artemether::initialize() {
             
 }
 
-// TODO the function below is a copy-and-paste from the PPQ function; must be modified
-// Completed - Venitha, 08/2025
+
 void pkpd_artemether::redraw_params_before_newdose()
 {
      
@@ -352,8 +327,10 @@ void pkpd_artemether::redraw_params_before_newdose()
     
     if(pkpd_artemether::stochastic) 
     {
+        // Applying IOV in MTT
+        // The variance is from Table 4 of Tarning 2012,  and is calculated as ln((50.9/100)^2+1) or ln((0.509)^2+1) = 0.2303820898
         double ETA_rv = gsl_ran_gaussian( rng, sqrt(0.23000) ); // this is ETA6, ETA7, and ETA8
-        //vprms[i_artemether_KTR] *= exp(-ETA_rv);                // WARNING this behavior is strange ... check if this is the right way to do it
+        //vprms[i_artemether_KTR] *= exp(-ETA_rv);              // WARNING this behavior is strange ... check if this is the right way to do it
                                                                 // Seems okay - Venitha, April 2025 
                                                                 // Actually, this does not assume independence between doses
                                                                 // Modifying KTR between doses independently and not cumulatively
@@ -362,20 +339,13 @@ void pkpd_artemether::redraw_params_before_newdose()
         vprms[i_artemether_KTR_indiv] = vprms[i_artemether_KTR_thisdose];
 
         // This alters the absorption/transit rate by adding IOV in MTT
-        // and not relative bioavailability F_thisdose
+        // and not relative bioavailability between doses
 
         // you need to multiple MT by exp(ETA_rv)
         // BUT:  KTR = 8/MT, so instead, simply multiple KTR by exp(-ETA_rv)
         // Hence the negative sign
 
     }
-    //double IOV_rv = ETA_rv;
-
-    //  TVF1 = THETA(4)*(1+THETA(6)*FLAG)*(1+THETA(7)*(PARA-3.98));;
-    //  F1   = TVF1*EXP(ETA(4));
-
-    //double THETA4_pe = 1.0; //TODO check if this is really fixed at 1.0 as a point estimate; checked.  It is fixed at 1.0.
-    //double ETA4_rv = gsl_ran_gaussian( rng, sqrt(0.08800) );
 
 }
 

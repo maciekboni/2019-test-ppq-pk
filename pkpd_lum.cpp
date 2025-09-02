@@ -59,13 +59,13 @@ pkpd_lum::pkpd_lum(  )
 
 
 
-    pdparam_n = 15.0; // default parameter if CLO is not specified
+    pdparam_n = 15.0;                       // default parameter if CLO is not specified
 
     pdparam_EC50 = exp( 0.525 * log(2700)); // ng/microliter
                                             // default parameter if CLO is not specified
 
-    pdparam_Pmax = 0.9995; // here you want to enter the max daily killing rate; it will be converted to hourly later
-                           // default parameter if CLO is not specified
+    pdparam_Pmax = 0.9995;                  // here you want to enter the max daily killing rate; it will be converted to hourly later
+                                            // default parameter if CLO is not specified
 
     rng=NULL;
     
@@ -148,20 +148,14 @@ void pkpd_lum::give_next_dose_to_patient( double fractional_dose_taken )
     if( doses_still_remain_to_be_taken )
     {
         // redraw_params_before_newdose(); // these are the dose-specific parameters that you're drawing here 
-                                           // Currently not implemented
+                                           // Currently not implemented as Kloprogge 2018 doesn't discuss any IOV in lumefantrine PK
         
-        // basically, for LUM, we do not redraw, bc there is no inter-occasion variability
+        // basically, for LUM, we do not redraw, bc there is no inter-occasion variability in any parameters
         // so this whole function just adds a dose or fractional dose
 
-        // for LUM there is no need to get a new F1 param for each dose
-
-        // Implementing IIV in F
+        // Implementing F on dose; this F has already been adjusted for IIV
         //y0[0] +=  v_dosing_amounts[num_doses_given] * fractional_dose_taken;
         y0[0] +=  v_dosing_amounts[num_doses_given] * vprms[i_lum_bioavailability_F_indiv] * fractional_dose_taken;
-        
-        //y0[0] +=  v_dosing_amounts[num_doses_given] * vprms[i_lum_bioavailability_F_thisdose]; // There's no IOV in lumefantrine acc. to Kloprogge et al.
-                                                                                                 // Can remove this line
-
         num_doses_given++;
 
         if( num_doses_given >= v_dosing_amounts.size() ) doses_still_remain_to_be_taken=false;
@@ -189,26 +183,18 @@ void pkpd_lum::predict( double t0, double t1 )
             
             v_dosing_compartment.push_back( y0[0] );
         
-            //v_concentration_in_blood.push_back( y0[1] * 1000.0 / central_volume_of_distribution  ); ng/L
+          
             
-            //v_concentration_in_blood.push_back( (y0[1]) / central_volume_of_distribution );     // The central volume of distribution is in liters - Venitha, April 2025
-                                                                                                  // The concentration is in mg/L           
-
-            indiv_central_volume_millilitres = vprms[i_lum_central_volume_of_distribution_indiv] * 1000;    // Converting L to ml
-            v_concentration_in_blood.push_back( (y0[1]) * pow(10, 6) / indiv_central_volume_millilitres );  // Concentration in the blood, ng/ml
-                                                                                                            // This is only the output! 
-                                                                                                            // The actual hill equation uses drug concentration in mg/L 
-                                                                                                            // mg/L == ng/microliter numerically 
-                                                                                                            // This was done as the unit of ec50 ng/microliter
-
-            //v_concentration_in_blood.push_back( (y0[1] * pow(10, 6)) / (patient_blood_volume/1000) );     // Reporting drug concentration in the blood as ng/ml
-
-            //v_concentration_in_blood.push_back( (y0[1]));   // Total lumefantrine in the blood, not concentration                                                                          
-
-            // v_peripheral_concentration.push_back( y0[2] / patient_blood_volume_litres  );
-
-            // v_killing_rate.push_back( y0[3] ); // Same as y0[dim-1]
-
+                                                                                                            
+                                                                                                            
+            indiv_central_volume_millilitres = vprms[i_lum_central_volume_of_distribution_indiv] * 1000;   // The central volume of distribution is in liters - Venitha, April 2025 
+            v_concentration_in_blood.push_back( (y0[1]) * pow(10, 6) / indiv_central_volume_millilitres ); // Converting L to ml
+                                                                                                           // Reporting drug concentration in the blood as ng/ml
+                                                                                                           // This is only the output! 
+                                                                                                           // The actual hill equation uses drug concentration in mg/L 
+                                                                                                           // mg/L == ng/microliter numerically 
+                                                                                                           // This was done as the unit of ec50 ng/microliter
+                                                                                                           
             v_parasitedensity_in_blood.push_back( y0[dim-1] );
             v_concentration_in_blood_hourtimes.push_back( t );
             
@@ -245,7 +231,7 @@ void pkpd_lum::initialize_params( void )
     double median_weight = 42.0;
     
     // all 10 below are point estimates
-    // all estimates centered on non-pregnant adult of weight 42 Kg and admission parasitaemia 15800 parasites per microliter - Venitha, 08/27/2025
+    // all estimates centered on non-pregnant adult of weight 42 Kg and admission parasitaemia 15,800 parasites per microliter
     double THETA1 = 1.35;
     double THETA2 = 11.2;           // NOTE: this is the "central volume of distribution" in liters in a 42kg adult which in non-PKPD language
                                     // is the volume of the blood plus the volume of everything else that is in 
@@ -275,29 +261,34 @@ void pkpd_lum::initialize_params( void )
 
     if( pkpd_lum::stochastic )
     {
+        // Used to incorporate IIV in V
+        // The variance is from Table 2 of Kloprogge 2018,  and is calculated as ln((144/100)^2+1) = 1.122849513
         ETA2_rv = gsl_ran_gaussian( rng, sqrt(1.12) );  
-        ETA6_rv = gsl_ran_gaussian( rng, sqrt(0.402) );     //  "_rv" means random variate this represents
+
+        // Used to incorporate IIV in F
+        // The variance is from Table 2 of Kloprogge 2018,  and is calculated as ln((70.3/100)^2+1) = 0.4015969698
+        ETA6_rv = gsl_ran_gaussian( rng, sqrt(0.402) );     
+                                                            //  "_rv" means random variate this represents
                                                             //  between-patient variability in bioavailability
     }
 
     // in the parameter calculations below
     // "TV" means typical value or population mean for some parameter
-    // F1_indiv is the relative absorbtion level for this individual
-    
+    // F1_indiv is the relative bioavailability for this individual
+
     // before we take into account the effects of dose, the value of TVF1 is one; this is the bioavailability parameter
     
-    // we will need to multiply this by a DS parameter (something to do w mg/kg scaling) and a "PARASITE" parameter that tells
+    // we will need to multiply this by a DOSE parameter (something to do w mg/kg scaling) and a "PARASITE" parameter that tells
     // us what the reduced bioavailability of lumefantrine is when parasitaemia is high
     
-
     double box_cox_BXPAR = -0.343; // parameter from box-cox transformation
     double PHI = exp( ETA6_rv );
     double ETATR = ( pow(PHI, box_cox_BXPAR) - 1.0  ) / box_cox_BXPAR ; 
     double D50 = THETA7;
     
     // this you keep fixed, and you use the total mg dose per occasion, and NOT any randomly drawn number
-    double DOSE = 1.0 - ( total_mg_dose_per_occasion/patient_weight ) / ( ( total_mg_dose_per_occasion/patient_weight ) + D50  ); // Not implemented
-                                                                                                                                  // Just got implemented! - Venitha, 08/2025
+    double DOSE = 1.0 - ( total_mg_dose_per_occasion/patient_weight ) / ( ( total_mg_dose_per_occasion/patient_weight ) + D50  ); // Was not implemented earlier
+                                                                                                                                  // Just got implemented! 
 
     // PARASITE = ((LNPC /4.20)**THETA(9)) -- TODO: -- check the log type on the parasitaemia (CONFIRMED on 3/31/2024 that it is log-10)
     //check if it's parasites/microliter (CONFIRMED also on 3/31/2024)
@@ -307,7 +298,7 @@ void pkpd_lum::initialize_params( void )
     // Re-writing effect of parasitaemia on lumefantrine bioavailability similar to how its expressed in the paper
     // log10(15800) gives ~4.20; 15800 parasites/microliter is the median value
     // Kloprogge 2018 has a typo in the formula they have provided, the correct formula 'should' be the one below. 
-    // 'Should' as no one officially told me so, I ran some tests and came to this conclusion - Venitha, 08/28/2025
+    // 'Should' as no one officially told me so, I ran some tests and came to this conclusion - Venitha
     double PARASITE = exp( THETA9 * (log10( parasites_per_ul_at_first_lum_dose) - 4.20));
 
     // Dose saturation effect on bioavailability, increasing the amount doesn't necessarily increase the amount of drug absorbed
@@ -322,6 +313,7 @@ void pkpd_lum::initialize_params( void )
     double indiv_bioavailability_F = typical_bioavailability_TVF * exp(ETATR); 
 
     // allometric scaling for weight on the Q parameter; clearance is scaled by 0.75, volume by 1.0
+    // Refer to Anderson and Holford 2008
     double typical_intercompartmental_clearance_TVQ = THETA3 * pow( patient_weight/median_weight , 0.75 );  
     double indiv_intercompartmental_clearance_Q = typical_intercompartmental_clearance_TVQ * exp( ETA3_rv );
 
@@ -363,15 +355,9 @@ void pkpd_lum::initialize_params( void )
 
 void pkpd_lum::redraw_params_before_newdose()
 {
-     
-    // ### first, you don't receive the full dose.  You may receive 80% or 110% of the dose depending
-    // on whether you're sitting or standing, whether you've recently had a big meal, whether some gets stuck
-    // between your teeth; below, we set the parameter F1 (with some random draws) to adjust this initial dose
-    
-    // NO INTER-OCCASSION VARIABILITY SO NOTHING FOR THIS FUNCTION TO DO
-    // Maybe it will be implemented in the future...? - Venitha, April 2025
 
-    // Okay, the Kloprogge paper didn't implement IOV, so there's no IOV in F for lumefantrine
+    // NO INTER-OCCASSION VARIABILITY SO NOTHING FOR THIS FUNCTION TO DO
+    // Kloprogge 2018 didn't implement IOV in lumefantrine PK, so there's no IOV in F for lumefantrine or other parameters
     
 }
 
