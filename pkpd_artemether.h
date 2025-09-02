@@ -20,8 +20,11 @@ using namespace std;
 
 // Editing to add PKPD parameters
 //enum parameter_index_artemether { i_artemether_KTR, i_artemether_k20, i_artemether_bioavailability_F_indiv, i_artemether_bioavailability_F_thisdose, i_artemether_typical_CL, i_artemether_CL_indiv, i_artemether_typical_V, i_artemether_V_indiv, i_artemether_central_volume_of_distribution_indiv, artemether_num_params }; 
+
 // There is no IOV in F_thisdose, removing i_artemether_bioavailability_F_thisdose
-enum parameter_index_artemether { i_artemether_KTR_indiv, i_artemether_KTR_thisdose, i_artemether_k20, i_artemether_bioavailability_F_indiv, i_artemether_typical_CL, i_artemether_CL_indiv, i_artemether_typical_V, i_artemether_V_indiv, i_artemether_central_volume_of_distribution_indiv, i_artemether_MT_indiv, artemether_num_params }; 
+// Also added i_artemether_KTR_indiv, i_artemether_KTR_thisdose and i_artemether_MT_indiv to implement IOV in KA/KTR acc. to Tarning 2012
+
+enum parameter_index_artemether { i_artemether_KTR_indiv, i_artemether_KTR_thisdose, i_artemether_MT_indiv, i_artemether_k20, i_artemether_bioavailability_F_indiv, i_artemether_typical_CL, i_artemether_CL_indiv, i_artemether_typical_V, i_artemether_V_indiv, i_artemether_central_volume_of_distribution_indiv, artemether_num_params }; 
 
 //typedef enum parameter_index_artemether i_artemether;
 

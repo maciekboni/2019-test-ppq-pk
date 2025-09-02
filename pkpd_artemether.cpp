@@ -155,7 +155,9 @@ void pkpd_artemether::give_next_dose_to_patient( double fractional_dose_taken )
         // add the new dose amount to the "dose compartment", i.e. the first compartment
         // There is no IOV in F dha acc. to Tarning 2012, removed IOV between doses on F
 
-        y0[0] +=  v_dosing_amounts[num_doses_given] * fractional_dose_taken; // 
+        // Implementing IIV in F, refer to Fig 1B in Tarning 2012
+        //y0[0] +=  v_dosing_amounts[num_doses_given] * fractional_dose_taken; 
+        y0[0] +=  v_dosing_amounts[num_doses_given] * vprms[i_artemether_bioavailability_F_indiv] * fractional_dose_taken; 
         
         num_doses_given++;
 

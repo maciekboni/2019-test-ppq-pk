@@ -320,9 +320,8 @@ int main(int argc, char* argv[])
                 {
                     if( dyn1->we_are_past_a_dosing_time(t0) )   
                     {
-                        //dyn1->give_next_dose_to_patient(1.0);    // 1.0 means the full dose is given
+                        dyn1->give_next_dose_to_patient(1.0);  // 1.0 means the full dose is given
                                                                 // if no dose remains to be given, function does nothing
-                        dyn1->give_next_dose_to_patient(dyn1->vprms[i_artemether_bioavailability_F_indiv]); 
                     }
                 }
                 dyn1->predict(t0, t1);
@@ -338,9 +337,8 @@ int main(int argc, char* argv[])
                 {
                     if( dyn2->we_are_past_a_dosing_time(t0) )   
                     {
-                        dyn2->give_next_dose_to_patient(1.0);    // 1.0 means the full dose is given
+                        dyn2->give_next_dose_to_patient(1.0);   // 1.0 means the full dose is given
                                                                 // if no dose remains to be given, function does nothing
-                        dyn2->give_next_dose_to_patient(dyn2->vprms[i_lum_bioavailability_F_indiv]);
                     }
                 }
                 dyn2->predict(t0, t1);

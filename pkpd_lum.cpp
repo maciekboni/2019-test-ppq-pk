@@ -36,9 +36,6 @@ pkpd_lum::pkpd_lum(  )
 
     parasites_per_ul_at_first_lum_dose = 10000.0;   // YOU MUST DO THIS SEPARATELY because the parasitaemia level "at first
                                                     // lum dose" is a special quantity that affects the lum absorption
-                                                    // Later we can use the current parasitaemia levels to modify bioavailability between doses
-
-
     const gsl_odeiv_step_type* T = gsl_odeiv_step_rkf45;
     os 	= gsl_odeiv_step_alloc(T, dim);
     oc 	= gsl_odeiv_control_y_new (1e-6, 0.0);
@@ -71,7 +68,6 @@ pkpd_lum::pkpd_lum(  )
                            // default parameter if CLO is not specified
 
     rng=NULL;
-    //immune_killing_rate =  0.0001;
     
 }
 
@@ -159,7 +155,9 @@ void pkpd_lum::give_next_dose_to_patient( double fractional_dose_taken )
 
         // for LUM there is no need to get a new F1 param for each dose
 
-        y0[0] +=  v_dosing_amounts[num_doses_given] * fractional_dose_taken;
+        // Implementing IIV in F
+        //y0[0] +=  v_dosing_amounts[num_doses_given] * fractional_dose_taken;
+        y0[0] +=  v_dosing_amounts[num_doses_given] * vprms[i_lum_bioavailability_F_indiv] * fractional_dose_taken;
         
         //y0[0] +=  v_dosing_amounts[num_doses_given] * vprms[i_lum_bioavailability_F_thisdose]; // There's no IOV in lumefantrine acc. to Kloprogge et al.
                                                                                                  // Can remove this line
