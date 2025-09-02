@@ -181,8 +181,8 @@ void pkpd_artemether::predict( double t0, double t1 )
         if( t >= ((double)num_hours_logged)  )
         {
 
-            indiv_central_volume_millilitres = vprms[i_artemether_central_volume_of_distribution_indiv] * 1000;   // Converting L to ml
-            v_concentration_in_blood.push_back( (y0[8] * pow(10, 6)) / indiv_central_volume_millilitres);         // The concentration in the blood, ng/ml
+            indiv_central_volume_millilitres = vprms[i_artemether_central_volume_of_distribution_indiv] * 1000;   // Converting L to ml as Central Volume is in L
+            v_concentration_in_blood.push_back( (y0[8] * pow(10, 6)) / indiv_central_volume_millilitres);         // The concentration in the CC is now converted to ng/ml
                                                                                                                   // This is only the output! 
                                                                                                                   // The actual hill equation uses drug concentration in mg/L 
                                                                                                                   // mg/L == ng/microliter numerically 
@@ -302,9 +302,7 @@ void pkpd_artemether::initialize_params( void )
     vprms[i_artemether_typical_V] = typical_volume_TVV;
     vprms[i_artemether_V_indiv] = pow(indiv_volume_V, central_volume_exponent);
     vprms[i_artemether_central_volume_of_distribution_indiv] = pow(indiv_central_volume_of_distribution, central_volume_exponent);
-    
     vprms[i_artemether_k20] = indiv_clearance_CL/vprms[i_artemether_V_indiv];
-    //vprms[i_artemether_k20] = indiv_clearance_CL/indiv_volume_V;
 }
 
 void pkpd_artemether::initialize() {

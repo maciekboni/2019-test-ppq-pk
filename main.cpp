@@ -270,14 +270,14 @@ int main(int argc, char* argv[])
             std::uniform_real_distribution<> patient_parasitaemia_distribution_log10(min_patient_parasitaemia_log10, max_patient_parasitaemia_log10);   
             double random_patient_parasitaemia_log10 = patient_parasitaemia_distribution_log10(G_RNG_CPP);
             double scaled_patient_parasitaemia = pow(10.0, random_patient_parasitaemia_log10); // Convert back to original scale
-            double final_random_patient_parasitaemia = floor(scaled_patient_parasitaemia);   // Round to the lowest integer
+            double final_random_patient_parasitaemia = floor(scaled_patient_parasitaemia);     // Round to the lowest integer
 
             // Setting the initial parasitaemia for both artemether and lumefantrine
 
             dyn1->set_parasitaemia(final_random_patient_parasitaemia); // NOTE: you must set both of these to the same thing
             dyn2->set_parasitaemia(final_random_patient_parasitaemia);   
             
-            // Also recording the initial parasitemia to calculate parasitemia effect on F
+            // Also recording the initial parasitemia to calculate intial parasitemia effect on F
             dyn2->parasites_per_ul_at_first_lum_dose = final_random_patient_parasitaemia;   // NOTE YOU MUST DO THIS SEPARATELY because the parasitaemia level "at first
                                                                                             // lum dose" is a special quantity that affects the lum absorption
 
@@ -287,7 +287,7 @@ int main(int argc, char* argv[])
             dyn1->patient_age = G_CLO_AGE;
             dyn1->patient_weight = G_CLO_WEIGHT;
             dyn1-> patient_blood_volume = pow((dyn1->patient_weight * 70.0 * 1000.0), G_CLO_BLOOD_VOLUME_EXPONENT);     // Units: microliters
-                                                                                                                        // Drug concentration in centr                                                              al compartment is in mg/microliter
+                                                                                                                        // Drug concentration used to calculate the instantaneous killing rate is in mg/L                                                              al compartment is in mg/microliter
                                                                                                                         // Drug concentration in output in ng/microliter
             dyn1->pdparam_n = G_CLO_HILL_COEFF_ARTEMETHER;                                             
             dyn1->pdparam_EC50 = G_CLO_EC50_ARTEMETHER;
@@ -300,7 +300,9 @@ int main(int argc, char* argv[])
             dyn2->patient_id = pi; 
             dyn2->patient_age = G_CLO_AGE;
             dyn2->patient_weight = G_CLO_WEIGHT;
-            dyn2-> patient_blood_volume = pow((dyn2->patient_weight * 70.0 * 1000.0), G_CLO_BLOOD_VOLUME_EXPONENT);     // Units: microliters               
+            dyn2-> patient_blood_volume = pow((dyn2->patient_weight * 70.0 * 1000.0), G_CLO_BLOOD_VOLUME_EXPONENT);     // Units: microliters
+                                                                                                                        // Drug concentration used to calculate the instantaneous killing rate is in mg/L 
+                                                                                                                        // Drug concentration in output in ng/microliter               
             dyn2->pdparam_n = G_CLO_HILL_COEFF_LUM;
             dyn2->pdparam_EC50 = G_CLO_EC50_LUM;
             dyn2->pdparam_Pmax = G_CLO_PMAX_LUM;
@@ -321,7 +323,7 @@ int main(int argc, char* argv[])
                     if( dyn1->we_are_past_a_dosing_time(t0) )   
                     {
                         dyn1->give_next_dose_to_patient(1.0);  // 1.0 means the full dose is given
-                                                                // if no dose remains to be given, function does nothing
+                                                               // if no dose remains to be given, function does nothing
                     }
                 }
                 dyn1->predict(t0, t1);
