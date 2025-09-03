@@ -262,7 +262,7 @@ void pkpd_lum::initialize_params( void )
     if( pkpd_lum::stochastic )
     {
         // Used to incorporate IIV in V
-        // The variance is from Table 2 of Kloprogge 2018,  and is calculated as ln((144/100)^2+1) = 1.122849513
+        // The variance is from Table 2 of Kloprogge 2018, and is calculated as ln((144/100)^2+1) = 1.122849513
         ETA2_rv = gsl_ran_gaussian( rng, sqrt(1.12) );  
 
         // Used to incorporate IIV in F
@@ -281,7 +281,8 @@ void pkpd_lum::initialize_params( void )
     // we will need to multiply this by a DOSE parameter (something to do w mg/kg scaling) and a "PARASITE" parameter that tells
     // us what the reduced bioavailability of lumefantrine is when parasitaemia is high
     
-    double box_cox_BXPAR = -0.343; // parameter from box-cox transformation
+    //double box_cox_BXPAR = -0.343;
+    double box_cox_BXPAR = THETA10; // parameter from box-cox transformation    
     double PHI = exp( ETA6_rv );
     double ETATR = ( pow(PHI, box_cox_BXPAR) - 1.0  ) / box_cox_BXPAR ; 
     double D50 = THETA7;
@@ -293,24 +294,28 @@ void pkpd_lum::initialize_params( void )
     // PARASITE = ((LNPC /4.20)**THETA(9)) -- TODO: -- check the log type on the parasitaemia (CONFIRMED on 3/31/2024 that it is log-10)
     //check if it's parasites/microliter (CONFIRMED also on 3/31/2024)
     //      
-    //double PARASITE = pow( log10( parasites_per_ul_at_first_lum_dose ) / 4.20 , THETA9 );
+    double PARASITE = pow( log10( parasites_per_ul_at_first_lum_dose ) / 4.20 , THETA9 );
 
     // Re-writing effect of parasitaemia on lumefantrine bioavailability similar to how its expressed in the paper
     // log10(15800) gives ~4.20; 15800 parasites/microliter is the median value
     // Kloprogge 2018 has a typo in the formula they have provided, the correct formula 'should' be the one below. 
     // 'Should' as no one officially told me so, I ran some tests and came to this conclusion - Venitha
-    double PARASITE = exp( THETA9 * (log10( parasites_per_ul_at_first_lum_dose) - 4.20));
+    // double PARASITE = exp( THETA9 * (log10( parasites_per_ul_at_first_lum_dose) - 4.20));
+    // double PARASITE = exp( THETA9 - (log10( parasites_per_ul_at_first_lum_dose) - 4.20));
 
     // Dose saturation effect on bioavailability, increasing the amount doesn't necessarily increase the amount of drug absorbed
     // 50% saturation on dose
-    double typical_bioavailability_TVF = THETA6 * DOSE; 
+    //double typical_bioavailability_TVF = THETA6 * DOSE; 
 
     // Modifying typical_bioavailability_TVF by initial parasitaemia 
     // Refer to Supplementary S1 Text Kloprogge 2018
-    typical_bioavailability_TVF *= PARASITE;
+    //typical_bioavailability_TVF *= PARASITE;
 
     // Implementing IIV in F as follows:
-    double indiv_bioavailability_F = typical_bioavailability_TVF * exp(ETATR); 
+    //double indiv_bioavailability_F = typical_bioavailability_TVF * exp(ETATR); 
+
+    double typical_bioavailability_TVF = THETA6 * DOSE * PARASITE;
+    double indiv_bioavailability_F = typical_bioavailability_TVF * exp(ETATR);
 
     // allometric scaling for weight on the Q parameter; clearance is scaled by 0.75, volume by 1.0
     // Refer to Anderson and Holford 2008
@@ -382,6 +387,10 @@ void pkpd_lum::generate_recommended_dosing_schedule()
     // BUT WE CAN JUST DO       0, 12, 24, 36, 48, 60
 
     // Dosing updated to match WHO guidelines in the hopes that it will improve efficacy...
+    
+    // Dosing schedules in pediatric TES
+    // 0, 8, 24, 36, 48, and 60 h - Falade 2023
+    // 0, 8, 24, 36, 48, and 60 h - Ngwa Niba et al., 2022
     
     double num_tablets_per_dose;
 
