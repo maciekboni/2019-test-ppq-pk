@@ -265,12 +265,20 @@ int main(int argc, char* argv[])
 
             //Drawing parasitaemia from a uniform distribution
 
-            double min_patient_parasitaemia_log10 = log10(2000); // Minimum parasitaemia
-            double max_patient_parasitaemia_log10 = log10(200000); // Maximum parasitaemia
-            std::uniform_real_distribution<> patient_parasitaemia_distribution_log10(min_patient_parasitaemia_log10, max_patient_parasitaemia_log10);   
-            double random_patient_parasitaemia_log10 = patient_parasitaemia_distribution_log10(G_RNG_CPP);
-            double scaled_patient_parasitaemia = pow(10.0, random_patient_parasitaemia_log10); // Convert back to original scale
-            double final_random_patient_parasitaemia = floor(scaled_patient_parasitaemia);     // Round to the lowest integer
+            //double min_patient_parasitaemia_log10 = log10(2000); // Minimum parasitaemia
+            //double min_patient_parasitaemia_log10 = log10(13);
+            //double max_patient_parasitaemia_log10 = log10(200000); // Maximum parasitaemia
+            //double max_patient_parasitaemia_log10 = log10(450000);
+            //std::uniform_real_distribution<> patient_parasitaemia_distribution_log10(min_patient_parasitaemia_log10, max_patient_parasitaemia_log10);   
+            std::lognormal_distribution<double> random_patient_parasitaemia_lognormal(9.154,1);
+            //double random_patient_parasitaemia_log10 = patient_parasitaemia_distribution_log10(G_RNG_CPP);
+            //double scaled_patient_parasitaemia = pow(10.0, random_patient_parasitaemia_log10); // Convert back to original scale
+            //double final_random_patient_parasitaemia = floor(scaled_patient_parasitaemia);     // Round to the lowest integer
+            double random_patient_parasitaemia_value = random_patient_parasitaemia_lognormal(G_RNG_CPP);
+            //std::cout << random_patient_parasitaemia_value << "\n";
+            //double scaled_patient_parasitaemia = exp(random_patient_parasitaemia_value); 
+            double final_random_patient_parasitaemia = floor(random_patient_parasitaemia_value);   
+            //std::cout << final_random_patient_parasitaemia << "\n";  
 
             // Setting the initial parasitaemia for both artemether and lumefantrine
 

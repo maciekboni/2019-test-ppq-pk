@@ -1,5 +1,8 @@
-#ifndef PKPD_artemether
-#define PKPD_artemether
+// Adapted from pkpd_dha.h
+// Model and parameter values from Guidi et al., 2019
+
+#ifndef PKPD_DHA
+#define PKPD_DHA
 
 #include <vector>
 #include <math.h>
@@ -15,20 +18,17 @@ using namespace std;
 
 
 // these are the parameters
-//enum parameter_index_artemether { i_artemether_KTR, i_artemether_k20, i_artemether_F1_indiv, i_artemether_F1_thisdose, artemether_num_params }; 
+enum parameter_index_dha { i_dha_KTR, i_dha_k20, i_dha_F1_indiv, i_dha_F1_thisdose, dha_num_params }; 
 
-// Editing to add PKPD parameters
-enum parameter_index_artemether { i_artemether_KTR, i_artemether_k20, i_artemether_bioavailability_F_indiv, i_artemether_bioavailability_F_thisdose, i_artemether_typical_CL, i_artemether_CL_indiv, i_artemether_typical_V, i_artemether_V_indiv, i_artemether_central_volume_of_distribution_indiv, artemether_num_params }; 
-
-//typedef enum parameter_index_artemether i_artemether;
+//typedef enum parameter_index_dha i_dha;
 
 //extern gsl_rng *G_RNG;	
 
-class pkpd_artemether
+class pkpd_dha
 {   
 public:    
-    explicit pkpd_artemether();    // constructor
-    ~pkpd_artemether();         	  // destructor
+    explicit pkpd_dha();    // constructor
+    ~pkpd_dha();         	  // destructor
 
                                   
     static bool stochastic;       // just set this to false and the class will run a deterministic model with
@@ -114,7 +114,7 @@ public:
     //bool pregnant;                  // usually means just 2nd or 3rd trimester -- TODO: have this replace the "is_pregnant" bool
     bool is_pregnant; // TODO: deprecate
     bool is_male;
-    double immune_killing_rate;
+
 
 
     //
@@ -122,32 +122,22 @@ public:
     //
 
 
-    vector<double> v_dosing_compartment;                // an hourly time series of drug concentrations in the dosing compartment
-    vector<double> v_transit_compartment1;              // an hourly time series of drug concentrations in the transit compartment 1
-    vector<double> v_transit_compartment2;              // an hourly time series of drug concentrations in the transit compartment 2
-    vector<double> v_transit_compartment3;              // an hourly time series of drug concentrations in the transit compartment 3
-    vector<double> v_transit_compartment4;              // an hourly time series of drug concentrations in the transit compartment 4
-    vector<double> v_transit_compartment5;              // an hourly time series of drug concentrations in the transit compartment 5
-    vector<double> v_transit_compartment6;              // an hourly time series of drug concentrations in the transit compartment 6
-    vector<double> v_transit_compartment7;              // an hourly time series of drug concentrations in the transit compartment 7
 
-    vector<double> v_killing_rate;                    // an hourly time series of the killing rate
-    
     // an hourly time series of drug concentrations in the blood compartment only
     vector<double> v_concentration_in_blood;                // an hourly time series of drug concentrations in the blood compartment only
                                                             // should be in nanograms per milliliter (ng/ml), probably, TODO: Venitha to check
-                                                            // specifically for artemether is this is the case
-    
-                                                            //vector<double> v_concentration_in_blood_metabolite;   // same as above, but this allows you to keep track of a particular metabolite concentration                                                    
+                                                            // specifically for DHA is this is the case
+    //vector<double> v_concentration_in_blood_metabolite;   // same as above, but this allows you to keep track of a particular metabolite concentration                                                    
                                                             // no metabolite information is used for lumefantrine
     vector<double> v_concentration_in_blood_hourtimes;
     vector<double> v_parasitedensity_in_blood;
     int num_hours_logged;
-    double total_mg_dose_per_occassion;
-    double indiv_central_volume_millilitres;
+    
+    
+
     
     gsl_rng *rng;		
     
 };
 
-#endif // PKPD_artemether
+#endif // PKPD_DHA
