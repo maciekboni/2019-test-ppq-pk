@@ -127,6 +127,7 @@ void pkpd_ppq::give_next_dose_to_patient( double fractional_dose_taken )
         
         // add the new dose amount to the "dose compartment", i.e. the first compartment
         // Implementing IOV F on dose, F (i.e., vprms[i_ppq_bioavailability_F_thisdose]) has already been adjusted for IIV
+        // Refer to Fig 2 of Hoglund et al., 2017
         y0[0] +=  v_dosing_amounts[num_doses_given] * vprms[i_ppq_bioavailability_F_thisdose] * fractional_dose_taken;
         
         num_doses_given++;
@@ -344,12 +345,10 @@ void pkpd_ppq::initialize_PK_params( void )
 
 void pkpd_ppq::initialize_pkpd_object( void )
 {
-    
     //-- WARNING - THE AGE MEMBER VARIABLE MUST BE SET BEFORE YOU CALL THIS FUNCTION
-    
+
     initialize_PK_params();
     generate_recommended_dosing_schedule();
-    
 }
 
 void pkpd_ppq::redraw_PK_params_before_newdose()
