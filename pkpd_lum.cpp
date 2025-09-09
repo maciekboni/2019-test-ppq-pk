@@ -211,21 +211,21 @@ void pkpd_lum::predict( double t0, double t1 )
 }
 
 
-void pkpd_lum::initialize( void )
+void pkpd_lum::initialize_pkpd_object( void )
 {
     
     //-- WARNING -- the age member variable must be set before you call this function -- add this check
     
     // NOTE must call the two functions below in this order -- dosing schedule needs to be set first
     generate_recommended_dosing_schedule();
-    initialize_params();       
+    initialize_PK_params();       
     
 }
 
 
 
 
-void pkpd_lum::initialize_params( void )
+void pkpd_lum::initialize_PK_params( void )
 {
     // this is the median weight of a patient that these estimates were calibrated for
     double median_weight = 42.0;
@@ -274,34 +274,37 @@ void pkpd_lum::initialize_params( void )
 
     // in the parameter calculations below
     // "TV" means typical value or population mean for some parameter
-    // F1_indiv is the relative bioavailability for this individual
+    // F_indiv is the relative bioavailability for this individual
 
     // before we take into account the effects of dose, the value of TVF1 is one; this is the bioavailability parameter
     
     // we will need to multiply this by a DOSE parameter (something to do w mg/kg scaling) and a "PARASITE" parameter that tells
     // us what the reduced bioavailability of lumefantrine is when parasitaemia is high
     
-    //double box_cox_BXPAR = -0.343;
-    double box_cox_BXPAR = THETA10; // parameter from box-cox transformation    
-    double PHI = exp( ETA6_rv );
-    double ETATR = ( pow(PHI, box_cox_BXPAR) - 1.0  ) / box_cox_BXPAR ; // Checked, accurate
+    double box_cox_BXPAR = THETA10;                                     // Box-Cox shape parameter    
+    double PHI = exp( ETA6_rv );                                        // Exponential of IIV
+                                                                        // From NONMEM File: ETATR 	= (PHI**BXPAR-1)/BXPAR
+    double ETATR = ( pow(PHI, box_cox_BXPAR) - 1.0  ) / box_cox_BXPAR ; // Box-Cox tranfomation of IIV
+                                                                        // Checked, accurate
     double D50 = THETA7;
     
     // this you keep fixed, and you use the total mg dose per occasion, and NOT any randomly drawn number
     double DOSE = 1.0 - ( total_mg_dose_per_occasion/patient_weight ) / ( ( total_mg_dose_per_occasion/patient_weight ) + D50  ); // Was not implemented earlier
                                                                                                                                   // Just got implemented! 
 
-    // PARASITE = ((LNPC /4.20)**THETA(9)) -- TODO: -- check the log type on the parasitaemia (CONFIRMED on 3/31/2024 that it is log-10)
+    // From the Lumefantrine NONMEM file: PARASITE = ((LNPC /4.20)**THETA(9))
+    // LNPC: Parasite count (covariate; logarithm of parasite count)
+    // -- TODO: -- check the log type on the parasitaemia (CONFIRMED on 3/31/2024 that it is log-10)
     //check if it's parasites/microliter (CONFIRMED also on 3/31/2024)
-    //      
-    //double PARASITE = pow( log10( parasites_per_ul_at_first_lum_dose ) / 4.20 , THETA9 );
+    
+    double PARASITE = pow( (log10( parasites_per_ul_at_first_lum_dose ) / 4.20) , THETA9 );
 
     // Re-writing effect of parasitaemia on lumefantrine bioavailability similar to how its expressed in the paper
     // log10(15800) gives ~4.20; 15800 parasites/microliter is the median value
     // Kloprogge 2018 has a typo in the formula they have provided, the correct formula 'should' be the one below. 
     // 'Should' as no one officially told me so, I ran some tests and came to this conclusion - Venitha
     //double PARASITE = exp( THETA9 * (log10( parasites_per_ul_at_first_lum_dose) - 4.20));
-    double PARASITE = exp( THETA9 - (log10( parasites_per_ul_at_first_lum_dose) - 4.20));
+    //double PARASITE = exp( THETA9 - (log10( parasites_per_ul_at_first_lum_dose) - 4.20));
 
     // Dose saturation effect on bioavailability, increasing the amount doesn't necessarily increase the amount of drug absorbed
     // 50% saturation on dose
@@ -312,10 +315,7 @@ void pkpd_lum::initialize_params( void )
     //typical_bioavailability_TVF *= PARASITE;
 
     // Implementing IIV in F as follows:
-    //double indiv_bioavailability_F = typical_bioavailability_TVF * exp(ETATR); 
-
-    //double typical_bioavailability_TVF = THETA6 * DOSE * PARASITE;
-    double typical_bioavailability_TVF = THETA6 * DOSE;
+    double typical_bioavailability_TVF = THETA6 * DOSE * PARASITE;
     double indiv_bioavailability_F = typical_bioavailability_TVF * exp(ETATR);
 
     // allometric scaling for weight on the Q parameter; clearance is scaled by 0.75, volume by 1.0
@@ -350,7 +350,6 @@ void pkpd_lum::initialize_params( void )
     vprms[i_lum_VP_indiv] = pow(indiv_volume_peripheral_VP, central_volume_exponent);
 
     vprms[i_lum_k12] = indiv_absorption_KA;
-    
     vprms[i_lum_k23] = vprms[i_lum_VP_indiv]/vprms[i_lum_V_indiv];
     vprms[i_lum_k32] = vprms[i_lum_VP_indiv]/vprms[i_lum_VP_indiv];
     vprms[i_lum_k20] = indiv_clearance_CL/vprms[i_lum_V_indiv];
@@ -359,7 +358,7 @@ void pkpd_lum::initialize_params( void )
 }
 
 
-void pkpd_lum::redraw_params_before_newdose()
+void pkpd_lum::redraw_PK_params_before_newdose()
 {
 
     // NO INTER-OCCASSION VARIABILITY SO NOTHING FOR THIS FUNCTION TO DO

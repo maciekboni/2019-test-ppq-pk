@@ -63,9 +63,9 @@ public:
 
     vector<double> vprms;         // this holds all the parameters; they are indexed by the enums above
     
-    void initialize();
-    void initialize_params();
-    void redraw_params_before_newdose();    // you may need this if there is inter-occassion variability
+    void initialize_pkpd_object();
+    void initialize_PK_params();
+    void redraw_PK_params_before_newdose();    // you may need this if there is inter-occassion variability
                                             // in the PK parameters 
 
     double central_volume_of_distribution;  // for a particular patient of a particular weight, this is the volume of the blood 

@@ -1,5 +1,6 @@
 #include "assert.h"
 #include "pkpd_artemether.h"
+
 #include <filesystem>
 #include <string>
 #include <fstream>
@@ -140,14 +141,13 @@ int pkpd_artemether::rhs_ode(double t, const double y[], double f[], void *pkd_o
 
 }
 
-// The function is called using the bioavailability_F_indiv in main.cpp
 void pkpd_artemether::give_next_dose_to_patient( double fractional_dose_taken )
 {
     if( doses_still_remain_to_be_taken )
     {
         // The KA/KTR is modified by IOV by calling this function
     
-        redraw_params_before_newdose(); // these are the dose-specific parameters that you're drawing here
+        redraw_PK_params_before_newdose(); // these are the dose-specific parameters that you're drawing here
         
         // add the new dose amount to the "dose compartment", i.e. the first compartment
         // There is no IOV in F dha acc. to Tarning 2012, removed IOV between doses on F
@@ -205,7 +205,7 @@ void pkpd_artemether::predict( double t0, double t1 )
 
 
 
-void pkpd_artemether::initialize_params( void )
+void pkpd_artemether::initialize_PK_params( void )
 {
     
     //WARNING - THE AGE MEMBER VARIABLE MUST BE SET BEFORE YOU CALL THIS FUNCTION
@@ -230,12 +230,11 @@ void pkpd_artemether::initialize_params( void )
     double THETA6_pe = -0.375;
     //double THETA4_pe= 1.0;
     
-    //initial_log10_totalparasitaemia = log10(y0[dim-1]*patient_blood_volume);
-
     // To calculate the effect of initial parasitaemia on F_indiv, we need to use initial parasitemia per microliter
     // and not the total parasitemia as the value 3.98 in the equation below is log10(9549.93)
     // which is in parasites per microliter, not total parasitemia, which would be way, way, way higher
 
+    //initial_log10_totalparasitaemia = log10(y0[dim-1]*patient_blood_volume);
     initial_log10_totalparasitaemia = log10(y0[dim-1]);
     double typical_bioavailibility_TVF = 1.0 + THETA7_pe*(initial_log10_totalparasitaemia-3.98);
     if(is_pregnant) typical_bioavailibility_TVF *= (1.0+THETA6_pe);
@@ -302,17 +301,17 @@ void pkpd_artemether::initialize_params( void )
     vprms[i_artemether_typical_V] = typical_volume_TVV;
     vprms[i_artemether_V_indiv] = pow(indiv_volume_V, central_volume_exponent);
     vprms[i_artemether_central_volume_of_distribution_indiv] = pow(indiv_central_volume_of_distribution, central_volume_exponent);
-    vprms[i_artemether_k20] = indiv_clearance_CL/vprms[i_artemether_V_indiv];
+    vprms[i_artemether_k20] =  vprms[i_artemether_CL_indiv]/vprms[i_artemether_V_indiv];
 }
 
-void pkpd_artemether::initialize() {
+void pkpd_artemether::initialize_pkpd_object() {
     generate_recommended_dosing_schedule();
-    initialize_params();
+    initialize_PK_params();
             
 }
 
 
-void pkpd_artemether::redraw_params_before_newdose()
+void pkpd_artemether::redraw_PK_params_before_newdose()
 {
      
     // ---- first, you don't receive the full dose.  You may receive 80% or 110% of the dose depending

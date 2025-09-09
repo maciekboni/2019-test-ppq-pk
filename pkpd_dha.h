@@ -1,8 +1,9 @@
-#ifndef PKPD_DHA
-#define PKPD_DHA
+#ifndef PKPD_dha
+#define PKPD_dha
 
 #include <vector>
 #include <math.h>
+#include <filesystem>
 #include <gsl/gsl_errno.h>
 #include <gsl/gsl_matrix.h>
 #include <gsl/gsl_odeiv.h>
@@ -15,10 +16,10 @@ using namespace std;
 
 
 // these are the parameters
-//enum parameter_index_dha { i_dha_KTR, i_dha_k20, i_dha_F1_indiv, i_dha_F1_thisdose, dha_num_params }; 
+// There is no IOV in F_thisdose, removing i_dha_bioavailability_F_thisdose
+// Also added i_dha_KTR_indiv, i_dha_KTR_thisdose and i_dha_MT_indiv to implement IOV in KA/KTR acc. to Tarning 2012
 
-// Editing to add PKPD parameters
-enum parameter_index_dha { i_dha_KTR, i_dha_k20, i_dha_bioavailability_F_indiv, i_dha_bioavailability_F_thisdose, i_dha_typical_CL, i_dha_CL_indiv, i_dha_typical_V, i_dha_V_indiv, i_dha_central_volume_of_distribution_indiv, dha_num_params }; 
+enum parameter_index_dha { i_dha_KTR_indiv, i_dha_KTR_thisdose, i_dha_MT_indiv, i_dha_k20, i_dha_bioavailability_F_indiv, i_dha_typical_CL, i_dha_CL_indiv, i_dha_typical_V, i_dha_V_indiv, i_dha_central_volume_of_distribution_indiv, dha_num_params }; 
 
 //typedef enum parameter_index_dha i_dha;
 
@@ -27,8 +28,8 @@ enum parameter_index_dha { i_dha_KTR, i_dha_k20, i_dha_bioavailability_F_indiv, 
 class pkpd_dha
 {   
 public:    
-    explicit pkpd_dha();    // constructor
-    ~pkpd_dha();         	  // destructor
+    explicit pkpd_dha();          // constructor
+    ~pkpd_dha();         	      // destructor
 
                                   
     static bool stochastic;       // just set this to false and the class will run a deterministic model with
@@ -64,11 +65,9 @@ public:
     // ----  2  ----  PK PARAMETERS
     //
 
-    void initialize();  // TODO: this function needs to be created and set up
-    //void initialize_params_w_population_means();
-    void initialize_params();
-
-    // TODO: implement this function; we should remove the dosing from the predict function
+    double median_weight;   // this is the median weight of a patient that these estimates were calibrated for
+    void initialize_pkpd_object();  
+    void initialize_PK_params();
     void redraw_params_before_newdose();
     
 
@@ -81,9 +80,7 @@ public:
     double pdparam_n;
     double pdparam_EC50;
     double pdparam_Pmax;
-    
     // TODO: check this (from 2019)  Ricardo says it should be the log-natural of the per/ul parasitaemia
-    // UPDATE - 2024 - this can be deprecated
     double initial_log10_totalparasitaemia;
 
 
@@ -96,41 +93,57 @@ public:
     vector<double> v_dosing_times;
     vector<double> v_dosing_amounts;
     int num_doses_given;
-    double total_mg_dose_per_occasion;
     bool doses_still_remain_to_be_taken;
+    double total_mg_dose_per_occasion;
     bool we_are_past_a_dosing_time( double current_time );    
-    void give_next_dose_to_patient( double fraction_of_dose_taken ); // TODO: this needs to be implemented
+    void give_next_dose_to_patient( double fraction_of_dose_taken ); 
+
 
     //
     // ----  5  ----  PATIENT CHARACTERISTICS
     //
 
-    int patient_id;                     // for testing the instantaeneous killing rate
-    double patient_weight;              // this is the kg weight of the current patient
+    int patient_id;         // for testing the instantaeneous killing rate
+    double patient_weight;  // this is the kg weight of the current patient
     double patient_age;
-    double patient_blood_volume;        // in microliters, so should be between 250,000 (infant) to 6,000,000 (large adult)
-    double central_volume_exponent;     // Adding an exponent to the central volume of distribution for 'allometric' scaling
-    //bool pregnant;                    // usually means just 2nd or 3rd trimester -- TODO: have this replace the "is_pregnant" bool
+    double patient_blood_volume;      // in microliters, so should be between 250,000 (infant) to 6,000,000 (large adult)
+    double central_volume_exponent;   // Adding an exponent to the central volume of distribution for 'allometric' scaling
+    //bool pregnant;                  // usually means just 2nd or 3rd trimester -- TODO: have this replace the "is_pregnant" bool
     bool is_pregnant; // TODO: deprecate
     bool is_male;
+    double indiv_central_volume_millilitres;
+    //double immune_killing_rate;
+
 
     //
     // ----  6  ----  STORAGE VARIABLES FOR DYNAMICS OF PK AND PD CURVES
     //
 
-    // an hourly time series of drug concentrations in the blood compartment only
-    vector<double> v_concentration_in_blood;                // an hourly time series of drug concentrations in the blood compartment only
+
+    vector<double> v_dosing_compartment;                    // an hourly time series of drug concentrations in the dosing compartment
+    vector<double> v_transit_compartment1;                  // an hourly time series of drug concentrations in the transit compartment 1
+    vector<double> v_transit_compartment2;                  // an hourly time series of drug concentrations in the transit compartment 2
+    vector<double> v_transit_compartment3;                  // an hourly time series of drug concentrations in the transit compartment 3
+    vector<double> v_transit_compartment4;                  // an hourly time series of drug concentrations in the transit compartment 4
+    vector<double> v_transit_compartment5;                  // an hourly time series of drug concentrations in the transit compartment 5
+    vector<double> v_transit_compartment6;                  // an hourly time series of drug concentrations in the transit compartment 6
+    vector<double> v_transit_compartment7;                  // an hourly time series of drug concentrations in the transit compartment 7
+
+    vector<double> v_killing_rate;                          // an hourly time series of the killing rate
+    
+    vector<double> v_concentration_in_blood;                // an hourly time series of drug concentrations in the central compartment only
                                                             // should be in nanograms per milliliter (ng/ml), probably, TODO: Venitha to check
-                                                            // specifically for DHA is this is the case
+                                                            // specifically for dha is this is the case
+                                                            // Made sure to report dha concentrations in ng/ml
+
     //vector<double> v_concentration_in_blood_metabolite;   // same as above, but this allows you to keep track of a particular metabolite concentration                                                    
-                                                            // no metabolite information is used for lumefantrine
     vector<double> v_concentration_in_blood_hourtimes;
     vector<double> v_parasitedensity_in_blood;
     int num_hours_logged;
-    double indiv_central_volume_millilitres;
-
+    double last_logged_hour;
+    
     gsl_rng *rng;		
     
 };
 
-#endif // PKPD_DHA
+#endif // PKPD_dha

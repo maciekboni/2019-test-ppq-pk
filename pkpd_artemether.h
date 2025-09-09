@@ -1,5 +1,5 @@
-#ifndef PKPD_artemether
-#define PKPD_artemether
+#ifndef PKPD_ARTEMETHER
+#define PKPD_ARTEMETHER
 
 #include <vector>
 #include <math.h>
@@ -8,7 +8,7 @@
 #include <gsl/gsl_matrix.h>
 #include <gsl/gsl_odeiv.h>
 #include <gsl/gsl_vector.h>
-#include <gsl/gsl_rng.h> // random number generators from Gnu Scientific Library
+#include <gsl/gsl_rng.h>      // random number generators from Gnu Scientific Library
 #include <gsl/gsl_cdf.h>
 #include <gsl/gsl_randist.h>  // this includes the gsl_ran_gaussian function
 
@@ -70,12 +70,12 @@ public:
     // ----  2  ----  PK PARAMETERS
     //
 
-    void initialize();  // TODO: this function needs to be created and set up
+    void initialize_pkpd_object();  // TODO: this function needs to be created and set up
     //void initialize_params_w_population_means();
-    void initialize_params();
+    void initialize_PK_params();
 
     // TODO: implement this function; we should remove the dosing from the predict function
-    void redraw_params_before_newdose();
+    void redraw_PK_params_before_newdose();
     
 
     //
@@ -157,4 +157,4 @@ public:
     
 };
 
-#endif // PKPD_artemether
+#endif // PKPD_ARTEMETHER
