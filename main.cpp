@@ -62,7 +62,6 @@ double G_CLO_PMAX_PPQ = 0.9995;
 int G_CLO_OUTPUT_TYPE = 0;
 
 // Trying to study why AL efficacy changes with weight
-double G_CLO_BLOOD_VOLUME_EXPONENT = 1;
 double G_CLO_CENTRAL_VOLUME_EXPONENT = 1;
 
 // FUNCTION DECLARATIONS
@@ -294,9 +293,9 @@ int main(int argc, char* argv[])
             dyn1->patient_id = pi;
             dyn1->patient_age = G_CLO_AGE;
             dyn1->patient_weight = G_CLO_WEIGHT;
-            dyn1-> patient_blood_volume = pow((dyn1->patient_weight * 70.0 * 1000.0), G_CLO_BLOOD_VOLUME_EXPONENT);     // Units: microliters
-                                                                                                                        // Drug concentration used to calculate the instantaneous killing rate is in mg/L                                                              al compartment is in mg/microliter
-                                                                                                                        // Drug concentration in output in ng/microliter
+            dyn1-> patient_blood_volume = (dyn1->patient_weight * 70.0 * 1000.0);     // Units: microliters
+                                                                                      // Drug concentration used to calculate the instantaneous killing rate is in mg/L                                                              al compartment is in mg/microliter
+                                                                                      // Drug concentration in output in ng/microliter
             dyn1->pdparam_n = G_CLO_HILL_COEFF_ARTEMETHER;                                             
             dyn1->pdparam_EC50 = G_CLO_EC50_ARTEMETHER;
             dyn1->pdparam_Pmax = G_CLO_PMAX_ARTEMETHER;
@@ -308,9 +307,9 @@ int main(int argc, char* argv[])
             dyn2->patient_id = pi; 
             dyn2->patient_age = G_CLO_AGE;
             dyn2->patient_weight = G_CLO_WEIGHT;
-            dyn2-> patient_blood_volume = pow((dyn2->patient_weight * 70.0 * 1000.0), G_CLO_BLOOD_VOLUME_EXPONENT);     // Units: microliters
-                                                                                                                        // Drug concentration used to calculate the instantaneous killing rate is in mg/L 
-                                                                                                                        // Drug concentration in output in ng/microliter               
+            dyn2-> patient_blood_volume = (dyn2->patient_weight * 70.0 * 1000.0);     // Units: microliters
+                                                                                      // Drug concentration used to calculate the instantaneous killing rate is in mg/L 
+                                                                                      // Drug concentration in output in ng/microliter               
             dyn2->pdparam_n = G_CLO_HILL_COEFF_LUM;
             dyn2->pdparam_EC50 = G_CLO_EC50_LUM;
             dyn2->pdparam_Pmax = G_CLO_PMAX_LUM;
@@ -417,7 +416,7 @@ int main(int argc, char* argv[])
             double final_random_patient_parasitaemia = floor(random_patient_parasitaemia_value);   
             //std::cout << final_random_patient_parasitaemia << "\n";  
 
-            // Setting the initial parasitaemia for both artemether and lumefantrine
+            // Setting the initial parasitaemia for both dha and ppq
 
             dyn1->set_parasitaemia(final_random_patient_parasitaemia); // NOTE: you must set both of these to the same thing
             dyn2->set_parasitaemia(final_random_patient_parasitaemia);   
@@ -428,9 +427,9 @@ int main(int argc, char* argv[])
             dyn1->patient_id = pi;
             dyn1->patient_age = G_CLO_AGE;
             dyn1->patient_weight = G_CLO_WEIGHT;
-            dyn1-> patient_blood_volume = pow((dyn1->patient_weight * 70.0 * 1000.0), G_CLO_BLOOD_VOLUME_EXPONENT);     // Units: microliters
-                                                                                                                        // Drug concentration used to calculate the instantaneous killing rate is in mg/L                                                              al compartment is in mg/microliter
-                                                                                                                        // Drug concentration in output in ng/microliter
+            dyn1-> patient_blood_volume = (dyn1->patient_weight * 70.0 * 1000.0);     // Units: microliters
+                                                                                      // Drug concentration used to calculate the instantaneous killing rate is in mg/L                                                              al compartment is in mg/microliter
+                                                                                      // Drug concentration in output in ng/microliter
             dyn1->pdparam_n = G_CLO_HILL_COEFF_DHA;
             dyn1->pdparam_EC50 = G_CLO_EC50_DHA;
             dyn1->pdparam_Pmax = G_CLO_PMAX_DHA;
@@ -442,14 +441,14 @@ int main(int argc, char* argv[])
             dyn2->patient_id = pi; 
             dyn2->patient_age = G_CLO_AGE;
             dyn2->patient_weight = G_CLO_WEIGHT;
-            dyn2-> patient_blood_volume = pow((dyn2->patient_weight * 70.0 * 1000.0), G_CLO_BLOOD_VOLUME_EXPONENT);     // Units: microliters
-                                                                                                                        // Drug concentration used to calculate the instantaneous killing rate is in mg/L 
-                                                                                                                        // Drug concentration in output in ng/microliter               
+            dyn2-> patient_blood_volume = (dyn2->patient_weight * 70.0 * 1000.0);     // Units: microliters
+                                                                                      // Drug concentration used to calculate the instantaneous killing rate is in mg/L 
+                                                                                      // Drug concentration in output in ng/microliter               
             dyn2->pdparam_n = G_CLO_HILL_COEFF_PPQ;
             dyn2->pdparam_EC50 = G_CLO_EC50_PPQ;
             dyn2->pdparam_Pmax = G_CLO_PMAX_PPQ;
             dyn2->central_volume_exponent = G_CLO_CENTRAL_VOLUME_EXPONENT;
-            dyn2->initialize_pkpd_object();                                                                               // NB: parasitaemia must be set before initializing parameters
+            dyn2->initialize_pkpd_object();                                           // NB: parasitaemia must be set before initializing parameters
 
             t0=0.0;
             t1=maximum_enforced_stepsize;    // normally set to 0.5 hours
@@ -553,6 +552,7 @@ void ParseArgs(int argc, char **argv)
         else if( str == "--artesunate" )		        G_CLO_THERAPY  		                = therapy_artesunate;
         else if( str == "--dha" ) 		                G_CLO_THERAPY  		                = therapy_dha;
         else if( str == "--lum" )		                G_CLO_THERAPY  		                = therapy_lumefantrine;
+        //else if( str == "--ppq" )		                G_CLO_THERAPY  		                = therapy_ppq;
 
         else if( str == "--AL" ) 		                G_CLO_THERAPY  		                = therapy_AL;
         else if( str == "--DHA-PPQ" ) 		            G_CLO_THERAPY  		                = therapy_DHA_PPQ;
@@ -563,20 +563,21 @@ void ParseArgs(int argc, char **argv)
         else if( str == "-n" ) 	                        G_CLO_N	                            = atoi( argv[++i] );
         else if( str == "--pmf" ) 	                    G_CLO_PMF	                        = atof( argv[++i] );
         
-        else if( str == "--hill_dha" ) 		            G_CLO_HILL_COEFF_DHA	            = atof( argv[++i] );
         else if( str == "--hill_artemether" ) 		    G_CLO_HILL_COEFF_ARTEMETHER	        = atof( argv[++i] );
+        else if( str == "--hill_dha" ) 		            G_CLO_HILL_COEFF_DHA	            = atof( argv[++i] );
         else if( str == "--hill_lum" ) 		            G_CLO_HILL_COEFF_LUM	            = atof( argv[++i] );
+        else if( str == "--hill_ppq" ) 		            G_CLO_HILL_COEFF_PPQ	            = atof( argv[++i] );
         
-        else if( str == "--ec50_dha" ) 		            G_CLO_EC50_DHA	                    = atof( argv[++i] );
         else if( str == "--ec50_artemether" ) 		    G_CLO_EC50_ARTEMETHER	            = atof( argv[++i] );
+        else if( str == "--ec50_dha" ) 		            G_CLO_EC50_DHA	                    = atof( argv[++i] );
         else if( str == "--ec50_lum" ) 		            G_CLO_EC50_LUM	                    = atof( argv[++i] );
+        else if( str == "--ec50_ppq" ) 		            G_CLO_EC50_PPQ                      = atof( argv[++i] );
 
-        else if( str == "--pmax_dha" ) 		            G_CLO_PMAX_DHA	                    = atof( argv[++i] );
         else if (str == "--pmax_artemether" ) 		    G_CLO_PMAX_ARTEMETHER               = atof( argv[++i] );
+        else if( str == "--pmax_dha" ) 		            G_CLO_PMAX_DHA	                    = atof( argv[++i] );
         else if (str == "--pmax_lum" ) 		            G_CLO_PMAX_LUM	                    = atof( argv[++i] );
+        else if (str == "--pmax_ppq" ) 		            G_CLO_PMAX_PPQ	                    = atof( argv[++i] );
 
-        // BV exponent can be removed
-        else if( str == "--blood_volume_exponent" )     G_CLO_BLOOD_VOLUME_EXPONENT	        = atof( argv[++i] );
         else if (str == "--central_volume_exponent" )   G_CLO_CENTRAL_VOLUME_EXPONENT       = atof( argv[++i] );
 
         else if (str == "-o" ) 		                    G_CLO_OUTPUT_TYPE	                = atoi( argv[++i] );

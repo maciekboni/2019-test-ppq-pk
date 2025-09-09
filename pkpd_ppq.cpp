@@ -128,6 +128,7 @@ void pkpd_ppq::give_next_dose_to_patient( double fractional_dose_taken )
         // add the new dose amount to the "dose compartment", i.e. the first compartment
         // Implementing IOV F on dose, F (i.e., vprms[i_ppq_bioavailability_F_thisdose]) has already been adjusted for IIV
         // Refer to Fig 2 of Hoglund et al., 2017
+        // REMEMBER: ONLY for the FIRST DOSE, i_ppq_bioavailability_F_thisdose = i_ppq_bioavailability_F_indiv
         y0[0] +=  v_dosing_amounts[num_doses_given] * vprms[i_ppq_bioavailability_F_thisdose] * fractional_dose_taken;
         
         num_doses_given++;
@@ -224,10 +225,8 @@ void pkpd_ppq::initialize_PK_params( void )
     double THETA2_pe = 2910.0; // TVV of the central compartment
     double THETA3_pe = 310.0;
     
-    //double Q1 = THETA3_pe * pow(patient_weight/median_weight, ACL ); 
     double indiv_intercompartmental_clearance_Q1 = THETA3_pe * pow(patient_weight/median_weight, 0.75 ); 
     
-    //double V2 = THETA2_pe * pow(patient_weight/median_weight, AV ); 
     double typical_volume_TVV = THETA2_pe * pow(patient_weight/median_weight, 1.0 ); 
     double ETA2_rv = 0.0;
 
@@ -241,14 +240,7 @@ void pkpd_ppq::initialize_PK_params( void )
     typical_volume_TVV *= exp( ETA2_rv );
     double indiv_volume_V = typical_volume_TVV;
     
-    // NOTE ETA3 is fixed at zero; so we do not draw
-    // double ETA3_rv = gsl_ran_gaussian( rng, sqrt(0.0) );
-    // Q1 *= exp( ETA3 ); // should be zero
-    
     // this is the transition rate from to peripheral compt #1 back to the central compt 
-    // TVV3 = THETA(4)*(WT/M_WE)**AV;
-    // V3 = TVV3*EXP(ETA(4));
-
     double THETA4_pe = 4910.0; // TVVP1 of the first peripheral compartment
     double ETA4_rv = 0.0;
 
@@ -260,13 +252,10 @@ void pkpd_ppq::initialize_PK_params( void )
         ETA4_rv = gsl_ran_gaussian( rng, sqrt(0.0560) ); 
     }
 
-    //double TVV3 = THETA4_pe * pow(patient_weight/median_weight, AV ); 
     double typical_volume_peripheral_TVP1 = THETA4_pe * pow(patient_weight/median_weight, 1.0 ); 
     double individual_volume_peripheral_VP1 = typical_volume_peripheral_TVP1 * exp(ETA4_rv);
     
     // this is the transition rate from the central compt to peripheral compt #2
-    // Q2 = TVQ2*EXP(ETA(5));
-    // TVQ2 = THETA(5)*(WT/M_WE)**ACL;
     double THETA5_pe = 105.0; // TVQ2 of the second peripheral compartment
     double ETA5_rv = 0.0;
 
@@ -279,13 +268,10 @@ void pkpd_ppq::initialize_PK_params( void )
         ETA5_rv = gsl_ran_gaussian( rng, sqrt(0.0542) ); 
     }
 
-    //double TVQ2 = THETA5_pe * pow(patient_weight/median_weight, ACL ); 
     double typical_intercompartmental_clearance_Q2 = THETA5_pe * pow(patient_weight/median_weight, 0.75 ); 
     double indiv_intercompartmental_clearance_Q2 = typical_intercompartmental_clearance_Q2 * exp(ETA5_rv); 
     
     // this is the transition rate from to peripheral compt #2 back to the central compt 
-    // TVV4 = THETA(6)*(WT/M_WE)**AV;
-    // V4 = TVV4*EXP(ETA(6));
     double THETA6_pe = 30900.0;
     double ETA6_rv = 0.0;
     
@@ -296,14 +282,11 @@ void pkpd_ppq::initialize_PK_params( void )
         ETA6_rv = gsl_ran_gaussian( rng, sqrt(0.114) ); 
     }
 
-    //double TVV4 = THETA6_pe * pow(patient_weight/median_weight, AV ); 
     double typical_volume_peripheral_TVP2 = THETA6_pe * pow(patient_weight/median_weight, 1.0 ); 
     double indiv_volume_peripheral_VP2 = typical_volume_peripheral_TVP2 * exp(ETA6_rv); 
     
     
-    // this is the exit rate from the central compartment (the final exit rate in the model
-    // CL = TVCL*EXP(ETA(1));
-    // TVCL = THETA(1)*MF*(WT/M_WE)**ACL;
+    // this is the exit rate from the central compartment (the final exit rate in the model)
     double THETA1_pe = 55.4; 
     double ETA1_rv = 0.0;
     double HILL = 5.51;
@@ -317,12 +300,12 @@ void pkpd_ppq::initialize_PK_params( void )
         ETA1_rv = gsl_ran_gaussian( rng, sqrt(0.075) ); 
     }
 
-    //double TVCL = THETA1_pe * MF * pow(patient_weight/median_weight, ACL ); 
     double maturation_function_MF = pow(patient_age,HILL) / ( pow(patient_age,HILL) + pow(MF50,HILL) );
     double typical_clearance_TVCL = THETA1_pe * maturation_function_MF * pow(patient_weight/median_weight, 0.75); 
     double indiv_clearance_CL = typical_clearance_TVCL * exp(ETA1_rv);
 
     vprms[i_ppq_bioavailability_F_indiv] = indiv_bioavailability_F;
+    vprms[i_ppq_bioavailability_F_thisdose] = vprms[i_ppq_bioavailability_F_indiv]; // Only for the first dose
     vprms[i_ppq_CL_indiv] = indiv_clearance_CL;
     vprms[i_ppq_V_indiv] = indiv_volume_V;
     vprms[i_ppq_central_volume_of_distribution_indiv] = vprms[i_ppq_V_indiv]; // in Litres
@@ -358,6 +341,11 @@ void pkpd_ppq::redraw_PK_params_before_newdose()
     // on whether you're sitting or standing, whether you've recently had a big meal, whether some gets stuck
     // between your teeth; below, we set the parameter F1 (with some random draws) to adjust this initial dose
     
+    // From NONMEM:
+                    // IOV = ETA(10)*OC1+ETA(11)*OC2+ETA(12)*OC3
+                    // IOV2 = ETA(13)*OC1+ETA(14)*OC2+ETA(15)*OC3
+    // To do: Need to read paper and see what's this all about
+    // Also not implementing IOV on the first dose, need to see what's that about
     double IOV1_rv=0.0;
 
     // Used to incorporate IOV in F
@@ -367,15 +355,19 @@ void pkpd_ppq::redraw_PK_params_before_newdose()
         IOV1_rv = gsl_ran_gaussian( rng, sqrt(0.252) );  
     }
         
-    // double F1D_pe = 0.236;
-    double FD_pe = 0.237; // I think this is the DOSE_F, 23.7%, increase in relative F between each dosing occasion
+    // From NONMEM:
+                    //F1D = THETA(10)
+                    //F1COVD = (1 + F1D*(OCC-1))
+
+    // double F1D_pe = 0.236;                   // This value is from the NONMEM file(s)
+    double FD_pe = 0.237;                       // I think this is the DOSE_F, 23.7%, increase in relative F between each dosing occasion
     double OCC = 1.0 + (double)num_doses_given; // NOTE the RHS here is a class member
     double FCOVD = (1.0 + FD_pe*(OCC-1.0));     // THE REASON THIS EXISTS IS THAT DOSE ABSORBTION REALLY DOES INCREASE FOR PATIENTS 
                                                 // FROM DOSE TO DOSE, **ONLY** IN THE PPQ DATA; THIS MAY NOT OCCUR FOR OTHER DRUGS
-    // double THETA8 = 1.0;  // this is just fixed at one
-    // double TVF1 = THETA8*F1COVD;
-    double TVF1 = 1.0 * FCOVD;
-    double F_thisdose = vprms[i_ppq_bioavailability_F_indiv] * TVF1 * exp(IOV1_rv);
+
+    double typical_bioavailability_F_this_dose = 1.0 * FCOVD; // Calculating the typical value of F for this dose
+                                                              // The original TVF stays at the value initialized before drug administration begins      
+    double F_thisdose = vprms[i_ppq_bioavailability_F_indiv] * typical_bioavailability_F_this_dose * exp(IOV1_rv);
     vprms[i_ppq_bioavailability_F_thisdose] = F_thisdose;
    
     
