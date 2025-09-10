@@ -1,11 +1,12 @@
-// Model and parameter values from Guidi et al., 2019
-
-//#include <iostream>
-//#include <string>
-//#include <cstdlib>
+// Model and parameter values from Guidi et al., 2018
 
 #include "assert.h"
 #include "pkpd_mfq.h"
+
+#include <filesystem>
+#include <string>
+#include <fstream>
+#include <iostream>
 
 bool pkpd_mfq::stochastic = true;
 

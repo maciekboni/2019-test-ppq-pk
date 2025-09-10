@@ -1,16 +1,14 @@
-// Adapted from pkpd_dha.h
-// Model and parameter values from Guidi et al., 2019
-
-#ifndef PKPD_DHA
-#define PKPD_DHA
+#ifndef PKPD_ARTESUNATE
+#define PKPD_ARTESUNATE
 
 #include <vector>
 #include <math.h>
+#include <filesystem>
 #include <gsl/gsl_errno.h>
 #include <gsl/gsl_matrix.h>
 #include <gsl/gsl_odeiv.h>
 #include <gsl/gsl_vector.h>
-#include <gsl/gsl_rng.h> // random number generators from Gnu Scientific Library
+#include <gsl/gsl_rng.h>      // random number generators from Gnu Scientific Library
 #include <gsl/gsl_cdf.h>
 #include <gsl/gsl_randist.h>  // this includes the gsl_ran_gaussian function
 
@@ -18,17 +16,25 @@ using namespace std;
 
 
 // these are the parameters
-enum parameter_index_dha { i_dha_KTR, i_dha_k20, i_dha_F1_indiv, i_dha_F1_thisdose, dha_num_params }; 
+//enum parameter_index_artesunate { i_artesunate_KTR, i_artesunate_k20, i_artesunate_F1_indiv, i_artesunate_F1_thisdose, artesunate_num_params }; 
 
-//typedef enum parameter_index_dha i_dha;
+// Editing to add PKPD parameters
+//enum parameter_index_artesunate { i_artesunate_KTR, i_artesunate_k20, i_artesunate_bioavailability_F_indiv, i_artesunate_bioavailability_F_thisdose, i_artesunate_typical_CL, i_artesunate_CL_indiv, i_artesunate_typical_V, i_artesunate_V_indiv, i_artesunate_central_volume_of_distribution_indiv, artesunate_num_params }; 
+
+// There is no IOV in F_thisdose, removing i_artesunate_bioavailability_F_thisdose
+// Also added i_artesunate_KTR_indiv, i_artesunate_KTR_thisdose and i_artesunate_MT_indiv to implement IOV in KA/KTR acc. to Tarning 2012
+
+enum parameter_index_artesunate { i_artesunate_KTR_indiv, i_artesunate_KTR_thisdose, i_artesunate_MT_indiv, i_artesunate_k20, i_artesunate_bioavailability_F_indiv, i_artesunate_typical_CL, i_artesunate_CL_indiv, i_artesunate_typical_V, i_artesunate_V_indiv, i_artesunate_central_volume_of_distribution_indiv, artesunate_num_params }; 
+
+//typedef enum parameter_index_artesunate i_artesunate;
 
 //extern gsl_rng *G_RNG;	
 
-class pkpd_dha
+class pkpd_artesunate
 {   
 public:    
-    explicit pkpd_dha();    // constructor
-    ~pkpd_dha();         	  // destructor
+    explicit pkpd_artesunate();    // constructor
+    ~pkpd_artesunate();         	  // destructor
 
                                   
     static bool stochastic;       // just set this to false and the class will run a deterministic model with
@@ -64,12 +70,12 @@ public:
     // ----  2  ----  PK PARAMETERS
     //
 
-    void initialize();  // TODO: this function needs to be created and set up
+    void initialize_pkpd_object();  // TODO: this function needs to be created and set up
     //void initialize_params_w_population_means();
-    void initialize_params();
+    void initialize_PK_params();
 
     // TODO: implement this function; we should remove the dosing from the predict function
-    void redraw_params_before_newdose();
+    void redraw_PK_params_before_newdose();
     
 
     //
@@ -106,15 +112,15 @@ public:
     // ----  5  ----  PATIENT CHARACTERISTICS
     //
 
+    int patient_id;         // for testing the instantaeneous killing rate
     double patient_weight;  // this is the kg weight of the current patient
-    double median_weight;   // this is the median weight of a patient that these estimates were calibrated for
-    double weight;         // this is the weight that is actually used in the calculations (it's one of the two above)
-    double age;
-    double patient_blood_volume;    // in microliters, so should be between 250,000 (infant) to 6,000,000 (large adult)
+    double patient_age;
+    double patient_blood_volume;      // in microliters, so should be between 250,000 (infant) to 6,000,000 (large adult)
+    double central_volume_exponent;   // Adding an exponent to the central volume of distribution for 'allometric' scaling
     //bool pregnant;                  // usually means just 2nd or 3rd trimester -- TODO: have this replace the "is_pregnant" bool
     bool is_pregnant; // TODO: deprecate
     bool is_male;
-
+    //double immune_killing_rate;
 
 
     //
@@ -122,22 +128,33 @@ public:
     //
 
 
+    vector<double> v_dosing_compartment;                // an hourly time series of drug concentrations in the dosing compartment
+    vector<double> v_transit_compartment1;              // an hourly time series of drug concentrations in the transit compartment 1
+    vector<double> v_transit_compartment2;              // an hourly time series of drug concentrations in the transit compartment 2
+    vector<double> v_transit_compartment3;              // an hourly time series of drug concentrations in the transit compartment 3
+    vector<double> v_transit_compartment4;              // an hourly time series of drug concentrations in the transit compartment 4
+    vector<double> v_transit_compartment5;              // an hourly time series of drug concentrations in the transit compartment 5
+    vector<double> v_transit_compartment6;              // an hourly time series of drug concentrations in the transit compartment 6
+    vector<double> v_transit_compartment7;              // an hourly time series of drug concentrations in the transit compartment 7
 
+    vector<double> v_killing_rate;                      // an hourly time series of the killing rate
+    
     // an hourly time series of drug concentrations in the blood compartment only
     vector<double> v_concentration_in_blood;                // an hourly time series of drug concentrations in the blood compartment only
                                                             // should be in nanograms per milliliter (ng/ml), probably, TODO: Venitha to check
-                                                            // specifically for DHA is this is the case
-    //vector<double> v_concentration_in_blood_metabolite;   // same as above, but this allows you to keep track of a particular metabolite concentration                                                    
+                                                            // specifically for artesunate is this is the case
+    
+                                                            //vector<double> v_concentration_in_blood_metabolite;   // same as above, but this allows you to keep track of a particular metabolite concentration                                                    
                                                             // no metabolite information is used for lumefantrine
     vector<double> v_concentration_in_blood_hourtimes;
     vector<double> v_parasitedensity_in_blood;
     int num_hours_logged;
-    
-    
-
+    double last_logged_hour;
+    double total_mg_dose_per_occasion;
+    double indiv_central_volume_millilitres;
     
     gsl_rng *rng;		
     
 };
 
-#endif // PKPD_DHA
+#endif // PKPD_ARTESUNATE
