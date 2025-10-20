@@ -61,7 +61,7 @@ public:
 
     vector<double> vprms;                 // this holds all the PK parameters
                                           // they are indexed by the enums above
-    void initialize();
+    void initialize_pkpd_object();
     void initialize_params();
     void redraw_params_before_newdose();  // you may need this if there is inter-occassion variability
                                           // in the PK parameters 
@@ -105,10 +105,9 @@ public:
     // ----  5  ----  PATIENT CHARACTERISTICS
     //
 
+    int patient_id;
     double patient_weight;          // this is the kg weight of the current patient
-    double median_weight;           // this is the median kg weight of a patient that these estimates were calibrated for
-    double weight;                  // this is the weight that is actually used in the calculations (it's one of the two above)
-    double age;                     // patient age in years
+    double patient_age;             // in years
     double patient_blood_volume;    // in microliters, so should be between 250,000 (infant) to 6,000,000 (large adult)
     bool pregnant;                  // usually means just 2nd or 3rd trimester
 

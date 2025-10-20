@@ -228,7 +228,7 @@ void pkpd_lum::initialize_pkpd_object( void )
 void pkpd_lum::initialize_PK_params( void )
 {
     // this is the median weight of a patient that these estimates were calibrated for
-    double median_weight = 42.0;
+    double population_median_weight = 42.0;
     
     // all 10 below are point estimates
     // all estimates centered on non-pregnant adult of weight 42 Kg and admission parasitaemia 15,800 parasites per microliter
@@ -320,18 +320,18 @@ void pkpd_lum::initialize_PK_params( void )
 
     // allometric scaling for weight on the Q parameter; clearance is scaled by 0.75, volume by 1.0
     // Refer to Anderson and Holford 2008
-    double typical_intercompartmental_clearance_TVQ = THETA3 * pow( patient_weight/median_weight , 0.75 );  
+    double typical_intercompartmental_clearance_TVQ = THETA3 * pow( patient_weight/population_median_weight , 0.75 );  
     double indiv_intercompartmental_clearance_Q = typical_intercompartmental_clearance_TVQ * exp( ETA3_rv );
 
-    double typical_volume_TVV = THETA2 * pow( patient_weight/median_weight , 1.0 ); 
+    double typical_volume_TVV = THETA2 * pow( patient_weight/population_median_weight , 1.0 ); 
     double indiv_volume_V = typical_volume_TVV * exp( ETA2_rv );  
     double indiv_central_volume_of_distribution = indiv_volume_V;
 
     // allometric scaling for weight on the clearance parameter
-    double typical_clearance_TVCL = THETA1 * pow( patient_weight/median_weight , 0.75 );  
+    double typical_clearance_TVCL = THETA1 * pow( patient_weight/population_median_weight , 0.75 );  
     double indiv_clearance_CL = typical_clearance_TVCL * exp( ETA1_rv );
 
-    double typical_volume_peripheral_TVVP = THETA4 * pow( patient_weight/median_weight , 1.0 );
+    double typical_volume_peripheral_TVVP = THETA4 * pow( patient_weight/population_median_weight , 1.0 );
     double indiv_volume_peripheral_VP = typical_volume_peripheral_TVVP * exp( ETA4_rv );
 
     double PREGNANCY = pregnant ? (1.0 + THETA8) : 1.0;

@@ -62,7 +62,6 @@ public:
     // ----  2  ----  PK PARAMETERS
     //
 
-    double median_weight;                           // this is the median weight of a patient that these estimates were calibrated for
     void initialize_pkpd_object();
     // void initialize_params_w_population_means(); // TODO deprecate this member function // Deprecated
     void initialize_PK_params();

@@ -213,7 +213,7 @@ void pkpd_dha::initialize_PK_params( void )
     
     // this is the median weight of the participants whose data were used to estimate the parameters for this study
     // it is used as a relative scaling factor below
-    double median_weight=48.5;
+    double population_median_weight=48.5;
     
     // initialize these relative dose factors to one (this should be the default behavior if
     // the model is not stochastic or if we decide to remove between-dose and/or between-patient variability
@@ -275,14 +275,14 @@ void pkpd_dha::initialize_PK_params( void )
     // ### ### this is the exit rate from the central compartment (the final exit rate in the model)
     double THETA1_pe = 78.0;
     double THETA2_pe = 129.0;
-    double typical_clearance_TVCL = THETA1_pe * pow( patient_weight/median_weight, 0.75 );  
+    double typical_clearance_TVCL = THETA1_pe * pow( patient_weight/population_median_weight, 0.75 );  
     
     
     //double ETA1_rv = 0.0; // this is fixed in this model
     //double CL = TVCL * exp(ETA1_rv);
     double indiv_clearance_CL = typical_clearance_TVCL; // just execute this line since ETA1 is fixed at zero above
 
-    double typical_volume_TVV = THETA2_pe * (patient_weight/median_weight);  
+    double typical_volume_TVV = THETA2_pe * (patient_weight/population_median_weight);  
     double indiv_volume_V = typical_volume_TVV;
 
     // Applying IIV in Vd

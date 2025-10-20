@@ -180,8 +180,8 @@ void pkpd_ppq::predict( double t0, double t1 )
 
 void pkpd_ppq::initialize_PK_params( void )
 {
-    
-    median_weight  =  54.0;
+    // this is the median weight of a patient that these estimates were calibrated for
+    double population_median_weight  =  54.0;
     
     //NOTE --- in this function alone, THE KTR PARAM HERE HAS INTER-PATIENT VARIABILITY BUT NO INTER-DOSE VARIABILITY
     //     --- THE F1 PARAMETER HERE IS JUST DEFUALTED TO ONE
@@ -225,9 +225,9 @@ void pkpd_ppq::initialize_PK_params( void )
     double THETA2_pe = 2910.0; // TVV of the central compartment
     double THETA3_pe = 310.0;
     
-    double indiv_intercompartmental_clearance_Q1 = THETA3_pe * pow(patient_weight/median_weight, 0.75 ); 
+    double indiv_intercompartmental_clearance_Q1 = THETA3_pe * pow(patient_weight/population_median_weight, 0.75 ); 
     
-    double typical_volume_TVV = THETA2_pe * pow(patient_weight/median_weight, 1.0 ); 
+    double typical_volume_TVV = THETA2_pe * pow(patient_weight/population_median_weight, 1.0 ); 
     double ETA2_rv = 0.0;
 
     // Used to incorporate IIV in MTT
@@ -252,7 +252,7 @@ void pkpd_ppq::initialize_PK_params( void )
         ETA4_rv = gsl_ran_gaussian( rng, sqrt(0.0560) ); 
     }
 
-    double typical_volume_peripheral_TVP1 = THETA4_pe * pow(patient_weight/median_weight, 1.0 ); 
+    double typical_volume_peripheral_TVP1 = THETA4_pe * pow(patient_weight/population_median_weight, 1.0 ); 
     double individual_volume_peripheral_VP1 = typical_volume_peripheral_TVP1 * exp(ETA4_rv);
     
     // this is the transition rate from the central compt to peripheral compt #2
@@ -268,7 +268,7 @@ void pkpd_ppq::initialize_PK_params( void )
         ETA5_rv = gsl_ran_gaussian( rng, sqrt(0.0542) ); 
     }
 
-    double typical_intercompartmental_clearance_Q2 = THETA5_pe * pow(patient_weight/median_weight, 0.75 ); 
+    double typical_intercompartmental_clearance_Q2 = THETA5_pe * pow(patient_weight/population_median_weight, 0.75 ); 
     double indiv_intercompartmental_clearance_Q2 = typical_intercompartmental_clearance_Q2 * exp(ETA5_rv); 
     
     // this is the transition rate from to peripheral compt #2 back to the central compt 
@@ -282,7 +282,7 @@ void pkpd_ppq::initialize_PK_params( void )
         ETA6_rv = gsl_ran_gaussian( rng, sqrt(0.114) ); 
     }
 
-    double typical_volume_peripheral_TVP2 = THETA6_pe * pow(patient_weight/median_weight, 1.0 ); 
+    double typical_volume_peripheral_TVP2 = THETA6_pe * pow(patient_weight/population_median_weight, 1.0 ); 
     double indiv_volume_peripheral_VP2 = typical_volume_peripheral_TVP2 * exp(ETA6_rv); 
     
     
@@ -301,7 +301,7 @@ void pkpd_ppq::initialize_PK_params( void )
     }
 
     double maturation_function_MF = pow(patient_age,HILL) / ( pow(patient_age,HILL) + pow(MF50,HILL) );
-    double typical_clearance_TVCL = THETA1_pe * maturation_function_MF * pow(patient_weight/median_weight, 0.75); 
+    double typical_clearance_TVCL = THETA1_pe * maturation_function_MF * pow(patient_weight/population_median_weight, 0.75); 
     double indiv_clearance_CL = typical_clearance_TVCL * exp(ETA1_rv);
 
     vprms[i_ppq_bioavailability_F_indiv] = indiv_bioavailability_F;

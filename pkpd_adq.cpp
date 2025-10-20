@@ -1,16 +1,15 @@
 // Model and parameters adapted from Ali et al., 2018
 
-//#include <iostream>
-//#include <string>
-//#include <cstdlib>
-
 #include "assert.h"
 #include "pkpd_adq.h"
+
+#include <iostream>
+#include <string>
 
 bool pkpd_adq::stochastic = true;
 
 // constructor
-pkpd_adq::pkpd_adq(  )
+pkpd_adq::pkpd_adq()
 {
     
     vprms.insert( vprms.begin(), adq_num_params, 0.0 );
@@ -34,9 +33,9 @@ pkpd_adq::pkpd_adq(  )
     oc 	= gsl_odeiv_control_y_new (1e-6, 0.0);
     oe 	= gsl_odeiv_evolve_alloc(dim);
     
+    patient_id = 0;
     patient_weight = -1.0;
-    median_weight  =  54.0;     // in kilograms 
-    weight = median_weight;     // this is the weight that is actually used in the calculations
+    patient_age = 25.0;
     pregnant = false;
 
     num_doses_given = 0;
@@ -44,7 +43,7 @@ pkpd_adq::pkpd_adq(  )
     doses_still_remain_to_be_taken = true;
     total_mg_dose_per_occassion = -99.0;    // meaning it is not set yet
     
-    age = 25.0;
+    patient_age = 25.0;
     patient_blood_volume = 5500000.0; // 5.5L of blood for an adult individual
     
     // 
@@ -180,7 +179,7 @@ void pkpd_adq::predict( double t0, double t1 )
 }
 
 
-void pkpd_adq::initialize( void )
+void pkpd_adq::initialize_pkpd_object( void )
 {
     
     //-- WARNING - THE AGE MEMBER VARIABLE MUST BE SET BEFORE YOU CALL THIS FUNCTION
@@ -188,14 +187,14 @@ void pkpd_adq::initialize( void )
     generate_recommended_dosing_schedule();
     initialize_params();
     
-    
 }
-
-
 
 
 void pkpd_adq::initialize_params( void )
 {
+
+    // this is the median weight of a patient that these estimates were calibrated for
+    double population_median_weight = 42.0;
     
      // all 18 below are point estimates
     double THETA1 = 2960.0;
@@ -256,20 +255,20 @@ void pkpd_adq::initialize_params( void )
 
     // this block of code if just for slower clearance in neonates, infants, and small toddlers
     // all of this saturates to 1.0 for people 2yo and older
-    double PMA = (age * 12.0) + 9.0; // this is some strange age adjustment
+    double PMA = (patient_age * 12.0) + 9.0; // this is some strange age adjustment
     double ME_AQ   = pow( PMA, THETA16 ) / ( pow( PMA, THETA16 ) + pow( THETA15, THETA16 ) );
     double ME_DEAQ = pow( PMA, THETA18 ) / ( pow( PMA, THETA18 ) + pow( THETA17, THETA18 ) );
 
-    double TVCL = THETA1 * pow( weight/50.0 , 0.75 ) * ME_AQ;
+    double TVCL = THETA1 * pow(patient_weight/50.0 , 0.75 ) * ME_AQ;
     double CL   = TVCL * exp(ETA1_rv);
 
-    double TVV_AQ = THETA2 * pow( weight/50.0 , 1.0 );
+    double TVV_AQ = THETA2 * pow(patient_weight/50.0 , 1.0 );
     double V_AQ   = TVV_AQ * exp( ETA2_rv );
 
-    double TVQ = THETA3 * pow( weight/50.0 , 0.75 );
+    double TVQ = THETA3 * pow(patient_weight/50.0 , 0.75 );
     double Q   = TVQ * exp( ETA3_rv );
 
-    double TVVP_AQ = THETA4 * pow( weight/50.0 , 1.0 );
+    double TVVP_AQ = THETA4 * pow(patient_weight/50.0 , 1.0 );
     double VP_AQ   = TVVP_AQ * exp( ETA4_rv );
 
     double TVKA = THETA5;
@@ -285,22 +284,22 @@ void pkpd_adq::initialize_params( void )
     double F1_later_dose = exp( ETA6_rv );
     double F1            = (1.0 - THETA14) * F1_later_dose;
 
-    double TVVC_DEAQ = THETA7 * pow( weight/50.0 , 1.0 );
+    double TVVC_DEAQ = THETA7 * pow(patient_weight/50.0 , 1.0 );
     double VC_DEAQ   = TVVC_DEAQ * exp( ETA7_rv );
 
-    double TVCL_DEAQ = THETA8 * pow( weight/50.0 , 0.75 ) * ME_AQ;
+    double TVCL_DEAQ = THETA8 * pow(patient_weight/50.0 , 0.75 ) * ME_AQ;
     double CL_DEAQ   = TVCL_DEAQ * exp( ETA8_rv );
 
-    double TVQ2 = THETA9 * pow( weight/50.0 , 0.75 );
+    double TVQ2 = THETA9 * pow(patient_weight/50.0 , 0.75 );
     double Q2   = TVQ2 * exp( ETA9_rv );
 
-    double TVVP2 = THETA10 * pow( weight/50.0 , 1.0 );
+    double TVVP2 = THETA10 * pow(patient_weight/50.0 , 1.0 );
     double VP2   = TVVP2 * exp( ETA10_rv );
 
-    double TVVP3 = THETA11 * pow( weight/50.0 , 1.0 );
+    double TVVP3 = THETA11 * pow(patient_weight/50.0 , 1.0 );
     double VP3   = TVVP3 * exp( ETA11_rv );
 
-    double TVQ3 = THETA12 * pow( weight/50.0 , 0.75 );
+    double TVQ3 = THETA12 * pow(patient_weight/50.0 , 0.75 );
     double Q3   = TVQ3 * exp( ETA12_rv );
 
     double TVMT = THETA13;
@@ -380,15 +379,15 @@ void pkpd_adq::generate_recommended_dosing_schedule()
     double num_tablets_per_dose = -99.0;
     
     // this is in kilograms
-    if( weight < 8.0 )
+    if( patient_weight < 8.0 )
     {
         num_tablets_per_dose = 1.0;
     }
-    else if( weight < 17.0 )
+    else if( patient_weight < 17.0 )
     {
         num_tablets_per_dose = 2.0;
     }
-    else if( weight < 35.0 )
+    else if( patient_weight < 35.0 )
     {
         num_tablets_per_dose = 4.0;
     }

@@ -1,0 +1,9 @@
+Date and Time: 2025-09-24 13:29:07
+Number of patient(s): 1000
+ec50_artemether Value(s): [0.001]
+pmax_artemether Value(s): [0.99998]
+Hill Co-efficient(s) Artemether: [1]
+ec50_lum Value(s): [0.19]
+pmax_lum Value(s): [0.99]
+Hill Co-efficient(s) Lumefantrine: [3]
+Central Volume of Distribution Exponent(s): 1
