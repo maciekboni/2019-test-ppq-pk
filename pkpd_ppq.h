@@ -62,7 +62,7 @@ public:
     // ----  2  ----  PK PARAMETERS
     //
 
-    void initialize_pkpd_object();
+    void initialize_pkpd_ppq_object();
     // void initialize_params_w_population_means(); // TODO deprecate this member function // Deprecated
     void initialize_PK_params();
     void redraw_PK_params_before_newdose();

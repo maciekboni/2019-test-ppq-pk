@@ -304,7 +304,7 @@ void pkpd_dha::initialize_PK_params( void )
     vprms[i_dha_k20] = indiv_clearance_CL/vprms[i_dha_V_indiv];
 }
 
-void pkpd_dha::initialize_pkpd_object() {
+void pkpd_dha::initialize_pkpd_dha_object() {
     generate_recommended_dosing_schedule();
     initialize_PK_params();
             

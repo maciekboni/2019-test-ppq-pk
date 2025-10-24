@@ -326,7 +326,7 @@ void pkpd_ppq::initialize_PK_params( void )
     
 }
 
-void pkpd_ppq::initialize_pkpd_object( void )
+void pkpd_ppq::initialize_pkpd_ppq_object( void )
 {
     //-- WARNING - THE AGE MEMBER VARIABLE MUST BE SET BEFORE YOU CALL THIS FUNCTION
 

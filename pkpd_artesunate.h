@@ -70,7 +70,7 @@ public:
     // ----  2  ----  PK PARAMETERS
     //
 
-    void initialize_pkpd_object();  // TODO: this function needs to be created and set up
+    void initialize_pkpd_artesunate_object();  // TODO: this function needs to be created and set up
     //void initialize_params_w_population_means();
     void initialize_PK_params();
 
@@ -116,11 +116,9 @@ public:
     double patient_weight;  // this is the kg weight of the current patient
     double patient_age;
     double patient_blood_volume;      // in microliters, so should be between 250,000 (infant) to 6,000,000 (large adult)
-    double central_volume_exponent;   // Adding an exponent to the central volume of distribution for 'allometric' scaling
     //bool pregnant;                  // usually means just 2nd or 3rd trimester -- TODO: have this replace the "is_pregnant" bool
     bool is_pregnant; // TODO: deprecate
     bool is_male;
-    //double immune_killing_rate;
 
 
     //

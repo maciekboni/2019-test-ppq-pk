@@ -63,7 +63,7 @@ public:
 
     vector<double> vprms;         // this holds all the parameters; they are indexed by the enums above
     
-    void initialize_pkpd_object();
+    void initialize_pkpd_lum_object();
     void initialize_PK_params();
     void redraw_PK_params_before_newdose();    // you may need this if there is inter-occassion variability
                                             // in the PK parameters 

@@ -185,7 +185,7 @@ int main(int argc, char* argv[])
             dyn->rng = G_RNG;    
             dyn->patient_age = G_CLO_AGE;
             dyn->patient_weight = G_CLO_WEIGHT;
-            dyn->initialize_pkpd_object();                                  // NB: parasitaemia must be set before initializing parameters
+            dyn->initialize_pkpd_lum_object();                                  // NB: parasitaemia must be set before initializing parameters
         
             t0=0.0;
             t1=maximum_enforced_stepsize;
@@ -242,7 +242,7 @@ int main(int argc, char* argv[])
             dyn->patient_age = G_CLO_AGE;
             dyn->patient_weight = G_CLO_WEIGHT;
 
-            dyn->initialize_pkpd_object();                              // NOTE parasitaemia must be set before initializing parameters
+            dyn->initialize_pkpd_dha_object();                              // NOTE parasitaemia must be set before initializing parameters
         
             t0=0.0;
             t1=maximum_enforced_stepsize;
@@ -329,7 +329,7 @@ int main(int argc, char* argv[])
             dyn1->pdparam_n = G_CLO_HILL_COEFF_ARTEMETHER;                                             
             dyn1->pdparam_EC50 = G_CLO_EC50_ARTEMETHER;
             dyn1->pdparam_Pmax = G_CLO_PMAX_ARTEMETHER;
-            dyn1->initialize_pkpd_object();
+            dyn1->initialize_pkpd_artemether_object();
 
             // Setting up the random number generator and patient characteristics for dyn2 lumefantrine
             dyn2->rng = G_RNG;  
@@ -342,7 +342,7 @@ int main(int argc, char* argv[])
             dyn2->pdparam_n = G_CLO_HILL_COEFF_LUM;
             dyn2->pdparam_EC50 = G_CLO_EC50_LUM;
             dyn2->pdparam_Pmax = G_CLO_PMAX_LUM;
-            dyn2->initialize_pkpd_object();    // NB: parasitaemia must be set before initializing parameters
+            dyn2->initialize_pkpd_lum_object();    // NB: parasitaemia must be set before initializing parameters
 
             t0=0.0;
             t1=maximum_enforced_stepsize;    // normally set to 0.5 hours
@@ -471,7 +471,7 @@ int main(int argc, char* argv[])
             dyn1->pdparam_n = G_CLO_HILL_COEFF_DHA;
             dyn1->pdparam_EC50 = G_CLO_EC50_DHA;
             dyn1->pdparam_Pmax = G_CLO_PMAX_DHA;
-            dyn1->initialize_pkpd_object();
+            dyn1->initialize_pkpd_dha_object();
 
             // Setting up the random number generator and patient characteristics for dyn2 lumefantrine
             dyn2->rng = G_RNG;  
@@ -484,7 +484,7 @@ int main(int argc, char* argv[])
             dyn2->pdparam_n = G_CLO_HILL_COEFF_PPQ;
             dyn2->pdparam_EC50 = G_CLO_EC50_PPQ;
             dyn2->pdparam_Pmax = G_CLO_PMAX_PPQ;
-            dyn2->initialize_pkpd_object();                                           // NB: parasitaemia must be set before initializing parameters
+            dyn2->initialize_pkpd_ppq_object();                                           // NB: parasitaemia must be set before initializing parameters
 
             t0=0.0;
             t1=maximum_enforced_stepsize;    // normally set to 0.5 hours
@@ -603,7 +603,7 @@ int main(int argc, char* argv[])
             dyn1->pdparam_n = G_CLO_HILL_COEFF_ARTESUNATE;
             dyn1->pdparam_EC50 = G_CLO_EC50_ARTESUNATE;
             dyn1->pdparam_Pmax = G_CLO_PMAX_ARTESUNATE;
-            dyn1->initialize_pkpd_object();
+            dyn1->initialize_pkpd_artesunate_object();
 
             // Setting up the random number generator and patient characteristics for dyn2 amodiaquine
             dyn2->rng = G_RNG;  
@@ -616,7 +616,7 @@ int main(int argc, char* argv[])
             dyn2->pdparam_n = G_CLO_HILL_COEFF_AQ;
             dyn2->pdparam_EC50 = G_CLO_EC50_AQ;
             dyn2->pdparam_Pmax = G_CLO_PMAX_AQ;
-            dyn2->initialize_pkpd_object();                                           // NB: parasitaemia must be set before initializing parameters
+            dyn2->initialize_pkpd_adq_object();                                           // NB: parasitaemia must be set before initializing parameters
 
             t0=0.0;
             t1=maximum_enforced_stepsize;    // normally set to 0.5 hours

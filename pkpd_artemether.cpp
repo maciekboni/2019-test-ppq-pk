@@ -304,7 +304,7 @@ void pkpd_artemether::initialize_PK_params( void )
     vprms[i_artemether_k20] =  vprms[i_artemether_CL_indiv]/vprms[i_artemether_V_indiv];
 }
 
-void pkpd_artemether::initialize_pkpd_object() {
+void pkpd_artemether::initialize_pkpd_artemether_object() {
     generate_recommended_dosing_schedule();
     initialize_PK_params();
             

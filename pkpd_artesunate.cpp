@@ -48,9 +48,6 @@ pkpd_artesunate::pkpd_artesunate( )
     last_logged_hour = -1.0; 
     total_mg_dose_per_occasion = -99.0; // Moved to constructor for uniformity with other classes
     doses_still_remain_to_be_taken = true;
-   
-    // For testing
-    central_volume_exponent = 1;
 
     // Parasite PD Characteristics
     // the parameters 15, exp( 0.525 * log(2700)), and 0.9 give about a 90% drug efficacy for an initial parasitaemia of 10,000/ul (25yo patient, 54kg)
@@ -301,12 +298,14 @@ void pkpd_artesunate::initialize_PK_params( void )
     vprms[i_artesunate_typical_CL] = typical_clearance_TVCL;
     vprms[i_artesunate_CL_indiv] = indiv_clearance_CL;
     vprms[i_artesunate_typical_V] = typical_volume_TVV;
-    vprms[i_artesunate_V_indiv] = pow(indiv_volume_V, central_volume_exponent);
-    vprms[i_artesunate_central_volume_of_distribution_indiv] = pow(indiv_central_volume_of_distribution, central_volume_exponent);
+    //vprms[i_artesunate_V_indiv] = pow(indiv_volume_V, central_volume_exponent);
+    vprms[i_artesunate_V_indiv] = indiv_volume_V;
+    //vprms[i_artesunate_central_volume_of_distribution_indiv] = pow(indiv_central_volume_of_distribution, central_volume_exponent);
+    vprms[i_artesunate_central_volume_of_distribution_indiv] = indiv_central_volume_of_distribution;
     vprms[i_artesunate_k20] =  vprms[i_artesunate_CL_indiv]/vprms[i_artesunate_V_indiv];
 }
 
-void pkpd_artesunate::initialize_pkpd_object() {
+void pkpd_artesunate::initialize_pkpd_artesunate_object() {
     generate_recommended_dosing_schedule();
     initialize_PK_params();
             

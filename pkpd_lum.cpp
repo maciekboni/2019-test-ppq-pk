@@ -211,7 +211,7 @@ void pkpd_lum::predict( double t0, double t1 )
 }
 
 
-void pkpd_lum::initialize_pkpd_object( void )
+void pkpd_lum::initialize_pkpd_lum_object( void )
 {
     
     //-- WARNING -- the age member variable must be set before you call this function -- add this check

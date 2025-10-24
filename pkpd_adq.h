@@ -17,8 +17,9 @@ using namespace std;
 
 
 // these are the parameters -- the n intercept parameters (for the n slopes for the n patients) are not included in this list
-enum parameter_index_adq { i_adq_k17, i_adq_k78, i_adq_k82,  i_adq_k23, i_adq_k32, i_adq_k24, i_adq_k45, i_adq_k54, i_adq_k46, i_adq_k64, i_adq_k40, i_adq_F1_indiv_first_dose, i_adq_F1_indiv_later_dose, i_adq_CF, adq_num_params }; 
+//enum parameter_index_adq { i_adq_k17, i_adq_k78, i_adq_k82,  i_adq_k23, i_adq_k32, i_adq_k24, i_adq_k45, i_adq_k54, i_adq_k46, i_adq_k64, i_adq_k40, i_adq_F_indiv_first_dose, i_adq_F_indiv_later_dose, i_adq_CF, adq_num_params }; 
 
+enum parameter_index_adq { i_adq_KTR_indiv, i_adq_KTR_thisdose, i_adq_k82,  i_adq_k23, i_adq_k32, i_adq_k24, i_adq_k45, i_adq_k54, i_adq_k46, i_adq_k64, i_adq_k40, i_adq_F_indiv_first_dose, i_adq_F_indiv_later_dose, i_adq_CF, adq_num_params }; 
 
 class pkpd_adq
 {   
@@ -61,8 +62,8 @@ public:
 
     vector<double> vprms;                 // this holds all the PK parameters
                                           // they are indexed by the enums above
-    void initialize_pkpd_object();
-    void initialize_params();
+    void initialize_pkpd_adq_object();
+    void initialize_PK_params();
     void redraw_params_before_newdose();  // you may need this if there is inter-occassion variability
                                           // in the PK parameters 
 

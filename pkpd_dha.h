@@ -66,7 +66,7 @@ public:
     //
 
     double median_weight;   // this is the median weight of a patient that these estimates were calibrated for
-    void initialize_pkpd_object();  
+    void initialize_pkpd_dha_object();  
     void initialize_PK_params();
     void redraw_params_before_newdose();
     

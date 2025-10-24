@@ -46,11 +46,10 @@ pkpd_adq::pkpd_adq()
     patient_age = 25.0;
     patient_blood_volume = 5500000.0; // 5.5L of blood for an adult individual
     
-    // 
+    // Patient PD parameters
     pdparam_n = 15.0;
     pdparam_EC50 = exp( 0.525 * log(2700));
     pdparam_Pmax = 0.9; // here you want to enter the max daily killing rate; it will be converted to hourly later
-
 
     rng=NULL;
 }
@@ -123,18 +122,16 @@ void pkpd_adq::give_next_dose_to_patient( double fractional_dose_taken )
     }
     else
     {
-        // if there were any substantial inter-occassion variability, you would call this function to redraw params
-        // redraw_params_before_newdose(); 
+        redraw_params_before_newdose(); 
 
-        // there is just one minor non-random inter-occassion variability effect that we model here, see below
 
         if( num_doses_given == 0 )
         {
-            y0[0] +=  v_dosing_amounts[num_doses_given] * vprms[i_adq_F1_indiv_first_dose] * fractional_dose_taken;
+            y0[0] +=  v_dosing_amounts[num_doses_given] * vprms[i_adq_F_indiv_first_dose] * fractional_dose_taken;
         } 
         else
         {
-            y0[0] +=  v_dosing_amounts[num_doses_given] * vprms[i_adq_F1_indiv_later_dose] * fractional_dose_taken;
+            y0[0] +=  v_dosing_amounts[num_doses_given] * vprms[i_adq_F_indiv_later_dose] * fractional_dose_taken;
         }
                 
         num_doses_given++;
@@ -179,55 +176,61 @@ void pkpd_adq::predict( double t0, double t1 )
 }
 
 
-void pkpd_adq::initialize_pkpd_object( void )
+void pkpd_adq::initialize_pkpd_adq_object( void )
 {
     
     //-- WARNING - THE AGE MEMBER VARIABLE MUST BE SET BEFORE YOU CALL THIS FUNCTION
     
     generate_recommended_dosing_schedule();
-    initialize_params();
+    initialize_PK_params();
     
 }
 
 
-void pkpd_adq::initialize_params( void )
+void pkpd_adq::initialize_PK_params( void )
 {
 
     // this is the median weight of a patient that these estimates were calibrated for
-    double population_median_weight = 42.0;
+    double population_median_weight = 50.0;
     
      // all 18 below are point estimates
-    double THETA1 = 2960.0;
-    double THETA2 = 13500.0;
-    double THETA3 = 2310.0;
-    double THETA4 = 22700.0;
-    double THETA5 = 0.589;
-    double THETA6 = 1.0;
-    double THETA7 = 258.0;
-    double THETA8 = 32.6;
-    double THETA9  = 154.0;
-    double THETA10 = 2460.0;
-    double THETA11 = 5580.0;
-    double THETA12 = 31.3;
-    double THETA13 = 0.236;
-    double THETA14 = 0.224;
-    double THETA15 = 11.8;
-    double THETA16 = 3.6;
-    double THETA17 = 12.9;
-    double THETA18 = 3.22;
+    double THETA1 = 2960.0;                 // CL_AQ
+    double THETA2 = 13500.0;                // Vc_AQ
+    double THETA3 = 2310.0;                 // Q_AQ
+    double THETA4 = 22700.0;                // Vp_AQ    
+    double THETA5 = 0.589;                  // Ka_AQ
+    double THETA6 = 1.0;                    // F_AQ
+    double THETA7 = 258.0;                  // Vc_DEAQ
+    double THETA8 = 32.6;                   // CL_DEAQ
+    double THETA9  = 154.0;                 // Q1_DEAQ
+    double THETA10 = 2460.0;                // Vp1_DEAQ
+    double THETA11 = 5580.0;                // Vp2_DEAQ
+    double THETA12 = 31.3;                  // Q2_DEAQ    
+    double THETA13 = 0.236;                 // MTT
+
+    double THETA14 = 0.224;                 // Effect of first dose on F
+                                            // In Ali 2018, given as -22.4% i.e., 0.224 reduction
+                                            // Or -0.224
+                                            // Missing sign in value here, but implemented correctly as (1-THETA14) * F
+                                                                                                    
+    double THETA15 = 11.8;                  // PMA50 for AQ, PMA at which maturation is 50%
+    double THETA16 = 3.6;                   // Hill factor for PMA50, AQ
+    double THETA17 = 12.9;                  // PMA50 for DEAQ
+    double THETA18 = 3.22;                  // Hill factor for PMA50, DEAQ
 
 
     //
     // the variables below are random draws from normal distributions; they will be exponentiated to have the final 
     // random variate '_rv' be log-normally distributed
     //
+
     double ETA1_rv = 0.0;   
     double ETA2_rv = 0.0;
     double ETA3_rv = 0.0;   
     double ETA4_rv = 0.0;   
     double ETA5_rv = 0.0;   
     double ETA6_rv = 0.0;
-    double ETA7_rv = 0.0;
+    double ETA7_rv = 0.0;   
     double ETA8_rv = 0.0;
     double ETA9_rv = 0.0;
     double ETA10_rv = 0.0;
@@ -237,77 +240,82 @@ void pkpd_adq::initialize_params( void )
 
     if( pkpd_adq::stochastic )
     {
-        ETA1_rv = gsl_ran_gaussian( rng, sqrt(0.103684) );  //  "_rv" means random variate 
-        ETA2_rv = gsl_ran_gaussian( rng, sqrt(0.281961) );     
-        //ETA3_rv = gsl_ran_gaussian( rng, sqrt(0.0) );       // fixed
-        //ETA4_rv = gsl_ran_gaussian( rng, sqrt(0.0) );       // fixed
-        ETA5_rv = gsl_ran_gaussian( rng, sqrt(0.616225) );                                                                 
-        ETA6_rv = gsl_ran_gaussian( rng, sqrt(0.095481) );
-        ETA7_rv = gsl_ran_gaussian( rng, sqrt(0.451584) );
-        ETA8_rv = gsl_ran_gaussian( rng, sqrt(0.004) );
-        // ETA 9, 10, 11, 12 are fixed
-        ETA13_rv = gsl_ran_gaussian( rng, sqrt(0.872356) );
+        //  "_rv" means random variate 
+
+        // The variances are from Table 3 of Ali 2018
+        // Calculated as (CV/100)^2 
+
+        ETA1_rv = gsl_ran_gaussian( rng, sqrt(0.103684) );      // IIV in CL_AQ 
+        ETA2_rv = gsl_ran_gaussian( rng, sqrt(0.281961) );      // IIV in Vc_AQ
+
+        ETA8_rv = gsl_ran_gaussian( rng, sqrt(0.04) );          // IIV in CL_DEAQ
+        ETA7_rv = gsl_ran_gaussian( rng, sqrt(0.451584) );      // IIV in Vc_DEAQ
+
+        ETA5_rv = gsl_ran_gaussian( rng, sqrt(0.616225) );      // IOV in Ka, also implemented in give_next_dose_to_patient
+        ETA6_rv = gsl_ran_gaussian( rng, sqrt(0.095481) );      // IOV in F, also implemented in give_next_dose_to_patient
+        ETA13_rv = gsl_ran_gaussian( rng, sqrt(0.872356) );     // IOV in MTT, also implemented in give_next_dose_to_patient
     }
 
 
     // in the parameter calculations below
     // "TV" means typical value or population mean for some parameter
+    // Postmenstrual age of patient, PMA 
+    double patient_PMA = (patient_age * 12.0) + 9.0; // PMA in months, (age in years) * 12 + 9; 9 months represents average gestational age at birth
 
-    // this block of code if just for slower clearance in neonates, infants, and small toddlers
-    // all of this saturates to 1.0 for people 2yo and older
-    double PMA = (patient_age * 12.0) + 9.0; // this is some strange age adjustment
-    double ME_AQ   = pow( PMA, THETA16 ) / ( pow( PMA, THETA16 ) + pow( THETA15, THETA16 ) );
-    double ME_DEAQ = pow( PMA, THETA18 ) / ( pow( PMA, THETA18 ) + pow( THETA17, THETA18 ) );
+    // PMA50, PMA at which enzyme maturation is 50%
+    double PMA50_AQ = THETA15;
+    double PMA50_DEAQ = THETA17;
 
-    double TVCL = THETA1 * pow(patient_weight/50.0 , 0.75 ) * ME_AQ;
-    double CL   = TVCL * exp(ETA1_rv);
+    double enzyme_maturation_AQ   = pow( patient_PMA, THETA16 ) / ( pow( patient_PMA, THETA16 ) + pow( PMA50_AQ, THETA16 ) );
+    double enzyme_maturation_DEAQ = pow( patient_PMA, THETA18 ) / ( pow( patient_PMA, THETA18 ) + pow( PMA50_DEAQ, THETA18 ) );
 
-    double TVV_AQ = THETA2 * pow(patient_weight/50.0 , 1.0 );
+    double TVCL_AQ = THETA1 * pow(patient_weight/population_median_weight , 0.75 ) * enzyme_maturation_AQ;
+    double CL_AQ   = TVCL_AQ * exp(ETA1_rv);
+
+    double TVV_AQ = THETA2 * pow(patient_weight/population_median_weight , 1.0 );
     double V_AQ   = TVV_AQ * exp( ETA2_rv );
 
-    double TVQ = THETA3 * pow(patient_weight/50.0 , 0.75 );
-    double Q   = TVQ * exp( ETA3_rv );
+    // Q_AQ is inter-compartmental clearance between central and peripheral compartments for AQ
+    double TVQ_AQ = THETA3 * pow(patient_weight/population_median_weight , 0.75 );
+    double Q_AQ   = TVQ_AQ * exp( ETA3_rv );
 
-    double TVVP_AQ = THETA4 * pow(patient_weight/50.0 , 1.0 );
+    // VP_AQ is the volume of distribution of the peripheral compartment for AQ
+    double TVVP_AQ = THETA4 * pow(patient_weight/population_median_weight , 1.0 );
     double VP_AQ   = TVVP_AQ * exp( ETA4_rv );
 
+    // KA is the absorption rate constant
     double TVKA = THETA5;
     double KA   = TVKA * exp( ETA5_rv );
 
-    // ----BLOCK1 COMMENTED OUT FOR EFFICIENCY----
-    // double TCOV          =  1.0;
-    // double F1_D          = (1.0 - THETA14*TCOV);
-    // double TVF1          = THETA6 * F1_D;
-    // double F1            = TVF1 * exp( ETA6_rv );
-    // double F1_later_dose = THETA6 * exp( ETA6_rv );
-    // ----BLOCK1 COMMENTED OUT FOR EFFICIENCY----
-    double F1_later_dose = exp( ETA6_rv );
-    double F1            = (1.0 - THETA14) * F1_later_dose;
+    // double F_later_dose               = exp( ETA6_rv );
+    // double F_indiv_first_dose         = (1.0 - THETA14) * F_later_dose;
 
-    double TVVC_DEAQ = THETA7 * pow(patient_weight/50.0 , 1.0 );
-    double VC_DEAQ   = TVVC_DEAQ * exp( ETA7_rv );
+    double F_indiv_first_dose = (1.0 - THETA14) * exp(ETA6_rv);
 
-    double TVCL_DEAQ = THETA8 * pow(patient_weight/50.0 , 0.75 ) * ME_AQ;
-    double CL_DEAQ   = TVCL_DEAQ * exp( ETA8_rv );
+    double TVVC_DEAQ        = THETA7 * pow(patient_weight/population_median_weight , 1.0 );
+    double VC_DEAQ          = TVVC_DEAQ * exp( ETA7_rv );
 
-    double TVQ2 = THETA9 * pow(patient_weight/50.0 , 0.75 );
-    double Q2   = TVQ2 * exp( ETA9_rv );
+    double TVCL_DEAQ        = THETA8 * pow(patient_weight/population_median_weight , 0.75 ) * ME_AQ;
+    double CL_DEAQ          = TVCL_DEAQ * exp( ETA8_rv );
 
-    double TVVP2 = THETA10 * pow(patient_weight/50.0 , 1.0 );
-    double VP2   = TVVP2 * exp( ETA10_rv );
+    double TVQ2             = THETA9 * pow(patient_weight/population_median_weight , 0.75 );
+    double Q2               = TVQ2 * exp( ETA9_rv );
 
-    double TVVP3 = THETA11 * pow(patient_weight/50.0 , 1.0 );
-    double VP3   = TVVP3 * exp( ETA11_rv );
+    double TVVP2            = THETA10 * pow(patient_weight/population_median_weight , 1.0 );
+    double VP2              = TVVP2 * exp( ETA10_rv );
 
-    double TVQ3 = THETA12 * pow(patient_weight/50.0 , 0.75 );
-    double Q3   = TVQ3 * exp( ETA12_rv );
+    double TVVP3            = THETA11 * pow(patient_weight/population_median_weight , 1.0 );
+    double VP3              = TVVP3 * exp( ETA11_rv );
 
-    double TVMT = THETA13;
-    double MT   = TVMT * exp( ETA13_rv );
+    double TVQ3             = THETA12 * pow(patient_weight/population_median_weight , 0.75 );
+    double Q3               = TVQ3 * exp( ETA12_rv );
+
+    double TVMT             = THETA13;
+    double MT               = TVMT * exp( ETA13_rv );
 
     // simple re-scaling from mg/L to ng/mL (or perhaps the other way around)
-    double S2 = V_AQ / 1000.0;
-    double S4 = VC_DEAQ / 1000.0;
+    double S2               = V_AQ / 1000.0;
+    double S4               = VC_DEAQ / 1000.0;
 
     double NN = 2.0;
     double KTR = (NN+1.0)/MT; // this is the transition param btw dosing and central compartments
@@ -323,6 +331,7 @@ void pkpd_adq::initialize_params( void )
     // these are the three transitions params from dose to central; normally they are all the same
     // so this particular structure is a bit strange; but we keep it for consistency with the original 
     // NONMEM model fit
+
     vprms[i_adq_k17] = KTR;
     vprms[i_adq_k78] = KTR;
     vprms[i_adq_k82] = KA;
@@ -341,8 +350,8 @@ void pkpd_adq::initialize_params( void )
 
     vprms[i_adq_CF] = 0.921159412; // this is the commented out value from BLOCK2
 
-    vprms[i_adq_F1_indiv_first_dose] = F1;
-    vprms[i_adq_F1_indiv_later_dose] = F1_later_dose; // basically, this is just a rv log-normally distributed around 1.0
+    vprms[i_adq_F_indiv_first_dose] = F_indiv_first_dose;
+    //vprms[i_adq_F_indiv_later_dose] = F_later_dose; // basically, this is just a rv log-normally distributed around 1.0
     
 }
 
@@ -350,11 +359,37 @@ void pkpd_adq::initialize_params( void )
 void pkpd_adq::redraw_params_before_newdose()
 {
      
-    // TODO -- first dose of amodiaquine is absorbed more poorly with 22.4% lower absorbtion
-    // this is the THETA14 parameter
+    // First dose of amodiaquine is absorbed more poorly with 22.4% lower absorption 
+    // this is the THETA14 parameter and has already been implemented in initialize_PK_params()
     
-    // NO INTER-OCCASSION VARIABILITY SO NOTHING FOR THIS FUNCTION TO DO
-    
+    // Implementing IOV in Ka, F and MTT 
+
+    double THETA5 = 0.589;  // Ka_AQ
+    double THETA13 = 0.236; // MTT
+
+    double ETA5_rv = 0.0;   // IOV in Ka
+    double ETA6_rv = 0.0;   // IOV in F  
+    double ETA13_rv = 0.0;  // IOV in MTT
+
+    if (pkpd_adq::stochastic) {
+        // The variance is from Table 3 of Ali 2018,  and is calculated as (CV/100)^2
+        ETA5_rv = gsl_ran_gaussian( rng, sqrt(0.616225) );    // IOV in Ka
+        ETA6_rv = gsl_ran_gaussian( rng, sqrt(0.095481) );    // IOV in F
+        ETA13_rv = gsl_ran_gaussian( rng, sqrt(0.872356) );   // IOV in MTT
+    }
+
+    // Redraw absorption rate constant Ka
+    vprms[i_adq_k82] = THETA5 * exp( ETA5_rv );
+
+    // Redraw bioavailability for subsequent doses
+    double F_later_dose = exp(ETA6_rv);
+    vprms[i_adq_F_indiv_later_dose] = 1.0 * F_later_dose;
+
+    // Redraw MTT
+    double MT = THETA13 * exp( ETA13_rv );
+    double NN = 2.0;
+    vprms[i_adq_k17] = (NN+1.0)/MT;
+    vprms[i_adq_k78] = (NN+1.0)/MT;
 }
 
 bool pkpd_adq::we_are_past_a_dosing_time( double current_time )

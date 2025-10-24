@@ -70,8 +70,7 @@ public:
     // ----  2  ----  PK PARAMETERS
     //
 
-    void initialize_pkpd_object();  // TODO: this function needs to be created and set up
-    //void initialize_params_w_population_means();
+    void initialize_pkpd_artemether_object();  
     void initialize_PK_params();
 
     // TODO: implement this function; we should remove the dosing from the predict function
