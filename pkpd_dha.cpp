@@ -46,9 +46,6 @@ pkpd_dha::pkpd_dha( )
     total_mg_dose_per_occasion = -99.0; // Moved to constructor for uniformity with other classes
     doses_still_remain_to_be_taken = true;
    
-    // For testing
-    central_volume_exponent = 1;
-
     // Parasite PD Characteristics
     // the parameters 15, exp( 0.525 * log(2700)), and 0.9 give about a 90% drug efficacy for an initial parasitaemia of 10,000/ul (25yo patient, 54kg)
     
@@ -87,7 +84,6 @@ int pkpd_dha::rhs_ode(double t, const double y[], double f[], void *pkd_object )
     // these are the right-hand sides of the derivatives of the six compartments
     
     // this is compartment 1, the gut or fixed dose compartment, i.e. the hypothetical compartment
-    // where the drug goes in first
     f[0] =  - p->vprms[i_dha_KTR_indiv] * y[0];
 
     // these are the seven transit compartments
@@ -299,8 +295,8 @@ void pkpd_dha::initialize_PK_params( void )
     vprms[i_dha_typical_CL] = typical_clearance_TVCL;
     vprms[i_dha_CL_indiv] = indiv_clearance_CL;
     vprms[i_dha_typical_V] = typical_volume_TVV;
-    vprms[i_dha_V_indiv] = pow(indiv_volume_V, central_volume_exponent);
-    vprms[i_dha_central_volume_of_distribution_indiv] = pow(indiv_central_volume_of_distribution, central_volume_exponent);
+    vprms[i_dha_V_indiv] = indiv_volume_V;
+    vprms[i_dha_central_volume_of_distribution_indiv] = indiv_central_volume_of_distribution;
     vprms[i_dha_k20] = indiv_clearance_CL/vprms[i_dha_V_indiv];
 }
 

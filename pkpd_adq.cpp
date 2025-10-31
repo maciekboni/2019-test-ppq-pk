@@ -36,7 +36,7 @@ pkpd_adq::pkpd_adq()
     oe 	= gsl_odeiv_evolve_alloc(dim);
     
     patient_id = 0;
-    patient_weight = -1.0;
+    patient_weight = 50;
     patient_age = 25.0;
     pregnant = false;
 
@@ -44,13 +44,11 @@ pkpd_adq::pkpd_adq()
     num_hours_logged = 0;    
     doses_still_remain_to_be_taken = true;
     total_mg_dose_per_occassion = -99.0;    // meaning it is not set yet
-    
-    patient_age = 25.0;
-    patient_blood_volume = 5500000.0; // 5.5L of blood for an adult individual
-    
+    patient_blood_volume = patient_weight * 70.0 * 1000.0; // in microliters
+
     // Patient PD parameters
     pdparam_n = 15.0;
-    pdparam_EC50 = exp( 0.525 * log(2700));
+    pdparam_EC50 = 0.1; // ng/microliter
     pdparam_Pmax = 0.9; // here you want to enter the max daily killing rate; it will be converted to hourly later
 
     rng=NULL;
@@ -112,7 +110,9 @@ int pkpd_adq::rhs_ode(double t, const double y[], double f[], void *pkd_object )
 
     // this is the per/ul parasite population size
     // Using DEAQ concentration for killing effect, need to revisit later if AQ killing effect needs to be modelled too
-    double a = (-1.0/24.0) * log( 1.0 - p->pdparam_Pmax * pow(y[4],p->pdparam_n) / (pow(y[4],p->pdparam_n) + pow(p->pdparam_EC50,p->pdparam_n)) );
+    // indiv_central_volume_of_distribution (L) =! patient_blood_volume
+    // drug concentration units mg/L, ec50 units ng/microliter, numerically the same
+    double a = (-1.0/24.0) * log( 1.0 - p->pdparam_Pmax * pow(y[4]/p->vprms[i_adq_central_volume_of_distribution_DEAQ_indiv],p->pdparam_n) / (pow(y[4]/p->vprms[i_adq_central_volume_of_distribution_DEAQ_indiv],p->pdparam_n) + pow(p->pdparam_EC50,p->pdparam_n)) );
     f[9] = -a * y[8];
     
     
@@ -162,10 +162,15 @@ void pkpd_adq::predict( double t0, double t1 )
         // check if time t is equal to or larger than the next scheduled hour to log
         if( t >= ((double)num_hours_logged)  )
         {
-            v_concentration_in_blood.push_back( y0[1] );                // TODO: you need to push_back 1000 * y0[1] / V
-                                                                        // and the result is microgram per liter = ng/mL
-            v_concentration_in_blood_metabolite.push_back( y0[3] );     // TODO: you need to push_back 1000 * y0[3] / VC_DEAQ
-                                                                        // and the result is microgram per liter = ng/mL
+            indiv_central_volume_millilitres = vprms[i_adq_central_volume_of_distribution_DEAQ_indiv] * 1000; 
+            v_concentration_in_blood.push_back( (y0[2]*pow(10,6) / indiv_central_volume_millilitres));                   // The concentration in the CC is now converted to ng/ml
+                                                                                                                         // This is only the output! 
+                                                                                                                         // The actual hill equation uses drug concentration in mg/L 
+                                                                                                                         // mg/L == ng/microliter numerically 
+                                                                                                                         // This was done as the unit of ec50 ng/microliter
+                                                                                                                         // Reporting drug concentration in the blood as ng/ml
+            v_concentration_in_blood_metabolite.push_back( (y0[4] * pow(10, 6) / indiv_central_volume_millilitres));     // The concentration in the CC of DEAQ is now converted to ng/ml
+                                                                                                                                                                                                                            
             v_parasitedensity_in_blood.push_back( y0[dim-1] );
             v_concentration_in_blood_hourtimes.push_back( t );
             
@@ -352,21 +357,22 @@ void pkpd_adq::initialize_PK_params( void )
     vprms[i_adq_Ka_thisdose] = Ka;
 
     vprms[i_adq_k23] = Q_AQ/Vc_AQ;
-    vprms[i_adq_k32] = Q_AQ/Vp_AQ;
-
     vprms[i_adq_k24] = CL_AQ/Vc_AQ;
-
+    vprms[i_adq_k32] = Q_AQ/Vp_AQ;
+    
     vprms[i_adq_k45] = Q1_DEAQ/Vc_DEAQ;
     vprms[i_adq_k54] = Q1_DEAQ/Vp1_DEAQ;
     vprms[i_adq_k46] = Q2_DEAQ/Vc_DEAQ;
     vprms[i_adq_k64] = Q2_DEAQ/Vp2_DEAQ;
 
+    vprms[i_adq_central_volume_of_distribution_AQ_indiv] = Vc_AQ;
+    vprms[i_adq_central_volume_of_distribution_DEAQ_indiv] = Vc_DEAQ;
     vprms[i_adq_k40] = CL_DEAQ/Vc_DEAQ;
 
-    vprms[i_adq_CF] = 0.921159412; // this is the commented out value from BLOCK2
+    vprms[i_adq_CF] = 0.921159412; //Conversion factor AQ -> DEAQ molecular mass
+                                   // this is the commented out value from BLOCK2
 
     vprms[i_adq_F_indiv_first_dose] = F_indiv_first_dose;
-    //vprms[i_adq_F_indiv_later_dose] = F_later_dose; // basically, this is just a rv log-normally distributed around 1.0
     
 }
 
@@ -423,33 +429,42 @@ bool pkpd_adq::we_are_past_a_dosing_time( double current_time )
 void pkpd_adq::generate_recommended_dosing_schedule()
 {
     
-    // CHECK -- that this dosing schedule function indeed corresponds to amodiaquine
+    // Edited schedule based on WHO guidelines for amodiaquine dosing
+    /* From WHO:  
+    The target dose (and range) are 4 (2–10) mg/kg bw per day artesunate and 10 (7.5–15) mg/kg bw per day amodiaquine once a day for 3 days. 
+    A total therapeutic dose range of 6–30 mg/kg bw per day artesunate and 22.5–45 mg/kg bw per dose amodiaquine is recommended. */
 
-    double num_tablets_per_dose = -99.0;
+    double num_tablets_per_dose;
     
     // this is in kilograms
-    if( patient_weight < 8.0 )
+    if( patient_weight >= 5.0 && patient_weight < 9.0 )
     {
-        num_tablets_per_dose = 1.0;
+        num_tablets_per_dose = 1.0; // 67.5 mg 
     }
-    else if( patient_weight < 17.0 )
+    else if( patient_weight >= 9.0 && patient_weight < 18.0  )
     {
-        num_tablets_per_dose = 2.0;
+        num_tablets_per_dose = 2.0; // 135 mg
     }
-    else if( patient_weight < 35.0 )
+    else if( patient_weight >= 18.0 && patient_weight < 36.0  )
     {
-        num_tablets_per_dose = 4.0;
+        num_tablets_per_dose = 4.0; // 270 mg
     }
-    else
+    else if (patient_weight >= 36.0)
     {
-        num_tablets_per_dose = 8.0;
+        num_tablets_per_dose = 8.0; // 540 mg
+    } 
+
+    // Adding an error message saying weight not supported
+    
+    else {
+        std::cerr << "Error: Weight not supported." << std::endl;
     }
-   
     // 
     total_mg_dose_per_occassion = num_tablets_per_dose * 67.5;  // this is 67.5mg of amodiaquine, which is the pediatric strength
                                                                 // PS - in reality, there are different tablet sizes
     
     v_dosing_times.insert( v_dosing_times.begin(), 3, 0.0 );
+    v_dosing_times[0] = 0.0;
     v_dosing_times[1] = 24.0;
     v_dosing_times[2] = 48.0; 
 

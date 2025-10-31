@@ -367,48 +367,46 @@ bool pkpd_artesunate::we_are_past_a_dosing_time( double current_time )
 void pkpd_artesunate::generate_recommended_dosing_schedule()
 {
 
-    // DOSING GUIDELINES SAY    0,  8, 24, 36, 48, 60
-    // BUT WE CAN JUST DO       0, 12, 24, 36, 48, 60
-
-    // Dosing updated to match WHO guidelines in the hopes that it will improve efficacy...
+    /* From WHO: 
+    Formulations currently available: 
+    A fixed-dose combination in tablets containing 25 + 67.5 mg, 50 + 135 mg or 100 + 270 mg of AS and AQ, respectively
+    The target dose (and range) are 4 (2–10) mg/kg bw per day artesunate once a day for 3 days. 
+    A total therapeutic dose range of 6–30 mg/kg bw per day artesunate is recommended.
+    */
     
     double num_tablets_per_dose;
     
-    if( patient_weight >= 5.0 && patient_weight < 15.0 )
+    if( patient_weight >= 5.0 && patient_weight < 9.0 )
     {
         num_tablets_per_dose = 1.0;
     }
-    else if( patient_weight >= 15.0 && patient_weight < 25.0  )
+    else if( patient_weight >= 9.0 && patient_weight < 18.0  )
     {
         num_tablets_per_dose = 2.0;
     }
-    else if( patient_weight >= 25.0 && patient_weight < 35.0  )
-    {
-        num_tablets_per_dose = 3;
-    }
-    else if (patient_weight >= 35.0)
+    else if( patient_weight >= 18.0 && patient_weight < 36.0  )
     {
         num_tablets_per_dose = 4.0;
+    }
+    else if (patient_weight >= 36.0)
+    {
+        num_tablets_per_dose = 8.0;
     } 
     // Adding an error message saying weight not supported
     else {
         std::cerr << "Error: Weight not supported." << std::endl;
     }
    
-    // Artesunate given by weight, twice daily, for a total of three days - WHO guidelines, 2024
+    // Artesunate given by weight for a total of three days - WHO guidelines, 2024
     // This is the total milligrams of artesunate taken each dose
-    // Fixed-combination come in two doses: 20 mg and 40 mg; switching to 20 mg 'coz why not
-    // Also adjusted the doses accordingly 
-    total_mg_dose_per_occasion = num_tablets_per_dose * 20.0;
+  
+    total_mg_dose_per_occasion = num_tablets_per_dose * 25.0;
     
-    v_dosing_times.insert( v_dosing_times.begin(), 6, 0.0 );
+    v_dosing_times.insert( v_dosing_times.begin(), 3, 0.0 );
     v_dosing_times[0] = 0.0;
-    v_dosing_times[1] = 8.0;
-    v_dosing_times[2] = 24.0; 
-    v_dosing_times[3] = 36.0;
-    v_dosing_times[4] = 48.0;
-    v_dosing_times[5] = 60.0;
+    v_dosing_times[1] = 24.0; 
+    v_dosing_times[2] = 48.0;
 
-    v_dosing_amounts.insert( v_dosing_amounts.begin(), 6, total_mg_dose_per_occasion );
+    v_dosing_amounts.insert( v_dosing_amounts.begin(), 3, total_mg_dose_per_occasion );
 
 }

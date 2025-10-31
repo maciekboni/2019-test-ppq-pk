@@ -130,7 +130,7 @@ void output_results_combination_AS_AQ(int pi, pkpd_artesunate *dyn1, pkpd_adq *d
     else {
         for(int j=0; j<dyn1->v_concentration_in_blood.size(); j++ )
         {
-            fprintf(stdout, "%d %10.3f %10.3f %10.3f %10.3f \n", pi, dyn1->v_concentration_in_blood_hourtimes[j], dyn1->v_concentration_in_blood[j], dyn2->v_concentration_in_blood[j], dyn1->v_parasitedensity_in_blood[j] );
+            fprintf(stdout, "%d %10.3f %10.3f %10.3f %10.3f \n", pi, dyn1->v_concentration_in_blood_hourtimes[j], dyn1->v_concentration_in_blood[j], dyn2->v_concentration_in_blood[j], dyn2->v_concentration_in_blood_metabolite[j], dyn1->v_parasitedensity_in_blood[j] );
         }
     }
 }
@@ -569,7 +569,7 @@ int main(int argc, char* argv[])
 
     if( G_CLO_THERAPY == therapy_AS_AQ )
     {
-        fprintf(stdout, "PID,HOUR,COMP2CONC_AS,COMP2CONC_AQ,PARASITEDENSITY\n" );
+        fprintf(stdout, "PID,HOUR,COMP2CONC_AS,COMP2CONC_AQ,COMP2CONC_DEAQ,PARASITEDENSITY\n" );
         fprintf(stderr, "\n");
 
         // pi is patient index
