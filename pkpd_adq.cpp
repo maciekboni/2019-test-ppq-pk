@@ -16,7 +16,9 @@ pkpd_adq::pkpd_adq()
     assert( vprms.size()==adq_num_params );
     
     // this is the dimensionality of the ODE system
-    dim = 9; // eight pk equations and one pd clearance equation
+    // 1 dose compartment + 2 transit compartments + 1 absorption compartment + 2 AQ compartments + 3 DEAQ compartments + 1 PD equation
+    // nine pk equations and one pd clearance equation
+    dim = 10; 
 
     // this is the main vector of state variables
     y0 = new double[dim];
@@ -80,34 +82,48 @@ int pkpd_adq::rhs_ode(double t, const double y[], double f[], void *pkd_object )
 
     // these are the right-hand sides of the derivatives of the six compartments
     
-    // this is compartment 1, the fixed dose compartment, i.e. the hypothetical compartment
+    // this is the fixed dose compartment, i.e. the hypothetical compartment
     // where the drug goes in first, ka is the transition from this fixed dose compartment to the transition compartments
-    f[0] =  - p->vprms[i_adq_k17] * y[0];
+    //f[0] =  - p->vprms[i_adq_k17] * y[0];
+    f[0] =  - p->vprms[i_adq_KTR_thisdose] * y[0]; // Bioavailability F is implemented in give_next_dose_to_patient
+
+    // the absorption compartment
+    f[1] = y[8]*p->vprms[i_adq_KTR_thisdose] - y[2]*p->vprms[i_adq_Ka_thisdose];
 
     // this is compartment 2, the central compartment, i.e. the blood, for AQ only
-    f[1] =  y[7]*p->vprms[i_adq_k82]  +  y[2]*p->vprms[i_adq_k32]  -  y[1]*p->vprms[i_adq_k23]  -  y[1]*p->vprms[i_adq_k24];
+    //f[1] =  y[7]*p->vprms[i_adq_k82]  +  y[2]*p->vprms[i_adq_k32]  -  y[1]*p->vprms[i_adq_k23]  -  y[1]*p->vprms[i_adq_k24];
+    f[2] =  y[1]*p->vprms[i_adq_Ka_thisdose]  + y[3]*p->vprms[i_adq_k32] -  y[2]*p->vprms[i_adq_k23]  -  y[2]*p->vprms[i_adq_k24];
     
     // this is compartment 3, the peripheral compartment for AQ in the blood
-    f[2] = y[1]*p->vprms[i_adq_k23]  -  y[2]*p->vprms[i_adq_k32];
+    //f[2] = y[1]*p->vprms[i_adq_k23]  -  y[2]*p->vprms[i_adq_k32];
+    f[3] = y[2]*p->vprms[i_adq_k23]  -  y[3]*p->vprms[i_adq_k32];
 
     // this is compartment 4, the central compartment for DEAQ (a metabolite of AQ) in the blood
-    f[3] = p->vprms[i_adq_CF]*y[1]*p->vprms[i_adq_k24]  +  y[4]*p->vprms[i_adq_k54]  +  y[5]*p->vprms[i_adq_k64]  -  y[3]*p->vprms[i_adq_k45]  -  y[3]*p->vprms[i_adq_k46]  -  y[3]*p->vprms[i_adq_k40];
+    //f[3] = p->vprms[i_adq_CF]*y[1]*p->vprms[i_adq_k24]  +  y[4]*p->vprms[i_adq_k54]  +  y[5]*p->vprms[i_adq_k64]  -  y[3]*p->vprms[i_adq_k45]  -  y[3]*p->vprms[i_adq_k46]  -  y[3]*p->vprms[i_adq_k40];
+    f[4] = p->vprms[i_adq_CF]*y[2]*p->vprms[i_adq_k24]  +  y[5]*p->vprms[i_adq_k54]  +  y[6]*p->vprms[i_adq_k64]  -  y[4]*p->vprms[i_adq_k45]  -  y[4]*p->vprms[i_adq_k46]  -  y[4]*p->vprms[i_adq_k40];
 
-    // this is compartment 5, a peripheral compartment for DEAQ in the blood
-    f[4] = y[3]*p->vprms[i_adq_k45]  -  y[4]*p->vprms[i_adq_k54];
+    // this is compartment 5, first peripheral compartment for DEAQ in the blood
+    //f[4] = y[3]*p->vprms[i_adq_k45]  -  y[4]*p->vprms[i_adq_k54];
+    f[5] = y[4]*p->vprms[i_adq_k45]  -  y[5]*p->vprms[i_adq_k54];
 
-    // this is compartment 6, a peripheral compartment for DEAQ in the blood
-    f[5] = y[3]*p->vprms[i_adq_k46]  -  y[5]*p->vprms[i_adq_k64];
+    // this is compartment 6, second peripheral compartment for DEAQ in the blood
+    //f[5] = y[3]*p->vprms[i_adq_k46]  -  y[5]*p->vprms[i_adq_k64];
+    f[6] = y[4]*p->vprms[i_adq_k46]  -  y[6]*p->vprms[i_adq_k64];
 
-    // this is compartment 7, a transit compartment from dose to central
-    f[6] = y[0]*p->vprms[i_adq_k17]  -  y[6]*p->vprms[i_adq_k78];
+    // this is compartment 7, a transit compartment from dose to absorption
+    //f[6] = y[0]*p->vprms[i_adq_k17]  -  y[6]*p->vprms[i_adq_k78];
+    //f[6] = y[0]*p->vprms[i_adq_KTR_thisdose]  -  y[6]*p->vprms[i_adq_KTR_thisdose];
+    f[7] = y[0]*p->vprms[i_adq_KTR_thisdose]  -  y[7]*p->vprms[i_adq_KTR_thisdose];
 
-    // this is compartment 8, a transit compartment from dose to central
-    f[7] = y[6]*p->vprms[i_adq_k78]  -  y[7]*p->vprms[i_adq_k82];
-    
+    // this is compartment 8, a transit compartment from dose to absorption
+    //f[7] = y[6]*p->vprms[i_adq_k78]  -  y[7]*p->vprms[i_adq_k82];
+    f[8] = y[7]*p->vprms[i_adq_KTR_thisdose]  -  y[8]*p->vprms[i_adq_KTR_thisdose];
+
     // this is the per/ul parasite population size
+    // double a = (-1.0/24.0) * log( 1.0 - p->pdparam_Pmax * pow(y[1],p->pdparam_n) / (pow(y[1],p->pdparam_n) + pow(p->pdparam_EC50,p->pdparam_n)) );
+    // f[8] = -a * y[8];
     double a = (-1.0/24.0) * log( 1.0 - p->pdparam_Pmax * pow(y[1],p->pdparam_n) / (pow(y[1],p->pdparam_n) + pow(p->pdparam_EC50,p->pdparam_n)) );
-    f[8] = -a * y[8];
+    f[9] = -a * y[8];
     
     
     return GSL_SUCCESS;
@@ -332,9 +348,11 @@ void pkpd_adq::initialize_PK_params( void )
     // so this particular structure is a bit strange; but we keep it for consistency with the original 
     // NONMEM model fit
 
-    vprms[i_adq_k17] = KTR;
-    vprms[i_adq_k78] = KTR;
-    vprms[i_adq_k82] = KA;
+    //vprms[i_adq_k17] = KTR;
+    //vprms[i_adq_k78] = KTR;
+    vprms[i_adq_KTR_thisdose] = KTR;
+    //vprms[i_adq_k82] = KA;
+    vprms[i_adq_Ka_thisdose] = KA;
 
     vprms[i_adq_k23] = Q/V_AQ;
     vprms[i_adq_k32] = Q/VP_AQ;
@@ -379,7 +397,8 @@ void pkpd_adq::redraw_params_before_newdose()
     }
 
     // Redraw absorption rate constant Ka
-    vprms[i_adq_k82] = THETA5 * exp( ETA5_rv );
+    //vprms[i_adq_k82] = THETA5 * exp( ETA5_rv );
+    vprms[i_adq_Ka_thisdose] = THETA5 * exp( ETA5_rv );
 
     // Redraw bioavailability for subsequent doses
     double F_later_dose = exp(ETA6_rv);
@@ -388,8 +407,9 @@ void pkpd_adq::redraw_params_before_newdose()
     // Redraw MTT
     double MT = THETA13 * exp( ETA13_rv );
     double NN = 2.0;
-    vprms[i_adq_k17] = (NN+1.0)/MT;
-    vprms[i_adq_k78] = (NN+1.0)/MT;
+    // vprms[i_adq_k17] = (NN+1.0)/MT;
+    // vprms[i_adq_k78] = (NN+1.0)/MT;
+    vprms[i_adq_KTR_thisdose] = (NN+1.0)/MT;
 }
 
 bool pkpd_adq::we_are_past_a_dosing_time( double current_time )
