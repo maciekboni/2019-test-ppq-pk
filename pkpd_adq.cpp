@@ -82,47 +82,37 @@ int pkpd_adq::rhs_ode(double t, const double y[], double f[], void *pkd_object )
 
     // these are the right-hand sides of the derivatives of the six compartments
     
-    // this is the fixed dose compartment, i.e. the hypothetical compartment
-    // where the drug goes in first, ka is the transition from this fixed dose compartment to the transition compartments
-    //f[0] =  - p->vprms[i_adq_k17] * y[0];
-    f[0] =  - p->vprms[i_adq_KTR_thisdose] * y[0]; // Bioavailability F is implemented in give_next_dose_to_patient
+    // this is the fixed dose compartment
+    // IOV in Bioavailability F is implemented in give_next_dose_to_patient
+    f[0] =  - p->vprms[i_adq_KTR_thisdose] * y[0]; 
 
     // the absorption compartment
-    f[1] = y[8]*p->vprms[i_adq_KTR_thisdose] - y[2]*p->vprms[i_adq_Ka_thisdose];
+    f[1] = y[8]*p->vprms[i_adq_KTR_thisdose] - y[1]*p->vprms[i_adq_Ka_thisdose];
 
-    // this is compartment 2, the central compartment, i.e. the blood, for AQ only
-    //f[1] =  y[7]*p->vprms[i_adq_k82]  +  y[2]*p->vprms[i_adq_k32]  -  y[1]*p->vprms[i_adq_k23]  -  y[1]*p->vprms[i_adq_k24];
+    // this is compartment 2, the central compartment for AQ
     f[2] =  y[1]*p->vprms[i_adq_Ka_thisdose]  + y[3]*p->vprms[i_adq_k32] -  y[2]*p->vprms[i_adq_k23]  -  y[2]*p->vprms[i_adq_k24];
     
     // this is compartment 3, the peripheral compartment for AQ in the blood
-    //f[2] = y[1]*p->vprms[i_adq_k23]  -  y[2]*p->vprms[i_adq_k32];
     f[3] = y[2]*p->vprms[i_adq_k23]  -  y[3]*p->vprms[i_adq_k32];
 
     // this is compartment 4, the central compartment for DEAQ (a metabolite of AQ) in the blood
-    //f[3] = p->vprms[i_adq_CF]*y[1]*p->vprms[i_adq_k24]  +  y[4]*p->vprms[i_adq_k54]  +  y[5]*p->vprms[i_adq_k64]  -  y[3]*p->vprms[i_adq_k45]  -  y[3]*p->vprms[i_adq_k46]  -  y[3]*p->vprms[i_adq_k40];
     f[4] = p->vprms[i_adq_CF]*y[2]*p->vprms[i_adq_k24]  +  y[5]*p->vprms[i_adq_k54]  +  y[6]*p->vprms[i_adq_k64]  -  y[4]*p->vprms[i_adq_k45]  -  y[4]*p->vprms[i_adq_k46]  -  y[4]*p->vprms[i_adq_k40];
 
     // this is compartment 5, first peripheral compartment for DEAQ in the blood
-    //f[4] = y[3]*p->vprms[i_adq_k45]  -  y[4]*p->vprms[i_adq_k54];
     f[5] = y[4]*p->vprms[i_adq_k45]  -  y[5]*p->vprms[i_adq_k54];
 
     // this is compartment 6, second peripheral compartment for DEAQ in the blood
-    //f[5] = y[3]*p->vprms[i_adq_k46]  -  y[5]*p->vprms[i_adq_k64];
     f[6] = y[4]*p->vprms[i_adq_k46]  -  y[6]*p->vprms[i_adq_k64];
 
     // this is compartment 7, a transit compartment from dose to absorption
-    //f[6] = y[0]*p->vprms[i_adq_k17]  -  y[6]*p->vprms[i_adq_k78];
-    //f[6] = y[0]*p->vprms[i_adq_KTR_thisdose]  -  y[6]*p->vprms[i_adq_KTR_thisdose];
     f[7] = y[0]*p->vprms[i_adq_KTR_thisdose]  -  y[7]*p->vprms[i_adq_KTR_thisdose];
 
     // this is compartment 8, a transit compartment from dose to absorption
-    //f[7] = y[6]*p->vprms[i_adq_k78]  -  y[7]*p->vprms[i_adq_k82];
     f[8] = y[7]*p->vprms[i_adq_KTR_thisdose]  -  y[8]*p->vprms[i_adq_KTR_thisdose];
 
     // this is the per/ul parasite population size
-    // double a = (-1.0/24.0) * log( 1.0 - p->pdparam_Pmax * pow(y[1],p->pdparam_n) / (pow(y[1],p->pdparam_n) + pow(p->pdparam_EC50,p->pdparam_n)) );
-    // f[8] = -a * y[8];
-    double a = (-1.0/24.0) * log( 1.0 - p->pdparam_Pmax * pow(y[1],p->pdparam_n) / (pow(y[1],p->pdparam_n) + pow(p->pdparam_EC50,p->pdparam_n)) );
+    // Using DEAQ concentration for killing effect, need to revisit later if AQ killing effect needs to be modelled too
+    double a = (-1.0/24.0) * log( 1.0 - p->pdparam_Pmax * pow(y[4],p->pdparam_n) / (pow(y[4],p->pdparam_n) + pow(p->pdparam_EC50,p->pdparam_n)) );
     f[9] = -a * y[8];
     
     
@@ -285,56 +275,66 @@ void pkpd_adq::initialize_PK_params( void )
     double enzyme_maturation_AQ   = pow( patient_PMA, THETA16 ) / ( pow( patient_PMA, THETA16 ) + pow( PMA50_AQ, THETA16 ) );
     double enzyme_maturation_DEAQ = pow( patient_PMA, THETA18 ) / ( pow( patient_PMA, THETA18 ) + pow( PMA50_DEAQ, THETA18 ) );
 
+    // CL_AQ is the clearance of AQ from the central compartment
     double TVCL_AQ = THETA1 * pow(patient_weight/population_median_weight , 0.75 ) * enzyme_maturation_AQ;
     double CL_AQ   = TVCL_AQ * exp(ETA1_rv);
 
-    double TVV_AQ = THETA2 * pow(patient_weight/population_median_weight , 1.0 );
-    double V_AQ   = TVV_AQ * exp( ETA2_rv );
+    // Vc_AQ is the volume of distribution of the central compartment for AQ
+    double TVVc_AQ = THETA2 * pow(patient_weight/population_median_weight , 1.0 );
+    double Vc_AQ   = TVVc_AQ * exp( ETA2_rv );
 
     // Q_AQ is inter-compartmental clearance between central and peripheral compartments for AQ
     double TVQ_AQ = THETA3 * pow(patient_weight/population_median_weight , 0.75 );
     double Q_AQ   = TVQ_AQ * exp( ETA3_rv );
 
     // VP_AQ is the volume of distribution of the peripheral compartment for AQ
-    double TVVP_AQ = THETA4 * pow(patient_weight/population_median_weight , 1.0 );
-    double VP_AQ   = TVVP_AQ * exp( ETA4_rv );
+    double TVVp_AQ = THETA4 * pow(patient_weight/population_median_weight , 1.0 );
+    double Vp_AQ   = TVVp_AQ * exp( ETA4_rv );
 
-    // KA is the absorption rate constant
-    double TVKA = THETA5;
-    double KA   = TVKA * exp( ETA5_rv );
+    // Ka is the absorption rate constant, the rate at which drug moves from the absorption compartment to the central AQ compartment
+    double TVKa = THETA5;
+    double Ka   = TVKa * exp( ETA5_rv );
 
     // double F_later_dose               = exp( ETA6_rv );
     // double F_indiv_first_dose         = (1.0 - THETA14) * F_later_dose;
 
     double F_indiv_first_dose = (1.0 - THETA14) * exp(ETA6_rv);
 
-    double TVVC_DEAQ        = THETA7 * pow(patient_weight/population_median_weight , 1.0 );
-    double VC_DEAQ          = TVVC_DEAQ * exp( ETA7_rv );
+    // Vc_DEAQ is the volume of distribution of the central compartment for DEAQ
+    double TVVc_DEAQ        = THETA7 * pow(patient_weight/population_median_weight , 1.0 );
+    double Vc_DEAQ          = TVVc_DEAQ * exp( ETA7_rv );
 
-    double TVCL_DEAQ        = THETA8 * pow(patient_weight/population_median_weight , 0.75 ) * ME_AQ;
+    // CL_DEAQ is the clearance of DEAQ from the central compartment
+    double TVCL_DEAQ        = THETA8 * pow(patient_weight/population_median_weight , 0.75 ) * enzyme_maturation_DEAQ;
     double CL_DEAQ          = TVCL_DEAQ * exp( ETA8_rv );
 
-    double TVQ2             = THETA9 * pow(patient_weight/population_median_weight , 0.75 );
-    double Q2               = TVQ2 * exp( ETA9_rv );
+    // Q1_DEAQ is inter-compartmental clearance between the central and first peripheral compartment for DEAQ
+    double TVQ1_DEAQ        = THETA9 * pow(patient_weight/population_median_weight , 0.75 );
+    double Q1_DEAQ          = TVQ1_DEAQ * exp( ETA9_rv );
 
-    double TVVP2            = THETA10 * pow(patient_weight/population_median_weight , 1.0 );
-    double VP2              = TVVP2 * exp( ETA10_rv );
+    // Vp1_DEAQ is the volume of distribution of the first peripheral compartment for DEAQ
+    double TVVp1_DEAQ       = THETA10 * pow(patient_weight/population_median_weight , 1.0 );
+    double Vp1_DEAQ         = TVVp1_DEAQ * exp( ETA10_rv );
 
-    double TVVP3            = THETA11 * pow(patient_weight/population_median_weight , 1.0 );
-    double VP3              = TVVP3 * exp( ETA11_rv );
+    // Vp2_DEAQ is the volume of distribution of the second peripheral compartment for DEAQ
+    double TVVp2_DEAQ       = THETA11 * pow(patient_weight/population_median_weight , 1.0 );
+    double Vp2_DEAQ         = TVVp2_DEAQ * exp( ETA11_rv );
 
-    double TVQ3             = THETA12 * pow(patient_weight/population_median_weight , 0.75 );
-    double Q3               = TVQ3 * exp( ETA12_rv );
+    // Q2_DEAQ is inter-compartmental clearance between the central and second peripheral compartment for DEAQ
+    double TVQ2_DEAQ        = THETA12 * pow(patient_weight/population_median_weight , 0.75 );
+    double Q2_DEAQ          = TVQ2_DEAQ * exp( ETA12_rv );
 
+    // MTT is the mean transit time from dose to central compartment
     double TVMT             = THETA13;
     double MT               = TVMT * exp( ETA13_rv );
 
     // simple re-scaling from mg/L to ng/mL (or perhaps the other way around)
-    double S2               = V_AQ / 1000.0;
-    double S4               = VC_DEAQ / 1000.0;
+    double S2               = Vc_AQ / 1000.0;
+    double S4               = Vc_DEAQ / 1000.0;
 
+    // NN is the number of transit compartments from dose to absorption compartment
     double NN = 2.0;
-    double KTR = (NN+1.0)/MT; // this is the transition param btw dosing and central compartments
+    double KTR = (NN+1.0)/MT; // this is the transition param btw dosing and absorption compartments
 
     // ----BLOCK2 COMMENTED OUT FOR EFFICIENCY----
     // double MW_AQ   =  355.87                             ; Molecular weight AQ (g/mol)
@@ -348,23 +348,20 @@ void pkpd_adq::initialize_PK_params( void )
     // so this particular structure is a bit strange; but we keep it for consistency with the original 
     // NONMEM model fit
 
-    //vprms[i_adq_k17] = KTR;
-    //vprms[i_adq_k78] = KTR;
     vprms[i_adq_KTR_thisdose] = KTR;
-    //vprms[i_adq_k82] = KA;
-    vprms[i_adq_Ka_thisdose] = KA;
+    vprms[i_adq_Ka_thisdose] = Ka;
 
-    vprms[i_adq_k23] = Q/V_AQ;
-    vprms[i_adq_k32] = Q/VP_AQ;
+    vprms[i_adq_k23] = Q_AQ/Vc_AQ;
+    vprms[i_adq_k32] = Q_AQ/Vp_AQ;
 
-    vprms[i_adq_k24] = CL/V_AQ;
+    vprms[i_adq_k24] = CL_AQ/Vc_AQ;
 
-    vprms[i_adq_k45] = Q2/VC_DEAQ;
-    vprms[i_adq_k54] = Q2/VP2;
-    vprms[i_adq_k46] = Q3/VC_DEAQ;
-    vprms[i_adq_k64] = Q3/VP3;
+    vprms[i_adq_k45] = Q1_DEAQ/Vc_DEAQ;
+    vprms[i_adq_k54] = Q1_DEAQ/Vp1_DEAQ;
+    vprms[i_adq_k46] = Q2_DEAQ/Vc_DEAQ;
+    vprms[i_adq_k64] = Q2_DEAQ/Vp2_DEAQ;
 
-    vprms[i_adq_k40] = CL_DEAQ/VC_DEAQ;
+    vprms[i_adq_k40] = CL_DEAQ/Vc_DEAQ;
 
     vprms[i_adq_CF] = 0.921159412; // this is the commented out value from BLOCK2
 
@@ -397,7 +394,6 @@ void pkpd_adq::redraw_params_before_newdose()
     }
 
     // Redraw absorption rate constant Ka
-    //vprms[i_adq_k82] = THETA5 * exp( ETA5_rv );
     vprms[i_adq_Ka_thisdose] = THETA5 * exp( ETA5_rv );
 
     // Redraw bioavailability for subsequent doses
@@ -407,8 +403,6 @@ void pkpd_adq::redraw_params_before_newdose()
     // Redraw MTT
     double MT = THETA13 * exp( ETA13_rv );
     double NN = 2.0;
-    // vprms[i_adq_k17] = (NN+1.0)/MT;
-    // vprms[i_adq_k78] = (NN+1.0)/MT;
     vprms[i_adq_KTR_thisdose] = (NN+1.0)/MT;
 }
 
