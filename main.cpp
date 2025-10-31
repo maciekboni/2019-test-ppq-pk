@@ -125,12 +125,12 @@ void output_results_combination_AS_AQ(int pi, pkpd_artesunate *dyn1, pkpd_adq *d
 {
     if (G_CLO_OUTPUT_TYPE == 1) {
         int j = dyn1->v_concentration_in_blood.size()-1;
-        fprintf(stdout, "%d %10.3f %10.3f %10.3f %10.3f \n", pi, dyn1->v_concentration_in_blood_hourtimes[j], dyn1->v_concentration_in_blood[j], dyn2->v_concentration_in_blood[j], dyn1->v_parasitedensity_in_blood[j] );        
+        fprintf(stdout, "%d %10.3f %10.3f %10.3f %10.3f %10.3f\n", pi, dyn1->v_concentration_in_blood_hourtimes[j], dyn1->v_concentration_in_blood[j], dyn2->v_concentration_in_blood[j], dyn2->v_concentration_in_blood_metabolite[j], dyn1->v_parasitedensity_in_blood[j] );        
     }
     else {
         for(int j=0; j<dyn1->v_concentration_in_blood.size(); j++ )
         {
-            fprintf(stdout, "%d %10.3f %10.3f %10.3f %10.3f \n", pi, dyn1->v_concentration_in_blood_hourtimes[j], dyn1->v_concentration_in_blood[j], dyn2->v_concentration_in_blood[j], dyn2->v_concentration_in_blood_metabolite[j], dyn1->v_parasitedensity_in_blood[j] );
+            fprintf(stdout, "%d %10.3f %10.3f %10.3f %10.3f %10.3f\n", pi, dyn1->v_concentration_in_blood_hourtimes[j], dyn1->v_concentration_in_blood[j], dyn2->v_concentration_in_blood[j], dyn2->v_concentration_in_blood_metabolite[j], dyn1->v_parasitedensity_in_blood[j] );
         }
     }
 }

@@ -102,10 +102,10 @@ int pkpd_adq::rhs_ode(double t, const double y[], double f[], void *pkd_object )
     // this is compartment 6, second peripheral compartment for DEAQ in the blood
     f[6] = y[4]*p->vprms[i_adq_k46]  -  y[6]*p->vprms[i_adq_k64];
 
-    // this is compartment 7, a transit compartment from dose to absorption
+    // this is compartment 7, the first transit compartment from dose to absorption
     f[7] = y[0]*p->vprms[i_adq_KTR_thisdose]  -  y[7]*p->vprms[i_adq_KTR_thisdose];
 
-    // this is compartment 8, a transit compartment from dose to absorption
+    // this is compartment 8, the second transit compartment from dose to absorption
     f[8] = y[7]*p->vprms[i_adq_KTR_thisdose]  -  y[8]*p->vprms[i_adq_KTR_thisdose];
 
     // this is the per/ul parasite population size
@@ -113,7 +113,7 @@ int pkpd_adq::rhs_ode(double t, const double y[], double f[], void *pkd_object )
     // indiv_central_volume_of_distribution (L) =! patient_blood_volume
     // drug concentration units mg/L, ec50 units ng/microliter, numerically the same
     double a = (-1.0/24.0) * log( 1.0 - p->pdparam_Pmax * pow(y[4]/p->vprms[i_adq_central_volume_of_distribution_DEAQ_indiv],p->pdparam_n) / (pow(y[4]/p->vprms[i_adq_central_volume_of_distribution_DEAQ_indiv],p->pdparam_n) + pow(p->pdparam_EC50,p->pdparam_n)) );
-    f[9] = -a * y[8];
+    f[9] = -a * y[9];
     
     
     return GSL_SUCCESS;
@@ -254,17 +254,16 @@ void pkpd_adq::initialize_PK_params( void )
         //  "_rv" means random variate 
 
         // The variances are from Table 3 of Ali 2018
-        // Calculated as (CV/100)^2 
+        // The variance is calculated using the exact log-normal formula: ln((CV/100)² + 1)
+        ETA1_rv = gsl_ran_gaussian( rng, sqrt(0.098654) );      // IIV in CL_AQ 
+        ETA2_rv = gsl_ran_gaussian( rng, sqrt(0.248391) );      // IIV in Vc_AQ
 
-        ETA1_rv = gsl_ran_gaussian( rng, sqrt(0.103684) );      // IIV in CL_AQ 
-        ETA2_rv = gsl_ran_gaussian( rng, sqrt(0.281961) );      // IIV in Vc_AQ
+        ETA8_rv = gsl_ran_gaussian( rng, sqrt(0.039221) );      // IIV in CL_DEAQ
+        ETA7_rv = gsl_ran_gaussian( rng, sqrt(0.372655) );      // IIV in Vc_DEAQ
 
-        ETA8_rv = gsl_ran_gaussian( rng, sqrt(0.04) );          // IIV in CL_DEAQ
-        ETA7_rv = gsl_ran_gaussian( rng, sqrt(0.451584) );      // IIV in Vc_DEAQ
-
-        ETA5_rv = gsl_ran_gaussian( rng, sqrt(0.616225) );      // IOV in Ka, also implemented in give_next_dose_to_patient
-        ETA6_rv = gsl_ran_gaussian( rng, sqrt(0.095481) );      // IOV in F, also implemented in give_next_dose_to_patient
-        ETA13_rv = gsl_ran_gaussian( rng, sqrt(0.872356) );     // IOV in MTT, also implemented in give_next_dose_to_patient
+        ETA5_rv = gsl_ran_gaussian( rng, sqrt(0.480093) );      // IOV in Ka, also implemented in give_next_dose_to_patient
+        //ETA6_rv = gsl_ran_gaussian( rng, sqrt(0.091194) );    // IOV in F, implemented in give_next_dose_to_patient
+        //ETA13_rv = gsl_ran_gaussian( rng, sqrt(0.627198) );   // IOV in MTT, implemented in give_next_dose_to_patient
     }
 
 
@@ -393,10 +392,10 @@ void pkpd_adq::redraw_params_before_newdose()
     double ETA13_rv = 0.0;  // IOV in MTT
 
     if (pkpd_adq::stochastic) {
-        // The variance is from Table 3 of Ali 2018,  and is calculated as (CV/100)^2
-        ETA5_rv = gsl_ran_gaussian( rng, sqrt(0.616225) );    // IOV in Ka
-        ETA6_rv = gsl_ran_gaussian( rng, sqrt(0.095481) );    // IOV in F
-        ETA13_rv = gsl_ran_gaussian( rng, sqrt(0.872356) );   // IOV in MTT
+        // The variance is from Table 3 of Ali 2018,  and is calculated as ln((CV/100)² + 1)
+        ETA5_rv = gsl_ran_gaussian( rng, sqrt(0.480093) );    // IOV in Ka
+        ETA6_rv = gsl_ran_gaussian( rng, sqrt(0.091194) );    // IOV in F
+        ETA13_rv = gsl_ran_gaussian( rng, sqrt(0.627198) );   // IOV in MTT
     }
 
     // Redraw absorption rate constant Ka
@@ -455,7 +454,7 @@ void pkpd_adq::generate_recommended_dosing_schedule()
     } 
 
     // Adding an error message saying weight not supported
-    
+
     else {
         std::cerr << "Error: Weight not supported." << std::endl;
     }
