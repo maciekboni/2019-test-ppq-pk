@@ -47,7 +47,6 @@ pkpd_lum::pkpd_lum(  )
     patient_id = 0;
     patient_age = 25.0;
     patient_blood_volume = 5500000.0;       // 5.5L of blood for an adult individual
-    central_volume_exponent = 1;
     patient_weight = 54.0;                  // default weight of the patient in kg, can be overwritten via command line input
     pregnant = false;
 
@@ -140,21 +139,14 @@ int pkpd_lum::rhs_ode(double t, const double y[], double f[], void *pkd_object )
     return GSL_SUCCESS;
 }
 
-// The function is called using the bioavailability_F_indiv in main.cpp
-// That is, the fractional dose for each patient is set to the bioavailability_F_indiv parameter in main.cpp
-
 void pkpd_lum::give_next_dose_to_patient( double fractional_dose_taken )
 {
     if( doses_still_remain_to_be_taken )
     {
         // redraw_params_before_newdose(); // these are the dose-specific parameters that you're drawing here 
                                            // Currently not implemented as Kloprogge 2018 doesn't discuss any IOV in lumefantrine PK
-        
-        // basically, for LUM, we do not redraw, bc there is no inter-occasion variability in any parameters
-        // so this whole function just adds a dose or fractional dose
 
-        // Implementing F on dose; this F has already been adjusted for IIV
-        //y0[0] +=  v_dosing_amounts[num_doses_given] * fractional_dose_taken;
+        // Implementing F on dose; F has already been adjusted for IIV
         y0[0] +=  v_dosing_amounts[num_doses_given] * vprms[i_lum_bioavailability_F_indiv] * fractional_dose_taken;
         num_doses_given++;
 
@@ -342,12 +334,13 @@ void pkpd_lum::initialize_PK_params( void )
     
     vprms[i_lum_DS_indiv] = DOSE;
     vprms[i_lum_Q_indiv] = indiv_intercompartmental_clearance_Q;
-    //vprms[i_lum_V_indiv] = indiv_volume_V;
-    vprms[i_lum_V_indiv] = pow(indiv_volume_V, central_volume_exponent);
-    vprms[i_lum_central_volume_of_distribution_indiv] = pow(indiv_central_volume_of_distribution, central_volume_exponent);   
+
+    vprms[i_lum_V_indiv] = indiv_volume_V;
+
+    vprms[i_lum_central_volume_of_distribution_indiv] = indiv_central_volume_of_distribution;   
     vprms[i_lum_CL_indiv] = indiv_clearance_CL;
-    //vprms[i_lum_VP_indiv] = indiv_volume_peripheral_VP;
-    vprms[i_lum_VP_indiv] = pow(indiv_volume_peripheral_VP, central_volume_exponent);
+
+    vprms[i_lum_VP_indiv] = indiv_volume_peripheral_VP;
 
     vprms[i_lum_k12] = indiv_absorption_KA;
     vprms[i_lum_k23] = vprms[i_lum_VP_indiv]/vprms[i_lum_V_indiv];
@@ -361,7 +354,6 @@ void pkpd_lum::initialize_PK_params( void )
 void pkpd_lum::redraw_PK_params_before_newdose()
 {
 
-    // NO INTER-OCCASSION VARIABILITY SO NOTHING FOR THIS FUNCTION TO DO
     // Kloprogge 2018 didn't implement IOV in lumefantrine PK, so there's no IOV in F for lumefantrine or other parameters
     
 }
@@ -382,9 +374,6 @@ bool pkpd_lum::we_are_past_a_dosing_time( double current_time )
 
 void pkpd_lum::generate_recommended_dosing_schedule()
 {
-
-    // DOSING GUIDELINES SAY    0,  8, 24, 36, 48, 60
-    // BUT WE CAN JUST DO       0, 12, 24, 36, 48, 60
 
     // Dosing updated to match WHO guidelines in the hopes that it will improve efficacy...
     
@@ -414,9 +403,6 @@ void pkpd_lum::generate_recommended_dosing_schedule()
     else {
         std::cerr << "Error: Weight not supported." << std::endl;
     }
-   
-    // NOTE - do not confuse this with daily dosing - AL is taken twice daily, two occasions per day
-    // This is the total milligrams of lumefantrine taken each dose
 
     // Fixed-combination come in two doses: 120 mg and 240 mg; switching to 120 mg 'coz why not
     total_mg_dose_per_occasion = num_tablets_per_dose * 120.0;

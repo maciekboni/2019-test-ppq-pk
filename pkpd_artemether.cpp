@@ -268,7 +268,6 @@ void pkpd_artemether::initialize_PK_params( void )
     // NOTE at this point you have an MT value without any effect of dose order (i.e. whether it's dose 1, dose 2, etc.
     // later, you must/may draw another mean-zero normal rv, and multiply by the value above
     // this is done in redraw_params_before_newdose()
-    //vprms[i_artemether_KTR_indiv] = 8.0/MT;
     vprms[i_artemether_KTR_indiv] = 8.0/vprms[i_artemether_MT_indiv];
 
 
@@ -313,34 +312,24 @@ void pkpd_artemether::initialize_pkpd_artemether_object() {
 
 void pkpd_artemether::redraw_PK_params_before_newdose()
 {
-     
-    // ---- first, you don't receive the full dose.  You may receive 80% or 110% of the dose depending
-    // on whether you're sitting or standing, whether you've recently had a big meal, whether some gets stuck
-    // between your teeth; below, we set the parameter F1 (with some random draws) to adjust this initial dose
-
-    // this is the "dose occasion", i.e. the order of the dose (first, second, etc)
-    // This parameter is not used anywhere, perhaps the implementation needs to be re-written?
-    double OCC = 1.0 + (double)num_doses_given; // NOTE the RHS here is a class member
-    
+   
     if(pkpd_artemether::stochastic) 
     {
         // Applying IOV in MTT
         // The variance is from Table 4 of Tarning 2012,  and is calculated as ln((50.9/100)^2+1) or ln((0.509)^2+1) = 0.2303820898
-        double ETA_rv = gsl_ran_gaussian( rng, sqrt(0.23000) ); // this is ETA6, ETA7, and ETA8
-        //vprms[i_artemether_KTR] *= exp(-ETA_rv);              // WARNING this behavior is strange ... check if this is the right way to do it
-                                                                // Seems okay - Venitha, April 2025 
-                                                                // Actually, this does not assume independence between doses
-                                                                // Modifying KTR between doses independently and not cumulatively
-        
-        vprms[i_artemether_KTR_thisdose] = 8.0/vprms[i_artemether_MT_indiv] * exp(-ETA_rv);
-        vprms[i_artemether_KTR_indiv] = vprms[i_artemether_KTR_thisdose];
+        double ETA_rv = gsl_ran_gaussian( rng, sqrt(0.2303820898) ); 
+       
+        // Modifying KTR between doses independently and not cumulatively
 
         // This alters the absorption/transit rate by adding IOV in MTT
         // and not relative bioavailability between doses
 
-        // you need to multiple MT by exp(ETA_rv)
+         // you need to multiple MT by exp(ETA_rv)
         // BUT:  KTR = 8/MT, so instead, simply multiple KTR by exp(-ETA_rv)
         // Hence the negative sign
+        vprms[i_artemether_KTR_thisdose] = 8.0/vprms[i_artemether_MT_indiv] * exp(-ETA_rv);
+        vprms[i_artemether_KTR_indiv] = vprms[i_artemether_KTR_thisdose];
+
 
     }
 

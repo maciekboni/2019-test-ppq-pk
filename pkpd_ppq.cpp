@@ -335,64 +335,47 @@ void pkpd_ppq::initialize_pkpd_ppq_object( void )
 
 void pkpd_ppq::redraw_PK_params_before_newdose()
 {
-     
-    // ### first, you don't receive the full dose.  You may receive 80% or 110% of the dose depending
-    // on whether you're sitting or standing, whether you've recently had a big meal, whether some gets stuck
-    // between your teeth; below, we set the parameter F1 (with some random draws) to adjust this initial dose
-    
-    // From NONMEM:
-                    // IOV = ETA(10)*OC1+ETA(11)*OC2+ETA(12)*OC3
-                    // IOV2 = ETA(13)*OC1+ETA(14)*OC2+ETA(15)*OC3
-   
-    double IOV_F_rv = 0.0; // IOV in relative bioavailability F
 
+    double DOSE_F = 0.237;                      //The DOSE_F, 23.7%, increase in relative F between each dosing occasion
+    double OCC = 1.0 + (double)num_doses_given; // NOTE the RHS here is a class member
+
+    // Increase in relative bioavailability F with each dose occasion 
+    // Note: The first dose has no increase, i.e., F1COVD = 1.0 when OCC = 1
+    double FCOVD = (1.0 + DOSE_F*(OCC-1.0));  
+   
+    // IOV in relative bioavailability F
     // Used to incorporate IOV in F
     // The variance is from Table 3 of Hoglund 2017, and is calculated as ln((53.5/100)^2+1) = 0.2517115716
     if(pkpd_ppq::stochastic)
     {
-        IOV_F_rv = gsl_ran_gaussian( rng, sqrt(0.2517115716) );  
+        double IOV_F_rv = gsl_ran_gaussian( rng, sqrt(0.2517115716) );  
+
+        // Calculating the typical value of F for this dose
+        // The original TVF stays at the value initialized before drug administration begins 
+        double typical_bioavailability_F_this_dose = 1.0 * FCOVD;                                                                 
+        double F_thisdose = vprms[i_ppq_bioavailability_F_indiv] * typical_bioavailability_F_this_dose * exp(IOV_F_rv);
+        vprms[i_ppq_bioavailability_F_thisdose] = F_thisdose;
+    } else {
+        double typical_bioavailability_F_this_dose = 1.0 * FCOVD;                                                                 
+        double F_thisdose = vprms[i_ppq_bioavailability_F_indiv] * typical_bioavailability_F_this_dose;
+        vprms[i_ppq_bioavailability_F_thisdose] = F_thisdose;
     }
-        
-    // From NONMEM:
-    //F1D = THETA(10)
-    //F1COVD = (1 + F1D*(OCC-1))
-
-    //The DOSE_F, 23.7%, increase in relative F between each dosing occasion
-    double DOSE_F = 0.237;                       
-    double OCC = 1.0 + (double)num_doses_given; // NOTE the RHS here is a class member
-    // Increase in relative bioavailability F with each dose occasion 
-    // Note: The first dose has no increase, i.e., F1COVD = 1.0 when OCC = 1
-    double FCOVD = (1.0 + DOSE_F*(OCC-1.0));    
-                    
-
-    // Calculating the typical value of F for this dose
-    // The original TVF stays at the value initialized before drug administration begins 
-    double typical_bioavailability_F_this_dose = 1.0 * FCOVD;                                                                 
-    double F_thisdose = vprms[i_ppq_bioavailability_F_indiv] * typical_bioavailability_F_this_dose * exp(IOV_F_rv);
-    vprms[i_ppq_bioavailability_F_thisdose] = F_thisdose;
-   
-    
-    // IOV in MTT
-    double IOV_MTT_rv = 0.0;
 
     // Used to incorporate IOV in MTT
     // The variance is from Table 3 of Hoglund 2017, and is calculated as ln((46.4/100)^2+1) = 0.1949876685
     if(pkpd_ppq::stochastic)
     {
-        IOV_MTT_rv = gsl_ran_gaussian( rng, sqrt(0.1949876685) );
+        double IOV_MTT_rv = gsl_ran_gaussian( rng, sqrt(0.1949876685) );
+        // MT *= exp( IOV_MTT_rv ); - this is what you want to do, but MT goes into the rate variables below as 1/MT
+        // so it's simpler to execute the three lines below
 
+        // Note: i_ppq_MT_indiv already has the individual MT value with IIV included
+        vprms[i_ppq_KTR_thisdose] = 3.0/vprms[i_ppq_MT_indiv] * exp(-IOV_MTT_rv);
+        vprms[i_ppq_KTR_indiv] = vprms[i_ppq_KTR_thisdose];
+        vprms[i_ppq_k15] = vprms[i_ppq_KTR_indiv];
+        vprms[i_ppq_k56] = vprms[i_ppq_KTR_indiv];
+        vprms[i_ppq_k62] = vprms[i_ppq_KTR_indiv];
     }
-
-    // MT *= exp( IOV_MTT_rv ); - this is what you want to do, but MT goes into the rate variables below as 1/MT
-    // so it's simpler to execute the three lines below
-
-    // Note: i_ppq_MT_indiv already has the individual MT value with IIV included
-    vprms[i_ppq_KTR_thisdose] = 3.0/vprms[i_ppq_MT_indiv] * exp(-IOV_MTT_rv);
-    vprms[i_ppq_KTR_indiv] = vprms[i_ppq_KTR_thisdose];
-    vprms[i_ppq_k15] = vprms[i_ppq_KTR_indiv];
-    vprms[i_ppq_k56] = vprms[i_ppq_KTR_indiv];
-    vprms[i_ppq_k62] = vprms[i_ppq_KTR_indiv];
-    
 }
 
 bool pkpd_ppq::we_are_past_a_dosing_time( double current_time )

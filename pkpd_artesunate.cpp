@@ -298,9 +298,7 @@ void pkpd_artesunate::initialize_PK_params( void )
     vprms[i_artesunate_typical_CL] = typical_clearance_TVCL;
     vprms[i_artesunate_CL_indiv] = indiv_clearance_CL;
     vprms[i_artesunate_typical_V] = typical_volume_TVV;
-    //vprms[i_artesunate_V_indiv] = pow(indiv_volume_V, central_volume_exponent);
     vprms[i_artesunate_V_indiv] = indiv_volume_V;
-    //vprms[i_artesunate_central_volume_of_distribution_indiv] = pow(indiv_central_volume_of_distribution, central_volume_exponent);
     vprms[i_artesunate_central_volume_of_distribution_indiv] = indiv_central_volume_of_distribution;
     vprms[i_artesunate_k20] =  vprms[i_artesunate_CL_indiv]/vprms[i_artesunate_V_indiv];
 }
@@ -315,26 +313,13 @@ void pkpd_artesunate::initialize_pkpd_artesunate_object() {
 void pkpd_artesunate::redraw_PK_params_before_newdose()
 {
      
-    // ---- first, you don't receive the full dose.  You may receive 80% or 110% of the dose depending
-    // on whether you're sitting or standing, whether you've recently had a big meal, whether some gets stuck
-    // between your teeth; below, we set the parameter F1 (with some random draws) to adjust this initial dose
-
-    // this is the "dose occasion", i.e. the order of the dose (first, second, etc)
-    // This parameter is not used anywhere, perhaps the implementation needs to be re-written?
-    double OCC = 1.0 + (double)num_doses_given; // NOTE the RHS here is a class member
-    
     if(pkpd_artesunate::stochastic) 
     {
         // Applying IOV in MTT
         // The variance is from Table 4 of Tarning 2012,  and is calculated as ln((50.9/100)^2+1) or ln((0.509)^2+1) = 0.2303820898
-        double ETA_rv = gsl_ran_gaussian( rng, sqrt(0.23000) ); // this is ETA6, ETA7, and ETA8
-        //vprms[i_artesunate_KTR] *= exp(-ETA_rv);              // WARNING this behavior is strange ... check if this is the right way to do it
-                                                                // Seems okay - Venitha, April 2025 
-                                                                // Actually, this does not assume independence between doses
-                                                                // Modifying KTR between doses independently and not cumulatively
-        
-        vprms[i_artesunate_KTR_thisdose] = 8.0/vprms[i_artesunate_MT_indiv] * exp(-ETA_rv);
-        vprms[i_artesunate_KTR_indiv] = vprms[i_artesunate_KTR_thisdose];
+        double ETA_rv = gsl_ran_gaussian( rng, sqrt(0.2303820898) ); 
+       
+        // Modifying KTR between doses independently and not cumulatively
 
         // This alters the absorption/transit rate by adding IOV in MTT
         // and not relative bioavailability between doses
@@ -342,6 +327,9 @@ void pkpd_artesunate::redraw_PK_params_before_newdose()
         // you need to multiple MT by exp(ETA_rv)
         // BUT:  KTR = 8/MT, so instead, simply multiple KTR by exp(-ETA_rv)
         // Hence the negative sign
+        
+        vprms[i_artesunate_KTR_thisdose] = 8.0/vprms[i_artesunate_MT_indiv] * exp(-ETA_rv);
+        vprms[i_artesunate_KTR_indiv] = vprms[i_artesunate_KTR_thisdose];
 
     }
 
