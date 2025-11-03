@@ -91,6 +91,7 @@ public:
     int num_doses_given;
     bool doses_still_remain_to_be_taken;
     double total_mg_dose_per_occasion;
+    double total_mg_dose_per_occasion_pqp; // dose in mg of piperaquine phosphate
     bool we_are_past_a_dosing_time( double current_time );    
     void give_next_dose_to_patient( double fractional_dose_taken );
     

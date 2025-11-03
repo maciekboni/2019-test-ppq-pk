@@ -126,9 +126,8 @@ void pkpd_ppq::give_next_dose_to_patient( double fractional_dose_taken )
         redraw_PK_params_before_newdose(); 
         
         // add the new dose amount to the "dose compartment", i.e. the first compartment
-        // Implementing IOV F on dose, F (i.e., vprms[i_ppq_bioavailability_F_thisdose]) has already been adjusted for IIV
+        // Implementing IOV_F on dose; F (i.e., vprms[i_ppq_bioavailability_F_thisdose]) has already been adjusted for IIV
         // Refer to Fig 2 of Hoglund et al., 2017
-        // REMEMBER: ONLY for the FIRST DOSE, i_ppq_bioavailability_F_thisdose = i_ppq_bioavailability_F_indiv
         y0[0] +=  v_dosing_amounts[num_doses_given] * vprms[i_ppq_bioavailability_F_thisdose] * fractional_dose_taken;
         
         num_doses_given++;
@@ -197,7 +196,7 @@ void pkpd_ppq::initialize_PK_params( void )
     // The variance is from Table 3 of Hoglund 2017, and is calculated as ln((41.4/100)^2+1) = 0.1581962
     if( pkpd_ppq::stochastic )
     {
-        ETA8_rv = gsl_ran_gaussian( rng, sqrt(0.158) ); // "_rv" means random variate
+        ETA8_rv = gsl_ran_gaussian( rng, sqrt(0.1581962) ); // "_rv" means random variate
                                                         // this represents between-patient variability 
     }
     typical_bioavailability_TVF *= exp(ETA8_rv); 
@@ -212,7 +211,7 @@ void pkpd_ppq::initialize_PK_params( void )
     // The variance is from Table 3 of Hoglund 2017, and is calculated as ln((38.0/100)^2+1) = 0.1348804822
     if( pkpd_ppq::stochastic )
     {
-        ETA7_rv = gsl_ran_gaussian( rng, sqrt(0.135) );         // _rv means random variate
+        ETA7_rv = gsl_ran_gaussian( rng, sqrt(0.1348804822) );         // _rv means random variate
                                                                 // NOTE - the second argument to this function call needs to 
     }                                                           //        be the STANDARD DEVIATION not the variance
     double indiv_MT = typical_value_TVMT_pe * exp( ETA7_rv );
@@ -279,7 +278,7 @@ void pkpd_ppq::initialize_PK_params( void )
     // The variance is from Table 3 of Hoglund 2017, and is calculated as ln((34.7/100)^2+1) = 0.1136937972
     if( pkpd_ppq::stochastic )
     {
-        ETA6_rv = gsl_ran_gaussian( rng, sqrt(0.114) ); 
+        ETA6_rv = gsl_ran_gaussian( rng, sqrt(0.1136937972) ); 
     }
 
     double typical_volume_peripheral_TVP2 = THETA6_pe * pow(patient_weight/population_median_weight, 1.0 ); 
@@ -297,7 +296,7 @@ void pkpd_ppq::initialize_PK_params( void )
     if( pkpd_ppq::stochastic )
     {
         //ETA1_rv = gsl_ran_gaussian( rng, sqrt(0.0752) ); 
-        ETA1_rv = gsl_ran_gaussian( rng, sqrt(0.075) ); 
+        ETA1_rv = gsl_ran_gaussian( rng, sqrt(0.07495996625) ); 
     }
 
     double maturation_function_MF = pow(patient_age,HILL) / ( pow(patient_age,HILL) + pow(MF50,HILL) );
@@ -344,58 +343,55 @@ void pkpd_ppq::redraw_PK_params_before_newdose()
     // From NONMEM:
                     // IOV = ETA(10)*OC1+ETA(11)*OC2+ETA(12)*OC3
                     // IOV2 = ETA(13)*OC1+ETA(14)*OC2+ETA(15)*OC3
-    // To do: Need to read paper and see what's this all about
-    // Also not implementing IOV on the first dose, need to see what's that about
-    double IOV1_rv=0.0;
+   
+    double IOV_F_rv = 0.0; // IOV in relative bioavailability F
 
     // Used to incorporate IOV in F
     // The variance is from Table 3 of Hoglund 2017, and is calculated as ln((53.5/100)^2+1) = 0.2517115716
     if(pkpd_ppq::stochastic)
     {
-        IOV1_rv = gsl_ran_gaussian( rng, sqrt(0.252) );  
+        IOV_F_rv = gsl_ran_gaussian( rng, sqrt(0.2517115716) );  
     }
         
     // From NONMEM:
-                    //F1D = THETA(10)
-                    //F1COVD = (1 + F1D*(OCC-1))
+    //F1D = THETA(10)
+    //F1COVD = (1 + F1D*(OCC-1))
 
-    // double F1D_pe = 0.236;                   // This value is from the NONMEM file(s)
-    double FD_pe = 0.237;                       // I think this is the DOSE_F, 23.7%, increase in relative F between each dosing occasion
+    //The DOSE_F, 23.7%, increase in relative F between each dosing occasion
+    double DOSE_F = 0.237;                       
     double OCC = 1.0 + (double)num_doses_given; // NOTE the RHS here is a class member
-    double FCOVD = (1.0 + FD_pe*(OCC-1.0));     // THE REASON THIS EXISTS IS THAT DOSE ABSORBTION REALLY DOES INCREASE FOR PATIENTS 
-                                                // FROM DOSE TO DOSE, **ONLY** IN THE PPQ DATA; THIS MAY NOT OCCUR FOR OTHER DRUGS
+    // Increase in relative bioavailability F with each dose occasion 
+    // Note: The first dose has no increase, i.e., F1COVD = 1.0 when OCC = 1
+    double FCOVD = (1.0 + DOSE_F*(OCC-1.0));    
+                    
 
-    double typical_bioavailability_F_this_dose = 1.0 * FCOVD; // Calculating the typical value of F for this dose
-                                                              // The original TVF stays at the value initialized before drug administration begins      
-    double F_thisdose = vprms[i_ppq_bioavailability_F_indiv] * typical_bioavailability_F_this_dose * exp(IOV1_rv);
+    // Calculating the typical value of F for this dose
+    // The original TVF stays at the value initialized before drug administration begins 
+    double typical_bioavailability_F_this_dose = 1.0 * FCOVD;                                                                 
+    double F_thisdose = vprms[i_ppq_bioavailability_F_indiv] * typical_bioavailability_F_this_dose * exp(IOV_F_rv);
     vprms[i_ppq_bioavailability_F_thisdose] = F_thisdose;
    
     
-    // second, you redraw a specific KTR parameter for this dose, using a draw of the variable IOV2
-    // draw a random variate to get the value of the IOV2 variable
-    // Check if IOV is between doses/what the occasions are, if its between doses, this needs to moved outta here to redraw params
-    double IOV2_rv = 0.0;
+    // IOV in MTT
+    double IOV_MTT_rv = 0.0;
 
     // Used to incorporate IOV in MTT
     // The variance is from Table 3 of Hoglund 2017, and is calculated as ln((46.4/100)^2+1) = 0.1949876685
     if(pkpd_ppq::stochastic)
     {
-        IOV2_rv = gsl_ran_gaussian( rng, sqrt(0.195) );
-    
-        // vprms[i_ppq_k15] *= exp( - IOV2_rv );
-        // vprms[i_ppq_k56] *= exp( - IOV2_rv );
-        // vprms[i_ppq_k62] *= exp( - IOV2_rv );
-
-        // MT *= exp( IOV2_rv ); - this is what you want to do, but MT goes into the rate variables below as 1/MT
-        // so it's simpler to execute the three lines below
-
-        vprms[i_ppq_KTR_thisdose] = 3.0/vprms[i_ppq_MT_indiv] * exp(-IOV2_rv);
-        vprms[i_ppq_KTR_indiv] = vprms[i_ppq_KTR_thisdose];
-        vprms[i_ppq_k15] = vprms[i_ppq_KTR_indiv];
-        vprms[i_ppq_k56] = vprms[i_ppq_KTR_indiv];
-        vprms[i_ppq_k62] = vprms[i_ppq_KTR_indiv];
+        IOV_MTT_rv = gsl_ran_gaussian( rng, sqrt(0.1949876685) );
 
     }
+
+    // MT *= exp( IOV_MTT_rv ); - this is what you want to do, but MT goes into the rate variables below as 1/MT
+    // so it's simpler to execute the three lines below
+
+    // Note: i_ppq_MT_indiv already has the individual MT value with IIV included
+    vprms[i_ppq_KTR_thisdose] = 3.0/vprms[i_ppq_MT_indiv] * exp(-IOV_MTT_rv);
+    vprms[i_ppq_KTR_indiv] = vprms[i_ppq_KTR_thisdose];
+    vprms[i_ppq_k15] = vprms[i_ppq_KTR_indiv];
+    vprms[i_ppq_k56] = vprms[i_ppq_KTR_indiv];
+    vprms[i_ppq_k62] = vprms[i_ppq_KTR_indiv];
     
 }
 
@@ -472,160 +468,20 @@ void pkpd_ppq::generate_recommended_dosing_schedule()
         std::cerr << "Error: Weight not supported." << std::endl;
     }
 
+    // PQP - Piperaquine phosphate, what the patient takes orally
+    total_mg_dose_per_occasion_pqp = (num_tablets_per_dose * 160.0);  // A single tablet contains 160 mg of PPQ
 
-    total_mg_dose_per_occasion = num_tablets_per_dose * 160.0;  // A single tablet contains 160 mg of PPQ
+    // piperaquine base on which the population PK model is built (Hoglund 2017)
+    total_mg_dose_per_occasion = total_mg_dose_per_occasion_pqp * 0.577; // Multiplying by 0.577 to convert from PPQ-phosphate to PPQ base
+                                                                         // From the paper: Piperaquine was administered as piperaquine phosphate,
+                                                                         // which was converted to piperaquine base with a scale factor of 57.7%   
 
     v_dosing_times.insert( v_dosing_times.begin(), 3, 0.0 );
     v_dosing_times[0] = 0.0;
     v_dosing_times[1] = 24.0;
     v_dosing_times[2] = 48.0;
     
-    v_dosing_amounts.insert( v_dosing_amounts.begin(), 3, total_mg_dose_per_occasion*0.577 ); // Need to check why this is
-    
+    v_dosing_amounts.insert( v_dosing_amounts.begin(), 3, total_mg_dose_per_occasion); 
 }
-
-// NOTE 2019/11/10
-// NOTE this function is deprecated.  Do not use it anymore.
-// Using pkpd_ppq::initialize_params instead 
-// Moving it to the end of the file and commenting it out so as to avoid confusion - Venitha, 08/2025
-// void pkpd_ppq::initialize_params_w_population_means( void )
-// {
-    
-//     assert(false);
-
-//     // as a safety this should default to one; you multiply the dose amount given (in the dose compartment)
-//     // by this factor F1; the dose compartment is compartment 0 here and compartment 1 in the PLoS Med paper
-//     vprms[i_ppq_F1_indiv] = 1.0;
-
- 
-//     // KTR is the transition rate among the first three compartments
-//     double TVMT_pe = 2.11; // this is the point estimate (_pe) for TVMT; there is no need to draw a random variate here
-//     double MT = TVMT_pe; // * exp( ETA7_rv );
-//     double KTR = 3.0/MT;
-//     vprms[i_ppq_k15] = KTR;
-//     vprms[i_ppq_k56] = KTR;
-//     vprms[i_ppq_k62] = KTR;
-
-    
-//     // this is the transition rate from the central compt to peripheral compt #1
-//     // double ACL = 0.75;  // this is the allometric scaling parameter for weight's influence on the Q1 parameter
-//     // double AV = 1.0;    // this is the allometric scaling parameter for weight's influence on the V2 parameter
-
-//     // Directly incorporating the allometric scaling parameters to mantain consistency
-
-//     double THETA2_pe = 2910.0;
-//     double THETA3_pe = 310.0;
-    
-//     double Q1 = THETA3_pe * pow(patient_weight/median_weight,0.75); 
-//     double V2 = THETA2_pe * pow(patient_weight/median_weight,1.0); 
-
-//     double ETA2_rv = gsl_ran_gaussian( rng, sqrt(0.371) );  
-//     V2 *= exp( ETA2_rv );
-
-//     // NOTE ETA3 is fixed at zero; so we do not draw
-//     // double ETA3_rv = gsl_ran_gaussian( rng, sqrt(0.0) );
-//     // Q1 *= exp( ETA3 ); // should be zero
-    
-//     vprms[i_ppq_k23] = Q1/V2;
-    
-    
-//     // this is the transition rate from to peripheral compt #1 back to the central compt 
-//     //         TVV3 = THETA(4)*(WT/M_WE)**AV;
-//     //         V3 = TVV3*EXP(ETA(4));
-//     double THETA4_pe = 4910.0;
-//     //double ETA4_rv = gsl_ran_gaussian( rng, sqrt(0.0558) ); 
-//     double TVV3 = THETA4_pe * pow(patient_weight/median_weight,1.0); 
-//     double V3 = TVV3; // * exp(ETA4_rv);
-    
-//     vprms[i_ppq_k32] = Q1/V3;
-    
-    
-//     // this is the transition rate from the central compt to peripheral compt #2
-//     //          Q2 = TVQ2*EXP(ETA(5));
-//     //          TVQ2 = THETA(5)*(WT/M_WE)**ACL;
-//     double THETA5_pe = 105.0;
-//     //double ETA5_rv = gsl_ran_gaussian( rng, sqrt(0.0541) ); 
-//     double TVQ2 = THETA5_pe * pow(patient_weight/median_weight, 0.75); 
-//     double Q2 = TVQ2; //* exp(ETA5_rv); 
-//     vprms[i_ppq_k24] = Q2/V2;
-
-    
-//     // this is the transition rate from to peripheral compt #2 back to the central compt 
-//     //         V4 = TVV4*EXP(ETA(6));
-//     //         TVV4 = THETA(6)*(WT/M_WE)**AV;
-//     double THETA6_pe = 30900.0;
-//     //double ETA6_rv = gsl_ran_gaussian( rng, sqrt(0.114) ); 
-//     double TVV4 = THETA6_pe * pow(patient_weight/median_weight, 1.0); 
-//     double V4 = TVV4; // * exp(ETA6_rv); 
-//     vprms[i_ppq_k42] = Q2/V4;
-    
-    
-//     // this is the exit rate from the central compartment (the final exit rate in the model)
-//     //         CL = TVCL*EXP(ETA(1));
-//     //         TVCL = THETA(1)*MF*(WT/M_WE)**ACL;
-//     double THETA1_pe = 55.4; 
-//     //double ETA1_rv = gsl_ran_gaussian( rng, sqrt(0.0752) ); 
-//     double HILL = 5.51;
-//     double EM50 = 0.575; 
-//     double MF = pow(patient_age,HILL) / ( pow(patient_age,HILL) + pow(EM50,HILL) );
-    
-//     double TVCL = THETA1_pe * MF * pow(patient_weight/median_weight, 0.75); 
-//     double CL = TVCL; //* exp(ETA1_rv); 
-
-//     vprms[i_ppq_k20] = CL/V2;    
-   
-// }
-
-// void pkpd_ppq::redraw_params_before_newdose()
-// {
-     
-//     // ### first, you don't receive the full dose.  You may receive 80% or 110% of the dose depending
-//     // on whether you're sitting or standing, whether you've recently had a big meal, whether some gets stuck
-//     // between your teeth; below, we set the parameter F1 (with some random draws) to adjust this initial dose
-    
-//     double IOV_rv=0.0;
-
-//     // Used to incorporate IOV in F
-//     // The variance is from Table 3 of Hoglund 2017, and is calculated as ln((53.5/100)^2+1) = 0.2517115716
-//     if(pkpd_ppq::stochastic)
-//     {
-//         IOV_rv = gsl_ran_gaussian( rng, sqrt(0.252) );  
-//     }
-    
-//     // this is the mean relative increase in bioavailability(?) from dose to dose
-//     double F1D_pe = 0.236; 
-
-//     // this is the "dose occassion", i.e. the order of the dose (first, second, etc)
-//     double OCC = 1.0 + (double)num_doses_given; // NOTE the RHS here is a class member
-    
-//     double F1COVD = (1.0 + F1D_pe*(OCC-1.0));   // THE REASON THIS EXISTS IS THAT DOSE ABSORBTION REALLY DOES INCREASE FOR PATIENTS 
-//                                                 // FROM DOSE TO DOSE, **ONLY** IN THE PPQ DATA; THIS MAY NOT OCCUR FOR OTHER DRUGS
-//     // double THETA8 = 1.0;  // this is just fixed at one
-//     // double TVF1 = THETA8*F1COVD;
-//     double TVF1 = F1COVD;
-//     // double F1 =  vprms[i_ppq_F1_indiv] * TVF1 * exp(IOV_rv); // IOV is the between dose variability
-//     // vprms[i_ppq_F1_thisdose] = F1;
-//     double F1 =  vprms[i_ppq_bioavailability_F_indiv] * TVF1 * exp(IOV_rv); // IOV is the between dose variability
-//     vprms[i_ppq_bioavailability_F_thisdose] = F1;
-   
-    
-//     // ### second, you redraw a specific KTR parameter for this dose, using a draw of the variable IOV2
-//     //     draw a random variate to get the value of the IOV2 variable
-//     // Check if IOV is between doses/what the occasions are, if its between doses, this needs to moved outta here to redraw params
-//     double IOV2_rv = 0.0;
-//     if(pkpd_ppq::stochastic)
-//     {
-//         IOV2_rv = gsl_ran_gaussian( rng, sqrt(0.195) );
-//         //IOV2_rv = gsl_ran_gaussian( rng, sqrt(0.00001) ); // only for testing purposes
-    
-//         // MT *= exp( IOV2_rv ); - this is what you want to do, but MT goes into the rate variables below as 1/MT
-//         // so it's simpler to execute the three lines below
-    
-//         vprms[i_ppq_k15] *= exp( - IOV2_rv );
-//         vprms[i_ppq_k56] *= exp( - IOV2_rv );
-//         vprms[i_ppq_k62] *= exp( - IOV2_rv );
-//     }
-    
-// }
 
 
