@@ -9,7 +9,6 @@ using namespace std;
 
 bool pkpd_lum::stochastic = true;
 
-
 // constructor
 pkpd_lum::pkpd_lum(  )
 {

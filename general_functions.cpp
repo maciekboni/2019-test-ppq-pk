@@ -1,9 +1,13 @@
-#include "pkpd_ppq.h" 
-#include "pkpd_dha.h"
-#include "pkpd_lum.h"
-#include "pkpd_adq.h"
-#include "pkpd_artemether.h"
 #include "general_functions.h"
+#include "globals.h"
+
+#include "pkpd_artemether.h"
+#include "pkpd_artesunate.h"
+#include "pkpd_dha.h"
+
+#include "pkpd_adq.h"
+#include "pkpd_lum.h"
+#include "pkpd_ppq.h" 
 
 #include <chrono>
 #include <cmath>
@@ -17,37 +21,18 @@
 #include <string>
 #include <string>
 
-double G_CLO_PMF = 8.0;
-double G_DENSITY_50 = 50011.087;
 
-int G_CLO_N = 1;
-double G_CLO_AGE = 25.0;
-double G_CLO_WEIGHT = 54.0;
+general_functions::general_functions()
+{
+      // ✅ Now this will work
+}
 
-double G_CLO_HILL_COEFF_DHA = 20.0;
-double G_CLO_HILL_COEFF_ARTEMETHER = 20.0;
-double G_CLO_HILL_COEFF_LUM = 15.0;
+general_functions::~general_functions()
+{
+      // ✅ Now this will work
+}
 
-double G_CLO_EC50_DHA = 0.1;
-double G_CLO_EC50_ARTEMETHER = 0.1;                                               // Assuming this to be ng/ml
-double G_CLO_EC50_LUM = exp( 0.525 * log (2700)); // use natural log, 63.30907617 // Assuming this to be ng/ml
-
-double G_CLO_PMAX_DHA = 0.983; //pmax_dha = 0.983 gives ~68.9% efficacy for DHA monotherapy, calibrated by Venitha in Dec 2024 
-                               //Original value = 0.99997
-
-double G_CLO_PMAX_ARTEMETHER = 0.983; 
-double G_CLO_PMAX_LUM = 0.9995;
-
-int G_CLO_OUTPUT_TYPE = 0;
-
-// Trying to study why AL efficacy changes with weight
-double G_CLO_BLOOD_VOLUME_EXPONENT = 1;
-double G_CLO_CENTRAL_VOLUME_EXPONENT = 1;
-
-enum therapy_type { therapy_none , therapy_amodiaquine, therapy_artemether, therapy_artesunate , therapy_dha, therapy_lumefantrine , therapy_AL, therapy_DHA_PPQ, therapy_AS_AQ}; 
-enum therapy_type G_CLO_THERAPY = therapy_none;
-
-void output_results_monotherapy_dha(int pi, pkpd_dha *dyn)
+void general_functions::output_results_monotherapy_dha(int pi, pkpd_dha *dyn)
 {
     if (G_CLO_OUTPUT_TYPE == 1) {
         int j = dyn->v_concentration_in_blood.size()-1;
@@ -61,7 +46,21 @@ void output_results_monotherapy_dha(int pi, pkpd_dha *dyn)
     }
 }
 
-void output_results_combination_AL(int pi, pkpd_artemether *dyn1, pkpd_lum *dyn2)
+void general_functions::output_results_monotherapy_lum(int pi, pkpd_lum *dyn)
+{
+    if (G_CLO_OUTPUT_TYPE == 1) {
+        int j = dyn->v_concentration_in_blood.size()-1;
+        fprintf(stdout, "%d , %10.3f , %10.3f , %10.3f \n", pi, dyn->v_concentration_in_blood_hourtimes[j], dyn->v_concentration_in_blood[j], dyn->v_parasitedensity_in_blood[j] );
+    }
+    else {
+        for(int j=0; j<dyn->v_concentration_in_blood.size(); j++ )
+        {
+            fprintf(stdout, "%d , %10.3f , %10.3f , %10.3f \n", pi, dyn->v_concentration_in_blood_hourtimes[j], dyn->v_concentration_in_blood[j], dyn->v_parasitedensity_in_blood[j] );
+        }
+    }
+}
+
+void general_functions::output_results_combination_AL(int pi, pkpd_artemether *dyn1, pkpd_lum *dyn2)
 {
     if (G_CLO_OUTPUT_TYPE == 1) {
         int j = dyn1->v_concentration_in_blood.size()-1;
@@ -75,7 +74,7 @@ void output_results_combination_AL(int pi, pkpd_artemether *dyn1, pkpd_lum *dyn2
     }
 }
 
-void output_results_combination_DHA_PPQ(int pi, pkpd_dha *dyn1, pkpd_ppq *dyn2)
+void general_functions::output_results_combination_DHA_PPQ(int pi, pkpd_dha *dyn1, pkpd_ppq *dyn2)
 {
     if (G_CLO_OUTPUT_TYPE == 1) {
         int j = dyn1->v_concentration_in_blood.size()-1;
@@ -89,7 +88,21 @@ void output_results_combination_DHA_PPQ(int pi, pkpd_dha *dyn1, pkpd_ppq *dyn2)
     }
 }
 
-void ParseArgs(int argc, char **argv)
+void general_functions::output_results_combination_AS_AQ(int pi, pkpd_artesunate *dyn1, pkpd_adq*dyn2)
+{
+    if (G_CLO_OUTPUT_TYPE == 1) {
+        int j = dyn1->v_concentration_in_blood.size()-1;
+        fprintf(stdout, "%d %10.3f %10.3f %10.3f %10.3f %10.3f \n", pi, dyn1->v_concentration_in_blood_hourtimes[j], dyn1->v_concentration_in_blood[j], dyn2->v_concentration_in_blood[j], dyn2->v_concentration_in_blood_metabolite[j], dyn1->v_parasitedensity_in_blood[j] );        
+    }
+    else {
+        for(int j=0; j<dyn1->v_concentration_in_blood.size(); j++ )
+        {
+            fprintf(stdout, "%d %10.3f %10.3f %10.3f %10.3f %10.3f \n", pi, dyn1->v_concentration_in_blood_hourtimes[j], dyn1->v_concentration_in_blood[j], dyn2->v_concentration_in_blood[j], dyn2->v_concentration_in_blood_metabolite[j], dyn1->v_parasitedensity_in_blood[j] );
+        }
+    }
+}
+
+void general_functions::ParseArgs(int argc, char **argv)
 {
     int i, start;
     start=1;
@@ -126,10 +139,6 @@ void ParseArgs(int argc, char **argv)
         else if( str == "--pmax_dha" ) 		            G_CLO_PMAX_DHA	                    = atof( argv[++i] );
         else if (str == "--pmax_artemether" ) 		    G_CLO_PMAX_ARTEMETHER               = atof( argv[++i] );
         else if (str == "--pmax_lum" ) 		            G_CLO_PMAX_LUM	                    = atof( argv[++i] );
-
-        // BV exponent can be removed
-        else if( str == "--blood_volume_exponent" )     G_CLO_BLOOD_VOLUME_EXPONENT	        = atof( argv[++i] );
-        else if (str == "--central_volume_exponent" )   G_CLO_CENTRAL_VOLUME_EXPONENT       = atof( argv[++i] );
 
         else if (str == "-o" ) 		                    G_CLO_OUTPUT_TYPE	                = atoi( argv[++i] );
         

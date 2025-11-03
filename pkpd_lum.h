@@ -111,7 +111,6 @@ public:
     double patient_weight;          // this is the kg weight of the current patient
     double patient_age;             // in years
     double patient_blood_volume;    // in microliters, so should be between 250,000 (infant) to 6,000,000 (large adult)
-    double central_volume_exponent; // Adding an exponent to the central volume of distribution for 'allometric' scaling
     bool pregnant;                  // usually means just 2nd or 3rd trimester
     //double immune_killing_rate;
 

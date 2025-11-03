@@ -130,7 +130,6 @@ void pkpd_adq::give_next_dose_to_patient( double fractional_dose_taken )
     {
         redraw_params_before_newdose(); 
 
-
         if( num_doses_given == 0 )
         {
             y0[0] +=  v_dosing_amounts[num_doses_given] * vprms[i_adq_F_indiv_first_dose] * fractional_dose_taken;
