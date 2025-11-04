@@ -25,7 +25,7 @@ find_package(GSL REQUIRED)
 
 #Add all .cpp files and .h files here
 # Add pkpd_mfq.cpp pkpd_mfq.h when needed
-set(SRC_FILES main.cpp pkpd_artemether.cpp pkpd_artemether.h pkpd_dha.cpp pkpd_dha.h pkpd_artesunate.cpp pkpd_artesunate.h pkpd_lum.cpp pkpd_lum.h pkpd_ppq.cpp pkpd_ppq.h pkpd_adq.cpp pkpd_adq.h)
+set(SRC_FILES main.cpp globals.cpp globals.h general_functions.cpp general_functions.h pkpd_simulation_functions.cpp pkpd_simulation_functions.h pkpd_artemether.cpp pkpd_artemether.h pkpd_dha.cpp pkpd_dha.h pkpd_artesunate.cpp pkpd_artesunate.h pkpd_lum.cpp pkpd_lum.h pkpd_ppq.cpp pkpd_ppq.h pkpd_adq.cpp pkpd_adq.h)
 
 
 #set(SRC_FILES main.cpp pkpd_adq.cpp pkpd_adq.h pkpd_dha.cpp pkpd_dha.h pkpd_lum.cpp pkpd_lum.h pkpd_ppq.cpp pkpd_ppq.h)

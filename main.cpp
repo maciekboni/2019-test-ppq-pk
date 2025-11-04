@@ -27,6 +27,8 @@ int main(int argc, char* argv[])
 {
     // Create an instance of general_functions
     general_functions general_func;
+
+    // Parse command line arguments
     general_func.ParseArgs(argc,argv);
 
     // Create an instance of pkpd_simulation

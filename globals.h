@@ -58,7 +58,7 @@ extern double G_CLO_HILL_COEFF_AQ;
 extern double G_CLO_HILL_COEFF_LUM;
 extern double G_CLO_HILL_COEFF_PPQ;
 
-int G_CLO_OUTPUT_TYPE;
-therapy_type G_CLO_THERAPY;
+extern int G_CLO_OUTPUT_TYPE;
+extern therapy_type G_CLO_THERAPY;
 
 #endif // GLOBALS_H

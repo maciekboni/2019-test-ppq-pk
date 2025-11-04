@@ -6,22 +6,22 @@ gsl_rng *G_RNG;
 // gsl_rng* G_RNG = nullptr;
 std::mt19937 G_RNG_CPP;	// Change to pointer if required
 
-// Parasite dynamics
+// Default settings for Parasite Dynamics
 double G_CLO_PMF = 8.0;
 double G_DENSITY_50 = 50011.087;   // from correspondence with Aubrey Cunnington, the parasite density level at which growth is inhibited 
-                            // to 50% of its max value occurs at ln(10.82) (10.49), 11.54) parasites per microliter for 
-                            // estimated from n=64 Gambian children with uncomplicated malaria (Giorgiadou et al, Nat Microbiol 2019)
+                                   // to 50% of its max value occurs at ln(10.82) (10.49), 11.54) parasites per microliter for 
+                                   // estimated from n=64 Gambian children with uncomplicated malaria (Giorgiadou et al, Nat Microbiol 2019)
 
 /*************************************************************************************************************************************/
-// Patient characteristics
-double G_CLO_N = 1;
+// Default Patient Characteristics
+int G_CLO_N = 1;
 double G_CLO_AGE = 25.0;
 double G_CLO_WEIGHT = 54.0;
 
 /*************************************************************************************************************************************/
 
-// PK/PD parameters
-    // Pmax values
+// Default values of PK/PD parameters
+// Pmax values
 double G_CLO_PMAX_DHA = 0.983; //pmax_dha = 0.983 gives ~68.9% efficacy for DHA monotherapy, calibrated by Venitha in Dec 2024
                         //Original value = 0.99997
 double G_CLO_PMAX_ARTEMETHER = 0.983;
@@ -53,10 +53,12 @@ double G_CLO_HILL_COEFF_PPQ = 5.0;
 /*************************************************************************************************************************************/
 
 // Input/Output parameters
-double G_CLO_OUTPUT_TYPE = 0;
+int G_CLO_OUTPUT_TYPE = 0;
 therapy_type G_CLO_THERAPY = therapy_none;
 
 // Define simulation control variables
 double maximum_enforced_stepsize = 0.5;
 double t0 = 0.0;
 double t1 = maximum_enforced_stepsize;
+
+/*************************************************************************************************************************************/
