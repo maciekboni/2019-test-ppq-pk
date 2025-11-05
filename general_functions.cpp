@@ -130,15 +130,27 @@ void general_functions::ParseArgs(int argc, char **argv)
         
         else if( str == "--hill_dha" ) 		            G_CLO_HILL_COEFF_DHA	            = atof( argv[++i] );
         else if( str == "--hill_artemether" ) 		    G_CLO_HILL_COEFF_ARTEMETHER	        = atof( argv[++i] );
-        else if( str == "--hill_lum" ) 		            G_CLO_HILL_COEFF_LUM	            = atof( argv[++i] );
+        else if( str == "--hill_artesunate" ) 		    G_CLO_HILL_COEFF_ARTESUNATE         = atof( argv[++i] );
         
         else if( str == "--ec50_dha" ) 		            G_CLO_EC50_DHA	                    = atof( argv[++i] );
         else if( str == "--ec50_artemether" ) 		    G_CLO_EC50_ARTEMETHER	            = atof( argv[++i] );
-        else if( str == "--ec50_lum" ) 		            G_CLO_EC50_LUM	                    = atof( argv[++i] );
-
+        else if( str == "--ec50_artesunate" ) 		    G_CLO_EC50_ARTESUNATE	            = atof( argv[++i] );
+       
         else if( str == "--pmax_dha" ) 		            G_CLO_PMAX_DHA	                    = atof( argv[++i] );
         else if (str == "--pmax_artemether" ) 		    G_CLO_PMAX_ARTEMETHER               = atof( argv[++i] );
+        else if (str == "--pmax_artesunate" ) 		    G_CLO_PMAX_ARTESUNATE               = atof( argv[++i] );
+        
+        else if( str == "--hill_aq" ) 		            G_CLO_HILL_COEFF_AQ	                = atof( argv[++i] );
+        else if( str == "--hill_lum" ) 		            G_CLO_HILL_COEFF_LUM	            = atof( argv[++i] );
+        else if( str == "--hill_ppq" ) 		            G_CLO_HILL_COEFF_PPQ	            = atof( argv[++i] );
+
+        else if( str == "--ec50_aq" ) 		            G_CLO_EC50_AQ	                    = atof( argv[++i] );
+        else if( str == "--ec50_lum" ) 		            G_CLO_EC50_LUM	                    = atof( argv[++i] );
+        else if( str == "--ec50_ppq" ) 		            G_CLO_EC50_PPQ	                    = atof( argv[++i] );
+
+        else if( str == "--pmax_aq" ) 		            G_CLO_PMAX_AQ	                    = atof( argv[++i] );
         else if (str == "--pmax_lum" ) 		            G_CLO_PMAX_LUM	                    = atof( argv[++i] );
+        else if (str == "--pmax_ppq" ) 		            G_CLO_PMAX_PPQ	                    = atof( argv[++i] );
 
         else if (str == "-o" ) 		                    G_CLO_OUTPUT_TYPE	                = atoi( argv[++i] );
         
